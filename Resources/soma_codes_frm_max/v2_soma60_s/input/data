@@ -1,0 +1,82 @@
+# Model parameters
+# Continuous equation parameters
+ &PARM01
+ tRef=5.,
+ sRef=35.,
+ no_slip_sides  = .TRUE.,
+ no_slip_bottom = .TRUE.,
+ bottomDragQuadratic = 0.001,
+ rhonil=1000.,
+ rhoConst=1014.65,
+ eosType='LINEAR',
+ tAlpha=2.0E-04,
+ sBeta=8.0E-04,
+ hFacMinDr=50.,
+ hFacMin=0.3,
+ hFacInf=0.1,
+ hFacSup=5.,
+ gravity=9.81,
+ implicitFreeSurface=.TRUE.,
+ implicitDiffusion=.TRUE.,
+ implicitViscosity=.TRUE.,
+ viscC4Leith=1.5,
+ viscC4Leithd=1.5,
+ viscA4GridMax=0.5,
+ useAreaViscLength=.TRUE.,
+ tempAdvScheme=33,
+ saltAdvScheme=33,
+ StaggerTimeStep=.TRUE.,
+ vectorInvariantMomentum=.TRUE.,
+ exactConserv=.TRUE.,
+ debuglevel=0,
+ useSingleCPUio=.TRUE.,
+ tempForcing = .TRUE.,
+ saltForcing = .FALSE.,
+ saltStepping=.TRUE.,
+ &
+
+# Elliptic solver parameters
+ &PARM02
+ cg2dMaxIters=300,
+ cg2dTargetResWunit=1.E-12,
+ &
+
+# Time stepping parameters
+ &PARM03
+ startTime=0.,
+# endTime=12000.,
+ deltaT=1200.,
+ pChkptFreq=622080000.,
+ chkptFreq=155520000.,
+ dumpFreq=0,
+ monitorFreq=1200.,
+ monitorSelect=2,
+ tauThetaClimRelax=2592000.,
+#-for longer run (100 yrs)
+ endTime = 3110400000.,
+ monitorFreq=2592000.,
+ forcing_In_AB = .FALSE.,
+ momDissip_In_AB=.FALSE.,
+ &
+
+# Gridding parameters
+ &PARM04
+ usingSphericalPolarGrid=.TRUE.,
+ delX=62*1.,
+ delY=62*1.,
+ xgOrigin=-1.,
+ ygOrigin=14.,
+ delR=4.6, 5.1, 5.7, 6.3, 6.9, 7.8, 8.6, 9.5, 10.5, 11.7, 12.9,
+         14.4, 15.8, 17.6, 19.5, 21.6, 24., 26.5, 29.3, 32.5,
+         35.9, 39.8, 44.1, 48.8, 53.9, 59.7, 66.1, 73., 80.9,
+         89.4, 98.8, 109.4, 120.8, 133.7, 147.7, 163.3, 180.5,
+         199.5, 220.4, 243.5,
+ &
+
+ &PARM05
+ bathyFile='bathy.bin',
+ zonalWindFile='windx_cosy.bin',
+ thetaClimFile='SST_relax.bin',
+ hydrogThetaFile='temp.bin',
+ hydrogSaltFile='salt.bin',
+ &

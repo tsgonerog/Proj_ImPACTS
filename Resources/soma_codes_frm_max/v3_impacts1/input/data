@@ -1,0 +1,74 @@
+# Model parameters
+# Continuous equation parameters
+ &PARM01
+ tRef=23.,23.,23.,22.,21.,20.,19.,17.,16.,15.,14.,12.,11.,10.,9.,8.,
+      7.,6.,6.,5.,5.,4.,4.,3.,3.,2.,2.,1.,1.,1.,1.,
+ sRef=31*34.5,
+ no_slip_sides=.TRUE.,
+ no_slip_bottom=.TRUE.,
+ bottomDragQuadratic=0.0021,
+ rhonil=1027.5,
+ rhoConstFresh=999.8,
+ eosType='JMD95Z',
+ hFacMinDr=50.,
+ hFacMin=0.3,
+ hFacInf=0.1,
+ hFacSup=5.,
+ implicitFreeSurface=.TRUE.,
+ implicitDiffusion=.TRUE.,
+ implicitViscosity=.TRUE.,
+ viscC4Leith=2.15,
+ viscC4Leithd=2.15,
+ viscA4GridMax=0.8,
+ useAreaViscLength=.TRUE.,
+ tempAdvScheme=33,
+ saltAdvScheme=33,
+ StaggerTimeStep=.TRUE.,
+ vectorInvariantMomentum=.TRUE.,
+ exactConserv=.TRUE.,
+ debuglevel=0,
+ useSingleCPUio=.TRUE.,
+ tempForcing = .TRUE.,
+ saltForcing = .FALSE.,
+ saltStepping=.TRUE.,
+ &
+
+# Elliptic solver parameters
+ &PARM02
+ cg2dTargetResidual=1.E-5,
+ cg2dMaxIters=100,
+ &
+
+# Time stepping parameters
+ &PARM03
+ startTime=0.,
+ deltaT=1200.,
+ pChkptFreq=622080000.,
+ chkptFreq=155520000.,
+ dumpFreq=0,
+ monitorFreq=1200.,
+ monitorSelect=2,
+ tauThetaClimRelax=2592000.,
+#-for longer run (100 yrs)
+ endTime = 3110400000.,
+ monitorFreq=2592000.,
+ &
+
+# Gridding parameters
+ &PARM04
+ usingSphericalPolarGrid=.TRUE.,
+ delX=62*1.,
+ delY=62*1.,
+ xgOrigin=-1.,
+ ygOrigin=14.,
+ delR=10., 11.33, 12.83, 14.53, 16.45, 18.63, 21.1, 23.9, 27.07, 30.65,
+      34.72, 39.32, 44.53, 50.43, 57.12, 64.69, 73.26, 82.97, 93.97,
+      106.42, 120.53, 136.5, 154.59, 175.08, 198.29, 224.57, 254.34,
+      288.05, 326.23, 369.47, 418.43,
+ &
+
+ &PARM05
+ bathyFile='bathy.bin',
+ zonalWindFile='wind.bin',
+ thetaClimFile='SST_relax.bin',
+ &
