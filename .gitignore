@@ -1,2 +1,8 @@
-# Ignore all build* directories at any depth
+# Match any directory named exactly 'build' at any depth
+**/build/
+
+# Match any directory that starts with 'build' (e.g., build_test, build_upd)
 **/build*/
+
+# Ignore large input binaries
+Resources/MITgcm-c68q-frm-shoshi/soma/input_binaries/
