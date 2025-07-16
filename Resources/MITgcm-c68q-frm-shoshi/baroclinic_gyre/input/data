@@ -1,0 +1,94 @@
+
+# ====================
+# | Model parameters |
+# ====================
+#
+# Continuous equation parameters
+ &PARM01
+ tRef = 20., 19.977, 19.9515, 19.923, 19.8915, 19.857, 19.818, 19.775, 
+	19.7275, 19.675, 19.6165, 19.552, 19.48, 19.401, 19.313, 19.2155, 
+	19.1075, 18.9875, 18.855, 18.7085, 18.546, 18.3665, 18.1675, 17.947, 
+	17.703, 17.4335, 17.135, 16.8045, 16.4395, 16.035, 15.588, 15.094, 
+	14.547, 13.943, 13.2745, 12.536, 11.7195, 10.817, 9.8195, 8.7175,
+ sRef = 34., 34.0037, 34.0078, 34.0123, 34.0174, 34.0229, 34.0291, 34.036,
+	34.0436, 34.052, 34.0614, 34.0717, 34.0832, 34.0958, 34.1099, 
+	34.1255, 34.1428, 34.162, 34.1832, 34.2066, 34.2326, 34.2614,
+	34.2932, 34.3285, 34.3675, 34.4106, 34.4584, 34.5113, 34.5697, 
+	34.6344, 34.7059, 34.785, 34.8725, 34.9691, 35.0761, 35.1942, 
+	35.3249, 35.4693, 35.6289, 35.8052,
+ no_slip_sides  = .TRUE.,
+ no_slip_bottom = .TRUE.,
+ bottomDragQuadratic = 0.001,
+ rhonil=1025.022,
+ eosType='JMD95Z',
+ hFacMinDr=10.,
+ hFacMin=0.3,
+ hFacInf=0.1,
+ hFacSup=5.,
+ gravity=9.81,
+ implicitFreeSurface=.TRUE.,
+ implicitDiffusion=.TRUE.,
+ implicitViscosity=.TRUE.,
+ viscC4Leith=1.5,
+ viscC4Leithd=1.5,
+ viscA4GridMax=0.5,
+ useAreaViscLength=.TRUE.,
+ tempAdvScheme=30,
+ saltAdvScheme=30,
+ StaggerTimeStep=.TRUE.,
+ vectorInvariantMomentum=.TRUE.,
+ exactConserv=.TRUE.,
+ debuglevel=1,
+ useSingleCPUio=.TRUE.,
+ tempForcing = .FALSE.,
+ saltForcing = .FALSE.,
+# debugLevel=-1,
+ &
+
+# Elliptic solver parameters
+ &PARM02
+ cg2dMaxIters=300,
+ cg2dTargetResidual=1.E-10,
+ &
+
+
+# Time stepping parameters
+ &PARM03
+ nIter0=1051920,
+# startTime=0.,
+# endTime=12000.,
+ deltaT=600.,
+# pChkptFreq=31557600.,
+# chkptFreq=155520000.,
+# dumpFreq=3600,
+# dumpFreq=86400,
+ monitorFreq=3600.,
+# monitorSelect=2,
+# tauThetaClimRelax=2592000.,
+#-for longer run (10 yrs)
+# endTime = 311040000.,
+# endTime = 631152000.,
+ nTimeSteps=525960,
+# monitorFreq=2592000.,
+ forcing_In_AB = .FALSE.,
+ momDissip_In_AB=.FALSE.,
+ &
+
+# Gridding parameters
+ &PARM04
+ usingSphericalPolarGrid=.TRUE.,
+ delX=210.*0.1666666666666667,
+ delY=174.*0.1666666666666667,
+ xgOrigin=-17.5,
+ ygOrigin=20.5,
+ delR=4.6, 5.1, 5.7, 6.3, 6.9, 7.8, 8.6, 9.5, 10.5, 11.7, 12.9,
+	 14.4, 15.8, 17.6, 19.5, 21.6, 24., 26.5, 29.3, 32.5,
+	 35.9, 39.8, 44.1, 48.8, 53.9, 59.7, 66.1, 73., 80.9,
+	 89.4, 98.8, 109.4, 120.8, 133.7, 147.7, 163.3, 180.5,
+	 199.5, 220.4, 243.5,
+ &
+
+ &PARM05
+ bathyFile='bathy.bin',
+ zonalWindFile='windx_cosy.bin',
+ &

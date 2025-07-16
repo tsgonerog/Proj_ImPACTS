@@ -1,0 +1,7 @@
++ date
++ mpiexec -n 4 ./mitgcmuv
+NORMAL END
+NORMAL END
+NORMAL END
+NORMAL END
++ date

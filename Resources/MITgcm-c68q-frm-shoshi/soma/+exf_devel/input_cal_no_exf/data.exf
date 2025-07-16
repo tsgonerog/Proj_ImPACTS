@@ -1,0 +1,52 @@
+#
+# *********************
+# External Forcing Data
+# *********************
+ &EXF_NML_01
+#
+ useExfCheckRange  = .TRUE.,
+# repeatPeriod      = 31622400.0,
+# repeatPeriod      = 1200.0,
+ exf_iprec         = 32,
+ exf_yftype        = 'RL',
+ readStressOnAgrid = .TRUE.,
+ &
+
+# *********************
+ &EXF_NML_02
+#
+ ustressstartdate1 = 19790101,
+ ustressstartdate2 = 000000,
+# ustressRepCycle   = 2592000,
+# ustressRepCycle   = 31104000,
+ ustressperiod     = 1200,
+# ustressRepCycle    = 1200,
+#
+ climsststartdate1 = 19790101,
+ climsststartdate2 = 000000,
+ climsssstartdate1 = 19790101,
+ climsssstartdate2 = 000000,
+# climsstRepCycle   = 1200,
+# climsssRepCycle   = 1200,
+# climsstperiod     = -12, 
+# climsssperiod     = -12, 
+ climsstperiod     = 2592000, 
+ climsssperiod     = 2592000, 
+ climsstTauRelax   = 5184000, 
+ climsssTauRelax   = 15552000, 
+#
+# ustressfile       = 'wind_seasonal.bin',
+ ustressfile       = 'wind_yrly1.bin',
+# climsstfile       = 'SST_relax.bin',
+ climsstfile       = 'SST_relax_monthly.bin',
+ climsssfile       = 'SSS_relax_monthly.bin',
+#
+ &
+
+# *********************
+ &EXF_NML_03
+ &
+
+# *********************
+ &EXF_NML_04
+ &

@@ -1,0 +1,17 @@
+Removing mpi version 2021.9.0
+Use `module list` to view any remaining dependent modules.
+Removing compiler version 2023.1.0
+Use `module list` to view any remaining dependent modules.
+  Load "debugger" to debug DPC++ applications with the gdb-oneapi debugger.
+  Load "dpl" for additional DPC++ APIs: https://github.com/oneapi-src/oneDPL
+Removing mkl version 2023.1.0
+Use `module list` to view any remaining dependent modules.
+Loading compiler version 2023.1.0
+  Load "debugger" to debug DPC++ applications with the gdb-oneapi debugger.
+  Load "dpl" for additional DPC++ APIs: https://github.com/oneapi-src/oneDPL
+Loading mkl version 2023.1.0
+Loading mpi version 2021.9.0
++ date
++ mpirun -np 4 ./mitgcmuv
+slurmstepd-c2-3: error: *** STEP 3089.0 ON c2-3 CANCELLED AT 2024-12-10T11:52:35 ***
+slurmstepd-c2-3: error: *** JOB 3089 ON c2-3 CANCELLED AT 2024-12-10T11:52:35 ***

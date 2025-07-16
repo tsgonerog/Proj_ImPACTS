@@ -1,0 +1,106 @@
+
+# ====================
+# | Model parameters |
+# ====================
+#
+# Continuous equation parameters
+ &PARM01
+ tRef=23.,23.,23.,22.,21.,20.,19.,17.,16.,15.,14.,12.,11.,10.,9.,8.,
+      7.,6.,6.,5.,5.,4.,4.,3.,3.,2.,2.,1.,1.,1.,1.,
+ sRef=31*35.,
+ no_slip_sides  = .TRUE.,
+ no_slip_bottom = .TRUE.,
+ viscC4Leith=1.5,
+ viscC4Leithd=1.5,
+ viscA4GridMax=0.5,
+ useAreaViscLength=.TRUE.,
+ bottomDragQuadratic = 0.001,
+ implicitDiffusion=.TRUE.,
+ implicitViscosity=.TRUE.,
+ hFacMinDr=10.,
+ hFacMin=0.3,
+ hFacInf=0.1,
+ hFacSup=5.,
+ select_rStar=2,
+ nonlinFreeSurf=4,
+ gravity=9.81,
+ rhonil=1025.022,
+ rhoConstFresh=1000.,
+ eosType='JMD95Z',
+ implicitFreeSurface=.TRUE.,
+ exactConserv=.TRUE.,
+ useSingleCpuIO=.TRUE.,
+ tempAdvScheme=30,
+ saltAdvScheme=30,
+ tempVertAdvScheme=3,
+ saltVertAdvScheme=3,
+ tempImplVertAdv=.TRUE.,
+ saltImplVertAdv=.TRUE.,
+ staggerTimeStep=.TRUE.,
+ vectorInvariantMomentum=.TRUE.,
+ useJamartWetPoints=.TRUE.
+ debugLevel=-1,
+# debuglevel=1,
+ tempForcing =.TRUE.,
+ saltForcing=.TRUE.,
+ &
+
+# Elliptic solver parameters
+ &PARM02
+ cg2dTargetResidual=1.E-10,
+ cg2dMaxIters=300,
+ &
+
+# Time stepping parameters
+ &PARM03
+# run for another 20 years after 100
+# nIter0=1,
+# nTimesteps = 1036800.,
+# run for 100 years
+ startTime=0.,
+ nTimesteps=5184000
+# endTime=12000.,
+ deltaT=600.,
+ pChkptFreq=622080000.,
+ chkptFreq=155520000.,
+ dumpFreq=0,
+# dumpFreq=86400,
+# monitorFreq=1200.,
+ monitorSelect=2,
+ monitorFreq=2592000.,
+# forcing_In_AB = .FALSE.,
+# momDissip_In_AB=.FALSE.,
+# tauThetaClimRelax=5184000.,
+ tauThetaClimRelax=2592000.,
+# tauThetaClimRelax=86400.,
+# tauThetaClimRelax=1200.,
+ tauSaltClimRelax=15552000.,
+ periodicExternalForcing=.TRUE.,
+# externForcingPeriod=600.,
+ externForcingPeriod=2592000.,
+# externForcingCycle=1200.,
+ externForcingCycle=31104000.,
+# seconds before looping back (i.e. seconds in a year)
+# so Period/Cycle = N timesteps in a year
+# for ALL forcings (T,S clim included)
+ &
+
+# Gridding parameters
+ &PARM04
+ usingSphericalPolarGrid=.TRUE.,
+ delX=372.*0.1666666666666667,
+ delY=372.*0.1666666666666667,
+ xgOrigin=-1.,
+ ygOrigin=14.,
+ delR=10., 11.33, 12.83, 14.53, 16.45, 18.63, 21.1, 23.9, 27.07, 30.65,
+      34.72, 39.32, 44.53, 50.43, 57.12, 64.69, 73.26, 82.97, 93.97,
+      106.42, 120.53, 136.5, 154.59, 175.08, 198.29, 224.57, 254.34,
+      288.05, 326.23, 369.47, 418.43,
+ &
+
+ &PARM05
+ bathyFile='bathy.bin',
+ zonalWindFile='wind_sv_0.1_0.4_cos.bin',
+ thetaClimFile='SST_relax_change_max.bin',
+ saltClimFile='SSS_relax_yrly.bin',
+ &
