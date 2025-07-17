@@ -39,7 +39,7 @@ start_time=$(date +%s)
 echo "Run started at: $(date)" > run_timing.txt
 
 # === Run the model in parallel ===
-mpiexec -n 4 ./mitgcmuv_tap_adj > output_tap_adj.txt 2>&1
+mpiexec -n $SLURM_NTASKS ./mitgcmuv_tap_adj > output_tap_adj.txt 2>&1
 
 # === Record end time ===
 end_time=$(date +%s)
