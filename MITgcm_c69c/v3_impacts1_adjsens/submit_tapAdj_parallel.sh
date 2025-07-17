@@ -14,7 +14,7 @@
 # necessary modules have been loaded through .bashrc
 
 # === Define key paths ===
-home_dir=/home/tshahriar/ImPACTS/MITgcm-SOMA/verification/v3_impacts1_adjsens
+home_dir=/home/tshahriar/Proj_ImPACTS/MITgcm_c69c/v3_impacts1_adjsens
 build_dir=$home_dir/build_tapAdj_parallel
 input_dir=$home_dir/input_tap
 run_dir=/scratch2/tshahriar/parV3imp_run_$SLURM_JOB_ID  # unique per job

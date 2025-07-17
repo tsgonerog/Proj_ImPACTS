@@ -4,7 +4,7 @@
 #- from this dir:
 # fromDir="../../tutorial_global_oce_latlon/input"
 
-fromDir="/home/tshahriar/ImPACTS/MITgcm-SOMA/verification/tutorial_global_oce_latlon/input"
+fromDir="/home/tshahriar/Proj_ImPACTS/MITgcm_c69c/MITgcm/verification/tutorial_global_oce_latlon/input"
 
 fileList=`( cd $fromDir ; echo *.bin )`
 
@@ -32,7 +32,7 @@ fi
 #- from this dir:
 # fromDir="../../isomip/input_ad"
 
-fromDir="/home/tshahriar/ImPACTS/MITgcm-SOMA/verification/isomip/input_ad"
+fromDir="/home/tshahriar/Proj_ImPACTS/MITgcm_c69c/MITgcm/verification/isomip/input_ad"
 
 fileList='ones_64b.bin'
 
