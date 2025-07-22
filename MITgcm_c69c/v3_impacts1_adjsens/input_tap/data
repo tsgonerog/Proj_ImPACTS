@@ -55,8 +55,12 @@
  monitorFreq=2592000.,
  monitorSelect=2,
  tauThetaClimRelax=2592000.,
-#-run for 1 yrs
+#-run for 1 yr (360 days, unit in seconds)
  endTime = 31104000.,
+#-adjMonitorFreq monitors adj information inside STDOUT.0000 (30 days, unit in seconds)
+ adjMonitorFreq=2592000.,
+#-adjDumpFreq spit out adj fields along the way called ADJTheta.0000000000.data (30 days, unit in seconds)
+ adjDumpFreq=2592000.,
  &
 
 # Gridding parameters

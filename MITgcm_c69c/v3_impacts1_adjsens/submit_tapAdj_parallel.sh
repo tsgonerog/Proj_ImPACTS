@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH -J pV3imAdj    # Set job name once here
+#SBATCH -J pV3imAdj_withAdjFreqs    # Set job name once here
 #SBATCH -o %x.%j.out   # %x = job name, %j = job ID
 #SBATCH -e %x.%j.err
 #SBATCH -N 2
