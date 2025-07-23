@@ -49,16 +49,28 @@
 
 # Time stepping parameters
  &PARM03
+#-#-test run || run for 1 month (unit in seconds)
  startTime=0.,
- endTime=3110400000.,
+ endTime=2592000.,
  deltaT=1200.,
  pChkptFreq=622080000.,
  chkptFreq=155520000.,
  dumpFreq=0,
- monitorFreq=2592000.,
+ monitorFreq=864000.,
  monitorSelect=2,
  tauThetaClimRelax=5184000.,
  tauSaltClimRelax=15552000.,
+#-#-for longer run || run for 100 years (unit in seconds)
+# startTime=0.,
+# endTime=3110400000.,
+# deltaT=1200.,
+# pChkptFreq=622080000.,
+# chkptFreq=155520000.,
+# dumpFreq=0,
+# monitorFreq=2592000.,
+# monitorSelect=2,
+# tauThetaClimRelax=5184000.,
+# tauSaltClimRelax=15552000.,
  &
 
 # Gridding parameters
