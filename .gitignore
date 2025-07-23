@@ -4,6 +4,9 @@
 # Match any directory that starts with 'build' (e.g., build_test, build_upd)
 **/build*/
 
+# Ignore all Jupyter Notebook checkpoints directory an any depth
+**/.ipynb_checkpoints/
+
 # Ignore large input binaries
 Resources/MITgcm-c68q-frm-shoshi/soma/input_binaries/
 Resources/MITgcm-c68q-frm-shoshi/soma6/input_binaries/
