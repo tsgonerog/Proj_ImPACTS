@@ -4,7 +4,7 @@
 MITGCM_ROOT=/home/tshahriar/Proj_ImPACTS/MITgcm_c69c/MITgcm
 
 # Go to build directory
-cd build_fd_parallel || { echo "Failed to enter build_fd_parallel"; exit 1; }
+cd build_frd_parallel || { echo "Failed to enter build_fd_parallel"; exit 1; }
 
 # Clean any previous build
 make CLEAN

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH -J v4soma_fd_test    # Set job name once here
+#SBATCH -J v4soma_frd_test    # Set job name once here
 #SBATCH -o %x.%j.out   # %x = job name, %j = job ID
 #SBATCH -e %x.%j.err
 #SBATCH -N 2

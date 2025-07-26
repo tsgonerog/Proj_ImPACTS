@@ -49,9 +49,9 @@
 
 # Time stepping parameters
  &PARM03
-#-#-test run || run for 1 month (unit in seconds)
+#-#-test run || run for 5 days (unit in seconds)
  startTime=0.,
- endTime=2592000.,
+ endTime=432000.,
  deltaT=1200.,
  pChkptFreq=622080000.,
  chkptFreq=155520000.,
