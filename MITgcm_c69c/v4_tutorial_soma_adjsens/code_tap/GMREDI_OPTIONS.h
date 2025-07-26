@@ -24,7 +24,7 @@ C -- exclude the clipping/tapering part of the code that is not used
 #define GM_EXCLUDE_CLIPPING
 #define GM_EXCLUDE_FM07_TAP
 #define GM_EXCLUDE_AC02_TAP
-C #define GM_EXCLUDE_TAPERING
+#undef GM_EXCLUDE_TAPERING
 #define GM_EXCLUDE_SUBMESO
 
 C Allows to read-in background 3-D Redi and GM diffusivity coefficients
