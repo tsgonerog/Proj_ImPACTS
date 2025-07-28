@@ -49,28 +49,42 @@
 
 # Time stepping parameters
  &PARM03
-#-#-test run || run for 5 days (unit in seconds)
+#-#-test run || run for endTime = 10 days (unit in seconds)
  startTime=0.,
- endTime=432000.,
+ endTime=864000.,
  deltaT=1200.,
+#-pChkptFreq ==> permanent checkpoint pickup files || every 20 years
  pChkptFreq=622080000.,
+#-chkptFreq ==> temporary checkpoint pickup files || every 5 years
  chkptFreq=155520000.,
+#-dumpFreq ==> freq of writing model state snapshot diagnostics || 0 bcz using diagnostic package?
  dumpFreq=0,
  monitorFreq=864000.,
  monitorSelect=2,
  tauThetaClimRelax=5184000.,
  tauSaltClimRelax=15552000.,
-#-#-for longer run || run for 100 years (unit in seconds)
+#-adjMonitorFreq ==> monitors adj information inside STDOUT.0000 || 1 day, unit in seconds
+ adjMonitorFreq=86400.,
+#-adjDumpFreq ==> spit out adj fields along the way e.g., ADJTheta.0000000000.data || 1 day, unit in seconds
+ adjDumpFreq=86400.,
+#-#-for longer run || run for endTime = 100 years (unit in seconds)
 # startTime=0.,
 # endTime=3110400000.,
 # deltaT=1200.,
+#-pChkptFreq ==> permanent checkpoint pickup files || every 20 years
 # pChkptFreq=622080000.,
+#-chkptFreq ==> temporary checkpoint pickup files || every 5 years
 # chkptFreq=155520000.,
+#-dumpFreq ==> freq of writing model state snapshot diagnostics || 0 bcz using diagnostic package?
 # dumpFreq=0,
 # monitorFreq=2592000.,
 # monitorSelect=2,
 # tauThetaClimRelax=5184000.,
 # tauSaltClimRelax=15552000.,
+#-adjMonitorFreq ==> monitors adj information inside STDOUT.0000 || 30 days, unit in seconds
+# adjMonitorFreq=2592000.,
+#-adjDumpFreq ==> spit out adj fields along the way e.g., ADJTheta.0000000000.data || 30 days, unit in seconds
+# adjDumpFreq=2592000.,
  &
 
 # Gridding parameters
