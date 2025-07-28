@@ -16,10 +16,10 @@
 job_name=$SLURM_JOB_NAME
 
 # === Define key paths ===
-home_dir=/home/tshahriar/Proj_ImPACTS/MITgcm_c69c/v4_tutorial_soma_adjsens
-build_dir=$home_dir/build_fd_parallel
+home_dir=/home/tshahriar/Proj_ImPACTS/MITgcm_c69c/v4_soma_with_adj
+build_dir=$home_dir/build_frd_parallel
 input_dir=$home_dir/input
-run_dir=/scratch2/tshahriar/${job_name}_run_$SLURM_JOB_ID  # unique per job
+run_dir=/scratch2/tshahriar/${job_name}_run$SLURM_JOB_ID  # unique per job
 
 # === Create run_data directory in scratch and move into it ===
 mkdir -p "$run_dir"
