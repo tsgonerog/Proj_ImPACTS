@@ -59,7 +59,8 @@
  chkptFreq=155520000.,
 #-dumpFreq ==> freq of writing model state snapshot diagnostics || 0 bcz using diagnostic package?
  dumpFreq=0,
- monitorFreq=864000.,
+#-monitorFreq ==> dump monitor output to standard output inside STDOUT.0000 || every 1 day
+ monitorFreq=86400.,
  monitorSelect=2,
  tauThetaClimRelax=5184000.,
  tauSaltClimRelax=15552000.,
@@ -77,6 +78,7 @@
 # chkptFreq=155520000.,
 #-dumpFreq ==> freq of writing model state snapshot diagnostics || 0 bcz using diagnostic package?
 # dumpFreq=0,
+#-monitorFreq ==> dump monitor output to standard output inside STDOUT.0000 || every 30 days
 # monitorFreq=2592000.,
 # monitorSelect=2,
 # tauThetaClimRelax=5184000.,
