@@ -49,9 +49,9 @@
 
 # Time stepping parameters
  &PARM03
-#-#-test run || run for endTime = 10 days (unit in seconds)
+#-#-test run || run for endTime = 30 days (unit in seconds)
  startTime=0.,
- endTime=864000.,
+ endTime=2592000.,
  deltaT=1200.,
 #-pChkptFreq ==> permanent checkpoint pickup files || every 20 years
  pChkptFreq=622080000.,
