@@ -630,9 +630,7 @@ c--         choice of the 3-tupel ( nchklev_1, nchklev_2, nchklev_3 ).
             if ( iloop .le. nTimeSteps ) then
 
 #  else /* ALLOW_TAMC_CHECKPOINTING  undefined */
-C TANVIR (the immediate next isn't a comment, it is implementing
-C binomial checkpointing for tapenade)
-C$AD BINOMIAL-CKP nTimeSteps+1 5 1
+
       DO iloop = 1, nTimeSteps
 
 c++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -642,10 +640,6 @@ c++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 c++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 #ifndef ALLOW_AUTODIFF
-C SHAHRIAR (if binomial checkpointing is properly working, I should not
-C see the line after SHAHRIAR in "the_main_loop.f" in the build
-C directory)
-C$AD BINOMIAL-CKP nTimeSteps+1 5 1
       DO iloop = 1, nTimeSteps
 #endif /* ALLOW_AUTODIFF */
 
