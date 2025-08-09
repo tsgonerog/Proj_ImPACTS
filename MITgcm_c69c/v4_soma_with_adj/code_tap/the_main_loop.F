@@ -630,16 +630,20 @@ c--         choice of the 3-tupel ( nchklev_1, nchklev_2, nchklev_3 ).
             if ( iloop .le. nTimeSteps ) then
 
 #  else /* ALLOW_TAMC_CHECKPOINTING  undefined */
-C TANVIR (the immediate next line isn't a comment, it is implementing
-C binomial checkpointing for tapenade) || why +1 in the 1st arg? =>
+C TANVIR---The immediate next line isn't a comment, it is implementing
+C binomial checkpointing for tapenade; fortran compilers will treat it
+C as a comment and ignore (that's why putting "C" before is crucial) but
+C tapenade won't ignore it|| why +1 in the 1st arg? =>
 C ans is tapenade considers exiting the timeloop as another step || 2nd
 C arg refers to the num of timesteps/snapshots we are storing in memory,
 C the more the better until the code crashes; this limit will keep
 C changing depending on the grid size of simulation, i.e., for finer
 C grid you will be able to store small number of snapshots in memory.
-C || 3rd arg is the starting number of iteration, should usually be 1
+C However, the ultimate limit is 98, this is the maximum we can go and
+C it is hardcoded in tapenade|| 3rd arg is the starting number of
+C iteration, should usually be 1.
 
-C$AD BINOMIAL-CKP nTimeSteps+1 50 1
+C$AD BINOMIAL-CKP nTimeSteps+1 98 1
       DO iloop = 1, nTimeSteps
 
 c++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -649,9 +653,10 @@ c++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 c++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 #ifndef ALLOW_AUTODIFF
-C SHAHRIAR (if binomial checkpointing is properly working, I should not
-C see the line after SHAHRIAR ASTRO in "the_main_loop.f" in the build
-C directory)
+C SHAHRIAR---If binomial checkpointing is properly working, I should not
+C see the line after SHAHRIAR in "the_main_loop.f" in the build
+C directory
+
 C$AD BINOMIAL-CKP nTimeSteps+1 5 1
       DO iloop = 1, nTimeSteps
 #endif /* ALLOW_AUTODIFF */
