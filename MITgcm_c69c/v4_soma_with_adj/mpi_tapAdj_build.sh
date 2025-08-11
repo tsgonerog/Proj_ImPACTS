@@ -4,19 +4,20 @@
 MITGCM_ROOT=/home/tshahriar/Proj_ImPACTS/MITgcm_c69c/MITgcm
 
 # Go to build directory
-cd build_frd_parallel || { echo "Failed to enter build_fd_parallel"; exit 1; }
+cd build_tapAdj_mpi || { echo "Failed to enter build_tapAdj_mpi"; exit 1; }
 
 # Clean any previous build
 make CLEAN
 
 # Configure the build
-$MITGCM_ROOT/tools/genmake2 -mpi \
+$MITGCM_ROOT/tools/genmake2 -tap -mpi \
     -of=$MPI_OPTFILE \
     -rd=$MITGCM_ROOT \
-    -mods=../code
+    -mods=../code_tap \
+    -adof=$MITGCM_ROOT/tools/adjoint_options/adjoint_default
 
 # Generate dependency list
 make depend
 
-# Build the forward model using 8 threads
-make -j 8
+# Build the adjoint model using 8 threads
+make -j 8 tap_adj
