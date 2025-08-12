@@ -1,10 +1,10 @@
 #!/bin/bash
 
-#SBATCH -J v4soma_tapAdj_MPI_test    # Set job name once here
+#SBATCH -J v4soma_tapAdj_serial_test    # Set job name once here
 #SBATCH -o %x.%j.out   # %x = job name, %j = job ID
 #SBATCH -e %x.%j.err
-#SBATCH -N 2
-#SBATCH -n 4
+#SBATCH -N 1
+#SBATCH -n 1
 #SBATCH -t 48:00:00
 #SBATCH --mail-user=tanvirshahriar@utexas.edu
 #SBATCH --mail-type=begin
@@ -17,7 +17,7 @@ job_name=$SLURM_JOB_NAME
 
 # === Define key paths ===
 home_dir=/home/tshahriar/Proj_ImPACTS/MITgcm_c69c/v4_soma_with_adj
-build_dir=$home_dir/build_tapAdj_mpi
+build_dir=$home_dir/build_tapAdj_serial
 input_dir=$home_dir/input_tap
 run_dir=/scratch2/tshahriar/${job_name}_run$SLURM_JOB_ID  # unique per job
 
@@ -38,8 +38,8 @@ ln -s "$build_dir/mitgcmuv_tap_adj" .
 start_time=$(date +%s)
 echo "Run started at: $(date)" > run_timing.txt
 
-# === Run the model in parallel ===
-mpiexec -n $SLURM_NTASKS ./mitgcmuv_tap_adj > output_tap_adj.txt 2>&1
+# === Run the model in serial ===
+./mitgcmuv_tap_adj > output_tap_adj.txt 2>&1
 
 # === Record end time ===
 end_time=$(date +%s)
