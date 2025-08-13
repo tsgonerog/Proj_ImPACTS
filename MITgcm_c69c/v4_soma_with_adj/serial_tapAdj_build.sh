@@ -3,6 +3,10 @@
 # Set root directory for MITgcm (absolute path is safest)
 MITGCM_ROOT=/home/tshahriar/Proj_ImPACTS/MITgcm_c69c/MITgcm
 
+# Replace SIZE.h and the_main_loop_b.f_for_genmake2 with serial versions
+cp code_tap/SIZE.h_serial code_tap/SIZE.h
+cp code_tap/the_main_loop_b.f_serialPatched code_tap/the_main_loop_b.f_for_genmake2
+
 # Go to build directory
 cd build_tapAdj_serial || { echo "Failed to enter build_tapAdj_serial"; exit 1; }
 
