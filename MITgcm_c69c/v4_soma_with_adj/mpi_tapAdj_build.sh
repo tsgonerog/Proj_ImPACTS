@@ -3,6 +3,10 @@
 # Set root directory for MITgcm (absolute path is safest)
 MITGCM_ROOT=/home/tshahriar/Proj_ImPACTS/MITgcm_c69c/MITgcm
 
+# Replace SIZE.h and the_main_loop_b.f_for_genmake2 with mpi versions
+cp code_tap/SIZE.h_mpi code_tap/SIZE.h
+cp code_tap/the_main_loop_b.f_for_genmake2_mpiPatched code_tap/the_main_loop_b.f_for_genmake2
+
 # Go to build directory
 cd build_tapAdj_mpi || { echo "Failed to enter build_tapAdj_mpi"; exit 1; }
 
