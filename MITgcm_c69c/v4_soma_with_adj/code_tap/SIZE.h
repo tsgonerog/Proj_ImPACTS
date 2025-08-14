@@ -42,14 +42,14 @@ CEOP
       INTEGER Ny
       INTEGER Nr
       PARAMETER (
-     &           sNx =  62,
-     &           sNy =  62,
+     &           sNx =  31,
+     &           sNy =  31,
      &           OLx =   4,
      &           OLy =   4,
      &           nSx =   1,
      &           nSy =   1,
-     &           nPx =   1,
-     &           nPy =   1,
+     &           nPx =   2,
+     &           nPy =   2,
      &           Nx  = sNx*nSx*nPx,
      &           Ny  = sNy*nSy*nPy,
      &           Nr  =   31)
