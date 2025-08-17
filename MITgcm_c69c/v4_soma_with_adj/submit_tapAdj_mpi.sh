@@ -28,9 +28,6 @@ cd "$run_dir"
 # === Link input files into run directory ===
 ln -s "$input_dir"/* .
 
-# === Run the input preparation script ===
-bash "$input_dir/prepare_run"
-
 # === Link MITgcm executable to run directory ===
 ln -s "$build_dir/mitgcmuv_tap_adj" .
 
