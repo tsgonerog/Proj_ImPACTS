@@ -1057,7 +1057,7 @@ C     !ROUTINE: THE_MAIN_LOOP
 C     !INTERFACE:
       SUBROUTINE THE_MAIN_LOOP_B(mytime, myiter, mythid)
       IMPLICIT NONE
-      character*5 pid
+      character*4 pid
 C     == Global variables ==
 CBOP
 C    !ROUTINE: SIZE.h
@@ -8565,7 +8565,7 @@ C    Look Snapshot:
           CALL POPREAL8ARRAY(gv, (snx+2*olx)*(sny+2*oly)*nr*nsx*nsy)
           CALL POPREAL8ARRAY(gu, (snx+2*olx)*(sny+2*oly)*nr*nsx*nsy)
 c ====== BEGIN manual I/O: forward fields (hFacC, theta, salt) -- MPI-safe ======
-      write(pid,'(I5.5)') myProcId
+      write(pid,'(I4.4)') myProcId
       open(unit=500, file='hFacC_v4_soma.data.'//pid)
       open(unit=501, file='theta_v4_soma.data.'//pid)
       open(unit=502, file='salt_v4_soma.data.'//pid)
@@ -12360,7 +12360,7 @@ C
       CALL POPREAL8ARRAY(rstarexpw, (snx+2*olx)*(sny+2*oly)*nsx*nsy)
       CALL POPREAL8ARRAY(rstarexps, (snx+2*olx)*(sny+2*oly)*nsx*nsy)
 c ====== BEGIN manual I/O: adjoint fields (thetab, saltb) -- MPI-safe ======
-      write(pid,'(I5.5)') myProcId
+      write(pid,'(I4.4)') myProcId
       open(unit=503, file='thetab_v4_soma.data.'//pid)
       open(unit=504, file='saltb_v4_soma.data.'//pid)
       DO ii1=1,nsy
