@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Set root directory for MITgcm (absolute path is safest)
-MITGCM_ROOT=/home/tshahriar/Proj_ImPACTS/MITgcm_c69c/MITgcm
+# Set root directory for MITgcm
+MITGCM_ROOT=../MITgcm
 
 # Replace SIZE.h and the_main_loop_b.f_for_genmake2 with mpi versions
 cp code_tap/SIZE.h_mpi code_tap/SIZE.h

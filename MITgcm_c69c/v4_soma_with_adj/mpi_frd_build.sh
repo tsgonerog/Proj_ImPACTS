@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Set root directory for MITgcm (absolute path is safest)
-MITGCM_ROOT=/home/tshahriar/Proj_ImPACTS/MITgcm_c69c/MITgcm
+# Set root directory for MITgcm
+MITGCM_ROOT=../MITgcm
 
 # Go to build directory
 cd build_frd_mpi || { echo "Failed to enter build_fd_mpi"; exit 1; }
