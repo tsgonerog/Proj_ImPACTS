@@ -33,7 +33,7 @@ cd build_tapAdj_mpi || { echo "Failed to enter build_tapAdj_mpi"; exit 1; }
 make CLEAN || true
 
 # Configure the build (this creates the Makefile here)
-"$MITGCM_ROOT/tools/genmake2" -tap -mpi \
+"$MITGCM_ROOT/tools/tapenadified_genmake2" -tap -mpi \
     -rd="$MITGCM_ROOT" \
     -of="$MPI_OPTFILE" \
     -mods=../code_tap \

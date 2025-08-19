@@ -27,7 +27,7 @@ cd build_tapAdj_serial || { echo "Failed to enter build_tapAdj_serial"; exit 1; 
 make CLEAN || true
 
 # Configure the build (this creates the Makefile here)
-"$MITGCM_ROOT/tools/genmake2" -tap \
+"$MITGCM_ROOT/tools/tapenadified_genmake2" -tap \
     -rd="$MITGCM_ROOT" \
     -of="$MITGCM_ROOT/tools/build_options/linux_amd64_ifort" \
     -mods=../code_tap \
