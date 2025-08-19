@@ -21,7 +21,7 @@ build_dir=$home_dir/build_tapAdj_serial
 input_dir=$home_dir/input_tap
 run_dir=/scratch2/tshahriar/${job_name}_run$SLURM_JOB_ID  # unique per job
 
-# === Create run_data directory in scratch and move into it ===
+# === Create run directory in scratch and move into it ===
 mkdir -p "$run_dir"
 cd "$run_dir"
 
