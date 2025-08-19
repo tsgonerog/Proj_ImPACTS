@@ -1,7 +1,14 @@
 #!/bin/bash
+# mpi Tapenade-adjoint build for MITgcm
 
-# Set root directory for MITgcm
-MITGCM_ROOT=../MITgcm
+# Exit immediately if a command fails (-e),
+# treat unset variables as errors (-u),
+# and make pipelines fail if any part fails (pipefail).
+set -euo pipefail
+
+# Set root directory for MITgcm relative to THIS script (works after cd)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MITGCM_ROOT="$SCRIPT_DIR/../MITgcm"
 
 # Check MPI_OPTFILE
 if [ -z "$MPI_OPTFILE" ]; then
@@ -18,13 +25,13 @@ fi
 # Go to build directory
 cd build_frd_mpi || { echo "Failed to enter build_frd_mpi"; exit 1; }
 
-# Clean any previous build
-make CLEAN
+# Clean any previous build (ignore if Makefile not created yet)
+make CLEAN || true
 
-# Configure the build
-$MITGCM_ROOT/tools/genmake2 -mpi \
-    -rd=$MITGCM_ROOT \
-    -of=$MPI_OPTFILE \
+# Configure the build (this creates the Makefile here)
+"$MITGCM_ROOT/tools/genmake2" -mpi \
+    -rd="$MITGCM_ROOT" \
+    -of="$MPI_OPTFILE" \
     -mods=../code
 
 # Generate dependency list
