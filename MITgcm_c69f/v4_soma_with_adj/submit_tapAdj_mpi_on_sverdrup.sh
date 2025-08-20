@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH -J v4soma_tapAdj_mpi_test    # Set job name once here
+#SBATCH -J v4soma_tapAdj_mpi_test_MITgcm_c69f    # Set job name once here
 #SBATCH -o %x.%j.out   # %x = job name, %j = job ID
 #SBATCH -e %x.%j.err
 #SBATCH -N 2
@@ -16,10 +16,10 @@
 job_name=$SLURM_JOB_NAME
 
 # === Define key paths ===
-home_dir=/home/tshahriar/Proj_ImPACTS/MITgcm_c69c/v4_soma_with_adj
-build_dir=$home_dir/build_tapAdj_mpi
-input_dir=$home_dir/input_tap
-run_dir=/scratch2/tshahriar/${job_name}_run$SLURM_JOB_ID  # unique per job
+home_dir="$SLURM_SUBMIT_DIR"
+build_dir="$home_dir/build_tapAdj_mpi"
+input_dir="$home_dir/input_tap"
+run_dir="/scratch2/tshahriar/${job_name}_run$SLURM_JOB_ID"  # unique per job
 
 # === Create run directory in scratch and move into it ===
 mkdir -p "$run_dir"
