@@ -10,9 +10,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MITGCM_ROOT="$SCRIPT_DIR/../MITgcm"
 
-# Replace SIZE.h and the_main_loop_b.f_for_genmake2 with mpi versions
+# Replace SIZE.h and the_main_loop_b.f_for_patched_genmake2 with mpi versions
 cp code_tap/SIZE.h_mpi code_tap/SIZE.h
-# cp code_tap/the_main_loop_b.f_for_genmake2_mpiPatched code_tap/the_main_loop_b.f_for_genmake2
+cp code_tap/the_main_loop_b.f_for_patched_genmake2_mpiPatch code_tap/the_main_loop_b.f_for_patched_genmake2
 
 # Check MPI_OPTFILE
 if [ -z "$MPI_OPTFILE" ]; then

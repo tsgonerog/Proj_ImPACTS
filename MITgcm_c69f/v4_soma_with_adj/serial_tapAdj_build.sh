@@ -10,9 +10,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MITGCM_ROOT="$SCRIPT_DIR/../MITgcm"
 
-# Replace SIZE.h and the_main_loop_b.f_for_genmake2 with serial versions
+# Replace SIZE.h and the_main_loop_b.f_for_patched_genmake2 with serial versions
 cp code_tap/SIZE.h_serial code_tap/SIZE.h
-# cp code_tap/the_main_loop_b.f_for_genmake2_serialPatched code_tap/the_main_loop_b.f_for_genmake2
+cp code_tap/the_main_loop_b.f_for_patched_genmake2_serialPatch code_tap/the_main_loop_b.f_for_patched_genmake2
 
 # Ensure build directory exists
 if [ ! -d build_tapAdj_serial ]; then
