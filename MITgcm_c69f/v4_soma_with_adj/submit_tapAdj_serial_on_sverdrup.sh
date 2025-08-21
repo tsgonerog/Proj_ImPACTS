@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH -J v4soma_tapAdj_serial_test_MITgcm_c69f    # Set job name once here
+#SBATCH -J v4soma_tapAdj_serial_test    # Set job name once here
 #SBATCH -o %x.%j.out   # %x = job name, %j = job ID
 #SBATCH -e %x.%j.err
 #SBATCH -N 1
