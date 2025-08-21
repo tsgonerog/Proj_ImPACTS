@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH -J v4soma_tapAdj_mpi_test    # Set job name once here
+#SBATCH -J v4StP_mpi_test    # Set job name once here
 #SBATCH -o %x.%j.out   # %x = job name, %j = job ID
 #SBATCH -e %x.%j.err
 #SBATCH -N 2
@@ -16,17 +16,18 @@
 job_name=$SLURM_JOB_NAME
 
 # === Define key paths ===
-home_dir="$SLURM_SUBMIT_DIR"
-build_dir="$home_dir/build_tapAdj_mpi"
-input_dir="$home_dir/input_tap"
-run_dir="/scratch2/tshahriar/${job_name}_run$SLURM_JOB_ID"  # unique per job
+base_dir="$SLURM_SUBMIT_DIR"
+build_dir="$base_dir/build_tapAdj_mpi"
+run_dir="/scratch2/tshahriar/v4_soma_tapAdj_runs/${job_name}_run$SLURM_JOB_ID"  # unique per job
 
 # === Create run directory in scratch and move into it ===
 mkdir -p "$run_dir"
 cd "$run_dir"
 
-# === Link input files into run directory ===
-ln -s "$input_dir"/* .
+# === Copy and link input files into run directory ===
+cp "$base_dir/input_tap"/* .
+ln -s "$base_dir/input_binaries"/* .
+ln -s "$base_dir/input_adj_binaries"/* .
 
 # === Link MITgcm executable to run directory ===
 ln -s "$build_dir/mitgcmuv_tap_adj" .
