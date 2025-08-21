@@ -10,6 +10,9 @@
 #SBATCH --mail-type=begin
 #SBATCH --mail-type=end
 
+# Enable command tracing for the entire script || all commands will be echoed (with variable expansions) into the .err file
+set -x
+
 # necessary modules have been loaded through .bashrc
 
 # === Use the job name set above ===
@@ -29,8 +32,8 @@ cp "$base_dir/input_tap"/* .
 ln -s "$base_dir/input_binaries"/* .
 ln -s "$base_dir/input_adj_binaries"/* .
 
-# === Link MITgcm executable to run directory ===
-ln -s "$build_dir/mitgcmuv_tap_adj" .
+# === Copy MITgcm executable to run directory ===
+cp -p "$build_dir/mitgcmuv_tap_adj" .
 
 # === Record start time ===
 start_time=$(date +%s)
