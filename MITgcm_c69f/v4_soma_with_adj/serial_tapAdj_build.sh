@@ -31,7 +31,7 @@ make CLEAN || true
     -rd="$MITGCM_ROOT" \
     -of="$MITGCM_ROOT/tools/build_options/linux_amd64_ifort" \
     -mods=../code_tap \
-    -adof="$MITGCM_ROOT/tools/adjoint_options/adjoint_default"
+    -adof="$MITGCM_ROOT/tools/adjoint_options/adjoint_tap"
 
 # Generate dependency list
 make depend

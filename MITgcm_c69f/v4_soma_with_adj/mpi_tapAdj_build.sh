@@ -37,7 +37,7 @@ make CLEAN || true
     -rd="$MITGCM_ROOT" \
     -of="$MPI_OPTFILE" \
     -mods=../code_tap \
-    -adof="$MITGCM_ROOT/tools/adjoint_options/adjoint_default"
+    -adof="$MITGCM_ROOT/tools/adjoint_options/adjoint_tap"
 
 # Generate dependency list
 make depend
