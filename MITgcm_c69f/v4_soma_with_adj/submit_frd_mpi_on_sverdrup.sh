@@ -28,8 +28,8 @@ cd "$run_dir"
 cp "$base_dir/input"/* .
 ln -s "$base_dir/input_binaries"/* .
 
-# === Link MITgcm executable to run directory ===
-ln -s "$build_dir/mitgcmuv" .
+# === Copy MITgcm executable to run directory ===
+cp -p "$build_dir/mitgcmuv" .
 
 # === Record start time ===
 start_time=$(date +%s)
