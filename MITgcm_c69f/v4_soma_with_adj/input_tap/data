@@ -58,7 +58,7 @@
 #-chkptFreq ==> temporary checkpoint pickup files || every 5 years
  chkptFreq=155520000.,
 #-dumpFreq ==> freq of writing model state snapshot diagnostics || 0 bcz using diagnostic package?
- dumpFreq=0,
+ dumpFreq=0.,
 #-monitorFreq ==> dump monitor output to standard output inside STDOUT.0000
  monitorFreq=86400.,
  monitorSelect=2,
