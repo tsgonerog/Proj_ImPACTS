@@ -44,7 +44,7 @@ done
 job_name="$SLURM_JOB_NAME"      # capture the job name set above
 base_dir="$SLURM_SUBMIT_DIR"  # directory from where the job was submitted
 build_dir="$base_dir/build_tapAdj_serial"
-run_dir="/scratch2/tshahriar/v4_soma_tapAdj_runs/${job_name}_run$SLURM_JOB_ID"  # unique per job
+run_dir="/scratch2/tshahriar/v4_soma_tapAdj_runs/${job_name}_${endTime_days}d_run$SLURM_JOB_ID"  # unique per job
 
 # ========== STAGE THE RUN DIRECTORY ==========
 
