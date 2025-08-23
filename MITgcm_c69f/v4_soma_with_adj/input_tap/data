@@ -49,7 +49,6 @@
 
 # Time stepping parameters
  &PARM03
-#-test run (endTime <=1 month)
  startTime=0.,
  endTime=1296000.,
  deltaT=1200.,
