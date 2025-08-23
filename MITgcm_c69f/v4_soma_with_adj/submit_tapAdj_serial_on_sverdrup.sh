@@ -1,7 +1,7 @@
 #!/bin/bash
 
-#SBATCH -J v4StP_srl_test    # Set job name once here
-#SBATCH -o %x.%j.out   # %x = job name, %j = job ID
+#SBATCH -J v4StP_srl     # Set job name once here
+#SBATCH -o %x.%j.out     # %x = job name, %j = job ID
 #SBATCH -e %x.%j.err
 #SBATCH -N 1
 #SBATCH -n 1
@@ -13,39 +13,44 @@
 # Enable command tracing for the entire script || all commands will be echoed (with variable expansions) into the .err file
 set -x
 
+# ========== LOAD NECESSARY MODULES ==========
+
 # necessary modules have been loaded through .bashrc
 
-# === Use the job name set above ===
-job_name=$SLURM_JOB_NAME
+# ========== PATHS & NAMES ==========
 
-# === Define key paths ===
-base_dir="$SLURM_SUBMIT_DIR"
+job_name="$SLURM_JOB_NAME"      # capture the job name set above
+base_dir="$SLURM_SUBMIT_DIR"  # directory from where the job was submitted
 build_dir="$base_dir/build_tapAdj_serial"
 run_dir="/scratch2/tshahriar/v4_soma_tapAdj_runs/${job_name}_run$SLURM_JOB_ID"  # unique per job
 
-# === Create run directory in scratch and move into it ===
+# ========== STAGE THE RUN DIRECTORY ==========
+
+# create run directory in scratch and move into it
 mkdir -p "$run_dir"
 cd "$run_dir"
 
-# === Copy and link input files into run directory ===
+# copy and link input files into run directory
 cp "$base_dir/input_tap"/* .
 ln -s "$base_dir/input_binaries"/* .
 ln -s "$base_dir/input_adj_binaries"/* .
 
-# === Copy MITgcm executable to run directory ===
+# copy MITgcm executable to run directory
 cp -p "$build_dir/mitgcmuv_tap_adj" .
 
-# === Record start time ===
-start_time=$(date +%s)
+# ========== RUN & TIMING ==========
+
+# record start time
+run_start_time=$(date +%s)
 echo "Run started at: $(date)" > run_timing.txt
 
-# === Run the model in serial ===
+# run the model in serial
 ./mitgcmuv_tap_adj > output_tap_adj.txt 2>&1
 
-# === Record end time ===
-end_time=$(date +%s)
+# record end time
+run_end_time=$(date +%s)
 echo "Run ended at:   $(date)" >> run_timing.txt
 
-# === Calculate and append elapsed time ===
-elapsed=$((end_time - start_time))
+# calculate and append elapsed time
+elapsed=$((run_end_time - run_start_time))
 printf "Total runtime:  %02d:%02d:%02d (HH:MM:SS)\n" $((elapsed/3600)) $(( (elapsed%3600)/60 )) $((elapsed%60)) >> run_timing.txt

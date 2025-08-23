@@ -49,6 +49,7 @@
 
 # Time stepping parameters
  &PARM03
+#-values of some parameters in this namelist are being set in the submit script
  startTime=0.,
  endTime=1296000.,
  deltaT=1200.,
@@ -63,9 +64,9 @@
  monitorSelect=2,
  tauThetaClimRelax=5184000.,
  tauSaltClimRelax=15552000.,
-#-adjMonitorFreq ==> monitors adj information inside STDOUT.0000
+#-adjMonitorFreq ==> monitors adj information inside STDOUT.0000 (not sure whether it works with Tapenade)
  adjMonitorFreq=86400.,
-#-adjDumpFreq ==> spit out adj fields along the way e.g., ADJTheta.0000000000.data
+#-adjDumpFreq ==> spit out adj fields along the way e.g., ADJTheta.0000000000.data (not sure whether it works with tapenade)
  adjDumpFreq=86400.,
  &
 
