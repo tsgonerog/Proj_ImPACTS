@@ -17,7 +17,7 @@ set -x
 
 # necessary modules have been loaded through .bashrc
 
-# ========== SET SOME TIME STEPPING PARAMETERS (IN DAYS) ==========
+# ========== SET SOME TIME STEPPING PARAMETERS (IN DAYS) IN input_tap/data ==========
 
 endTime_days=15
 dumpFreq_days=0
@@ -25,7 +25,7 @@ monitorFreq_days=1
 adjMonitorFreq_days=1
 adjDumpFreq_days=1
 
-#----------- do not edit below --------------
+#----------- do not edit below --------------------------
 namelist_data="$SLURM_SUBMIT_DIR/input_tap/data"
 
 # Auto-detect all *_days variables and strip suffix
@@ -42,7 +42,7 @@ done
 # ========== PATHS & NAMES ==========
 
 job_name="$SLURM_JOB_NAME"      # capture the job name set above
-base_dir="$SLURM_SUBMIT_DIR"  # directory from where the job was submitted
+base_dir="$SLURM_SUBMIT_DIR"    # directory from where the job was submitted
 build_dir="$base_dir/build_tapAdj_serial"
 run_dir="/scratch2/tshahriar/v4_soma_tapAdj_runs/${job_name}_${endTime_days}d_run$SLURM_JOB_ID"  # unique per job
 
