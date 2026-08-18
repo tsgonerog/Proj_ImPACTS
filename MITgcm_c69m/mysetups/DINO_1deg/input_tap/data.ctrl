@@ -1,0 +1,84 @@
+# *********************
+# ECCO controlvariables
+# *********************
+ &CTRL_NML
+# doSinglePrecTapelev=.TRUE.,
+ &
+#
+# *********************
+# names for ctrl_pack/unpack
+# *********************
+ &CTRL_PACKNAMES
+ &
+#
+# *********************
+# names for CTRL_GENARR, CTRL_GENTIM
+# *********************
+ &CTRL_NML_GENARR
+# ======== 2-D CONTROLS (time varying) ========
+# Zonal wind stress control  → ADJtaux, adxx_tauu
+ xx_gentim2d_file(1)       = 'xx_tauu',
+ xx_gentim2d_weight(1)     = 'ones_64b.bin',
+# optional bounds (units: N/m^2):
+# xx_gentim2d_bounds(1:5,1) = -0.5, -0.3, 0.3, 0.5, 5.,
+#
+# Meridional wind stress control  → ADJtauy, adxx_tauv
+ xx_gentim2d_file(2)       = 'xx_tauv',
+ xx_gentim2d_weight(2)     = 'ones_64b.bin',
+# xx_gentim2d_bounds(1:5,2) = -0.5, -0.3, 0.3, 0.5, 5.,
+#
+# surface heat flux (Qnet) control
+ xx_gentim2d_file(3)   = 'xx_qnet',
+ xx_gentim2d_weight(3) = 'ones_64b.bin',
+# xx_gentim2d_bounds(1:5,3) = -200., -100., 100., 200., 1.,
+#
+# freshwater flux (EmPmR) control
+ xx_gentim2d_file(4)   = 'xx_empmr',
+ xx_gentim2d_weight(4) = 'ones_64b.bin',
+# xx_gentim2d_bounds(1:5,4) = -1.E-4, -5.E-5, 5.E-5, 1.E-4, 1.,
+#
+# shortwave flux (Qsw) control
+ xx_gentim2d_file(5)   = 'xx_qsw',
+ xx_gentim2d_weight(5) = 'ones_64b.bin',
+# xx_gentim2d_bounds(1:5,5) = -300., -150., 150., 300., 1.,
+#
+# zonal wind speed (Uwind) control
+ xx_gentim2d_file(6)   = 'xx_uwind',
+ xx_gentim2d_weight(6) = 'ones_64b.bin',
+# xx_gentim2d_bounds(1:5,6) = -10., -5., 5., 10., 1.,
+#
+# meridional wind speed (Vwind) control
+ xx_gentim2d_file(7)   = 'xx_vwind',
+ xx_gentim2d_weight(7) = 'ones_64b.bin',
+# xx_gentim2d_bounds(1:5,7) = -10., -5., 5., 10., 1.,
+#
+ xx_gentim2d_file(8)       = 'xx_fu',
+ xx_gentim2d_weight(8)     = 'ones_64b.bin',
+#
+ xx_gentim2d_file(9)       = 'xx_fv',
+ xx_gentim2d_weight(9)     = 'ones_64b.bin',
+#
+# ======== 3-D CONTROLS (time invariant) ========
+ xx_genarr3d_file(1)       = 'xx_theta',
+ xx_genarr3d_weight(1)     = 'ones_64b.bin',
+ xx_genarr3d_bounds(1:5,1) = -2.,-1.9,39.,40.,5.,
+#
+ xx_genarr3d_file(2)       = 'xx_salt',
+ xx_genarr3d_weight(2)     = 'ones_64b.bin',
+ xx_genarr3d_bounds(1:5,2) = 29.,29.5,40.5,41.,5.,
+#
+ xx_genarr3d_file(3)       = 'xx_diffkr',
+ xx_genarr3d_weight(3)     = 'ones_64b.bin',
+ xx_genarr3d_bounds(1:5,3) = 1.E-6,2.E-6,4.E-4,5.E-4,0.,
+#
+# initial zonal velocity
+ xx_genarr3d_file(4)       = 'xx_uvel',
+ xx_genarr3d_weight(4)     = 'ones_64b.bin',
+# xx_genarr3d_bounds(1:5,4) = -0.5, -0.25, 0.25, 0.5, 1.,
+#
+# initial meridional velocity
+ xx_genarr3d_file(5)       = 'xx_vvel',
+ xx_genarr3d_weight(5)     = 'ones_64b.bin',
+# xx_genarr3d_bounds(1:5,5) = -0.5, -0.25, 0.25, 0.5, 1.,
+#
+ &

@@ -1,0 +1,52 @@
+# =========================
+# pkg AUTODIFF parameters :
+# =========================
+#  inAdExact :: get an exact adjoint (no approximation) (def=.True.)
+#
+ &AUTODIFF_PARM01
+# inAdExact = .FALSE.,
+ useKPPinAdMode = .FALSE.,
+ useGMRediInAdMode = .TRUE.,
+### useGGL90inAdMode = .FALSE.,
+ useSALT_PLUMEinAdMode = .FALSE.,
+# useInOutAdvar = .TRUE.,
+ inAdviscArNr       = 2.E-3,
+ inAdviscAhGrid     = 2.E-2,
+ inAdviscA4Grid     = 0.05E0,
+##watch out for these units when using logdiffkr!!!
+# inAddiffKrNrT      = 1.E-4,
+# inAddiffKrNrS      = 1.E-4,
+ inAddiffKhT        = 5.E2,
+ inAddiffKhS        = 5.E2,
+ inAddiffK4T        = 0.E10,
+ inAddiffK4S        = 0.E10,
+# inAdviscFac        = 2.E0,
+## make sure outAdviscA[4,h]Grid matches viscA[4,h]grid in data!!
+ outAdviscArNr      = 5.E-4,
+ outAdviscAhGrid    = 0.5E-2,
+# outAdviscAhGrid    = 1.E-4,
+ outAdviscA4Grid    = 0.E0,
+##watch out for these units when using logdiffkr!!!
+# outAddiffKrNrT     = 0.E-5,
+# outAddiffKrNrS     = 0.E-5,
+ outAddiffKhT       = 0.E-2,
+ outAddiffKhS       = 0.E-2,
+ outAddiffK4T       = 0.E10,
+ outAddiffK4S       = 0.E10,
+# outAdviscFac       = 1.E0,
+
+# CAB MAKE SURE THERE IS NO SWITCH FOR DYNAMICS,only Freedrift
+
+# this goes in data.seaice
+# SEAICEuseFREEDRIFT = .FALSE.,
+# SEAICEuseFREEDRIFTswitchInAd = .TRUE.,
+ SEAICEuseFREEDRIFTswitchInAd = .FALSE.,
+ SEAICEuseDYNAMICSswitchInAd = .FALSE.,
+ useSEAICEinAdMode = .TRUE.,
+ outSEAICEadjMODE    = 1,
+ inSEAICEadjMODE    = 1,
+ SIregFacInAd = 0.0,
+ SIregFacInFw = 1.0,
+ viscFacInFw = 1.,
+ viscFacInAd = 10.,
+ &

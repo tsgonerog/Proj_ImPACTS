@@ -1,0 +1,179 @@
+# ====================
+# | Model parameters |
+# ====================
+#
+# Continuous equation parameters
+ &PARM01
+ tRef               = 3*23.,3*22.,21.,2*20.,19.,2*18.,17.,2*16.,15.,14.,13.,
+                      12.,11.,2*9.,8.,7.,2*6.,2*5.,3*4.,3*3.,4*2.,12*1.,
+ sRef               = 50*34.5,
+ no_slip_sides  = .TRUE.,
+ no_slip_bottom = .TRUE.,
+#
+ viscAr=5.e-4,
+# viscAhGrid = 1.E-4,
+ viscA4Grid = 0.E0,
+ viscAhGrid = 0.5E-2,
+#
+ diffKhT=0.E0,
+ diffKhS=0.E0,
+ diffK4T=0.E10,
+ diffK4S=0.E10,
+ bottomDragQuadratic = 0.001,
+ implicitDiffusion=.TRUE.,
+ implicitViscosity=.TRUE.,
+ viscC4Leith=1.5,
+ viscC4Leithd=1.5,
+ viscA4GridMax=0.5,
+ useAreaViscLength=.TRUE.,
+ gravity=9.81,
+ rhonil=1029.,
+ rhoConst=1029.,
+ rhoConstFresh=1000.,
+ eosType='JMD95Z',
+ implicitFreeSurface=.TRUE.,
+ exactConserv=.TRUE.,
+ useSingleCpuIO=.TRUE.,
+#
+## if use nlfs and rfwf, can also use adv 7
+## if use adv7 (and seaice adv 77), need to compile
+## code_adv7_bypass_tamc_c67 and set overlap ol[x,y]=8 in SIZE.h
+# tempAdvScheme=7,
+# saltAdvScheme=7,
+#
+## if use adv30, only need overlap ol[x,y]=4
+ tempAdvScheme=30,
+ saltAdvScheme=30,
+ tempVertAdvScheme=3,
+ saltVertAdvScheme=3,
+ tempImplVertAdv=.TRUE.,
+ saltImplVertAdv=.TRUE.,
+ staggerTimeStep=.TRUE.,
+ vectorInvariantMomentum=.TRUE.,
+ useJamartWetPoints=.TRUE.,
+#
+## set to eccov4, make sure minbathy=20m first
+ hFacMin=.2,
+ hFacMinDr=5.,
+#
+## if use nlfs and rfwf, need smaller deltaT
+ select_rStar=2,
+ nonlinFreeSurf=4,
+ useRealFreshWaterFlux=.TRUE.,
+#
+## if use lfs and .not.rfwf, deltaT=1800s
+# nonlinFreeSurf=0,
+# useRealFreshWaterFlux=.FALSE.,
+# linFSconserveTr=.FALSE.,
+#
+ allowFreezing=.FALSE.,
+ readBinaryPrec=64,
+ writeBinaryPrec=32,
+ debugLevel=1,
+ /
+
+# Elliptic solver parameters
+ &PARM02
+ cg2dMaxIters=300,
+ cg2dTargetResWunit=1.E-10,
+ /
+
+# Time stepping parameters
+ &PARM03
+ pickupStrictlyMatch=.FALSE.,
+# nIter0=0,
+ nIter0=1,
+#atn: linking 2015/jan/01 to 2
+#atn: linking 2015/mar/01 NB[,b,c] to 2 to spin up
+# nIter0=2,
+#atn: linking 2015/sep/01 to 3
+# nIter0=3,
+###### 3600 sec
+# deltaT = 3600.,
+# 2yr: 365.25*24*2*3600/3600
+# nTimeSteps = 17532,
+# 5yr: 365.25*24*5*3600/3600
+# nTimeSteps = 43830,
+###### 1800 sec
+ deltaT = 1800.,
+# nTimeSteps = 143,
+# 1 month: 31*24*3600/1800
+# nTimeSteps = 1487,
+# 2 month: 61*24*3600/1800
+# nTimeSteps = 2927,
+# 3 month: 90*24*3600/1800
+# nTimeSteps = 4319,
+# 4 month: 120*24*3600/1800
+# nTimeSteps = 5759,
+# 6 month: (31+28+31+30+31+30)*24*3600/1800
+# nTimeSteps = 8688,
+# nTimeSteps = 8687,
+# 1yr: 365.25*24*3600/1800
+# 6 month: (31+28+31+30+31+30)*24*3600/1800
+# nTimeSteps = 8688,
+# nTimeSteps = 8687,
+# 1yr: 365.25*24*3600/1800
+# nTimeSteps = 17532,
+ nTimeSteps = 17519,
+# (365+274)*24*3600/1800 end of Sep 2016:
+# nTimeSteps = 30672,
+# nTimeSteps = 30671,
+# (365+274-1)*24*3600/1800 end of Sep 2016:
+# nTimeSteps = 30624,
+#2mo: (31+27)*24*3600/1800
+# nTimeSteps = 2784,
+# 2yr: 365.25*24*2*3600/1800
+# nTimeSteps = 35064,
+# 33mo: (365+366+273-1)*24*3600/1800
+# nTimeSteps = 48144,
+# 5yr: 365.25*24*5*3600/1800
+# nTimeSteps = 87660,
+# 5yr minus 3mo because cost heff is on month 57
+# nTimeSteps = 83231,
+# 3yr 365.25*24*3600*3/1800 = 52596
+# nTimeSteps = 52596,
+# 14years = 14*365.25*24*3600/1800
+# nTimeSteps = 245448,
+# 14years = (11*365+3*366)*24*3600/1800-1
+# nTimeSteps = 245424,
+###### 900 Sec
+# deltaT = 900.,
+# 2yr : 365.25*24*2*3600/900
+# nTimeSteps = 70128,
+###### pickup generation
+# three steps to get pickups
+# deltaT = 90.,
+ abEps = 0.1,
+ forcing_In_AB=.FALSE.,
+ momDissip_In_AB=.FALSE.,
+ pChkptFreq  =31536000.0,
+ monitorFreq = 2635200.0,
+ adjDumpFreq=2635200.0,
+ adjMonitorFreq = 2635200.0,
+ pickupStrictlyMatch=.FALSE.,
+ /
+
+# Gridding parameters
+ &PARM04
+ usingCurvilinearGrid=.TRUE.,
+ delR = 
+    10.00, 10.00, 10.00, 10.00, 10.00, 10.00, 10.00, 10.01,
+    10.03, 10.11, 10.32, 10.80, 11.76, 13.42, 16.04, 19.82, 24.85,
+    31.10, 38.42, 46.50, 55.00, 63.50, 71.58, 78.90, 85.15, 90.18,
+    93.96, 96.58, 98.25, 99.25,100.01,101.33,104.56,111.33,122.83,
+    139.09,158.94,180.83,203.55,226.50,249.50,272.50,295.50,318.50,
+    341.50,364.50,387.50,410.50,433.50,456.50,
+ /
+
+# Input datasets
+ &PARM05
+ adTapeDir='tapes',
+ bathyFile = 'bathy_obcs15Nov2018.bin',
+ hydrogThetaFile='WOA09v2_T_llc90notsqeeze_JAN.bin',
+ hydrogSaltFile ='WOA09v2_S_llc90notsqueeze_JAN.bin',
+ viscA4Dfile    ='visc_v1up9_cap0jy460GoM600_Pac0.bin',
+ viscA4Zfile    ='visc_v1up9_cap0jy460GoM600_Pac0.bin',
+# diffKrFile     ='diffkr_xxi12icoast9x10_merge.bin',
+# diffKrFile     ='logdiffkr_xxi12icoast9x10_merge.bin',
+ diffKrFile     ='logdiffkr_xxi12icoast9x10_merge_m1p5.bin',
+ /
