@@ -1,0 +1,84 @@
+#!/bin/bash
+#
+#  genmake2 optfile for Perlmutter (NERSC), CPU partition, PrgEnv-gnu.
+#
+#  Perlmutter CPU nodes are AMD EPYC 7763 (Zen 3). NERSC wraps every compiler
+#  behind the Cray drivers `ftn`, `cc` and `CC`, which already carry the include
+#  and library paths for cray-mpich and the cray-* libraries. Calling gfortran
+#  or mpif90 directly is not supported, so the wrappers are used unconditionally
+#  here rather than switching on $MPI the way the generic gfortran optfile does.
+#
+#  Load before building:
+#      module load PrgEnv-gnu
+#      module load cray-mpich cray-hdf5 cray-netcdf
+#  tools/machine_env.sh does this for you via impacts_load_modules.
+#
+#  STATUS: written from the MITgcm gfortran and Cray templates and NERSC's
+#  documented compiler wrappers. It has NOT been compile-tested on Perlmutter --
+#  no access from the machine it was written on. Expect to adjust FOPTIM and the
+#  netCDF paths on first use, and see PORTING.md.
+#
+#  Tested on: nothing yet.
+
+CC='cc'
+FC='ftn'
+F90C='ftn'
+LINK='ftn'
+
+DEFINES='-DWORDLENGTH=4 -DNML_TERMINATOR'
+CPP='cpp -traditional -P'
+
+EXTENDED_SRC_FLAG='-ffixed-line-length-132'
+F90FIXEDFORMAT='-ffixed-form'
+GET_FC_VERSION="--version"
+OMPFLAG='-fopenmp'
+
+NOOPTFLAGS='-O0'
+NOOPTFILES=''
+CFLAGS='-O0'
+
+# The Cray wrapper hides the real compiler version behind its own banner, so ask
+# gfortran directly. If PrgEnv-intel or PrgEnv-cray is loaded instead, this
+# returns nothing and the version-gated flags below are simply skipped.
+fcVers=`gfortran -dumpversion 2>/dev/null | head -n 1 | sed 's/^[^0-9]* //;s/\..*$//'`
+if ! [[ $fcVers =~ ^[0-9]+$ ]] ; then
+    echo "    un-recognized Compiler-version '$fcVers' ; ignored (-> set to 0)" ; fcVers=0 ;
+else echo "    get Compiler-version: '$fcVers'" ; fi
+
+# gfortran >= 10 rejects the mismatched argument types that MITgcm and the
+# Tapenade-generated code both rely on; without this the adjoint build fails.
+if [ $fcVers -ge 10 ] ; then
+    FFLAGS="$FFLAGS -fallow-argument-mismatch"
+fi
+
+# MITgcm MDS files are big-endian on disk. Every pickup, input binary and
+# ADJ*/adxx* output in this project was written that way on sverdrup, so this
+# must stay for the files to be readable across the two machines.
+FFLAGS="$FFLAGS -fconvert=big-endian -fimplicit-none"
+FFLAGS="$FFLAGS -mcmodel=medium"
+CFLAGS="$CFLAGS -mcmodel=medium"
+
+if test "x$IEEE" = x ; then       #- with optimisation:
+    # -march=znver3 matches the EPYC 7763. Drop to -march=native if a future
+    # node type differs, or remove entirely if a build is misbehaving: the
+    # adjoint is far more sensitive to aggressive optimisation than the forward.
+    FOPTIM='-O2 -funroll-loops -march=znver3'
+    NOOPTFILES="$NOOPTFILES ini_masks_etc.F"
+else
+    FFLAGS="$FFLAGS -Wall"
+    if [ $fcVers -ge 10 ] ; then
+        FFLAGS="$FFLAGS -Wno-unused-dummy-argument"
+    fi
+    if test "x$DEVEL" = x ; then  #- no optimisation + IEEE :
+        FOPTIM='-O0'
+    else                          #- development/check options:
+        FOPTIM='-O0 -g -fbounds-check'
+        FOPTIM="$FOPTIM -ffpe-trap=invalid,zero,overflow -finit-real=inf"
+    fi
+fi
+
+# The Cray wrappers supply MPI and the cray-* libraries, so no explicit -I/-L is
+# needed for them. netCDF is only required if useSingleCpuIO / pkg/mnc is on,
+# which this project does not use; uncomment if that changes.
+#INCLUDES="-I${NETCDF_DIR}/include"
+#LIBS="-L${NETCDF_DIR}/lib -lnetcdff -lnetcdf"

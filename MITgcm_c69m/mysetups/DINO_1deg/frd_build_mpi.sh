@@ -10,12 +10,19 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MITGCM_ROOT="$SCRIPT_DIR/../../MITgcm"
 
+# Per-machine optfiles, module stack and Tapenade check. Defaults reproduce the
+# sverdrup settings, so nothing changes here; on another machine add a case
+# block to tools/machine_env.sh rather than editing this script.
+source "$SCRIPT_DIR/../../../tools/machine_env.sh"
+impacts_load_modules
+
 # Replace SIZE.h with mpi version
 cp code/SIZE.h_mpi code/SIZE.h
 
-# Check MPI_OPTFILE
-if [ -z "$MPI_OPTFILE" ]; then
-    echo "ERROR: MPI_OPTFILE is not set. Please export it or define it in the script or add in your bashrc."
+# MPI_OPTFILE is defaulted by machine_env.sh; this catches a machine with none.
+if [ -z "$MPI_OPTFILE" ] || [ ! -f "$MPI_OPTFILE" ]; then
+    echo "ERROR: MPI_OPTFILE is unset or missing: '$MPI_OPTFILE'"
+    echo "       Set it for machine '$MACHINE' in tools/machine_env.sh, or export it."
     exit 1
 fi
 

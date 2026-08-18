@@ -23,7 +23,8 @@ tracked.
 | --- | --- |
 | `MITgcm_c69m/` | MITgcm **checkpoint69m** (2026-03-30) source tree plus the experiments built against it |
 | `analyses/` | Jupyter notebooks that read run output from scratch and produce diagnostics/figures |
-| `tools/` | `pre_push_check.sh`, the repo-wide sanity check described below |
+| `tools/` | `machine_env.sh` (per-machine settings), `submit.sh`, `pre_push_check.sh` |
+| `PORTING.md` | moving the setup to another cluster |
 | `resources/` | Reference notebooks from collaborators (e.g. `dinocean` package usage) |
 
 The MITgcm tree is vendored in full (~6,400 tracked files), not a submodule,
@@ -119,6 +120,33 @@ variant is produced.
 
 ---
 
+## Machines
+
+Everything cluster-specific lives in `tools/machine_env.sh`: scratch root, MPI
+launcher, `genmake2` optfiles, sbatch flags and the module stack. Build and
+submit scripts source it, so the same scripts run on either machine and porting
+means adding one case block rather than editing a dozen files.
+
+| | sverdrup (default) | perlmutter (NERSC) |
+| --- | --- | --- |
+| detected by | fallback | `$NERSC_HOST` |
+| scratch | `/scratch2/$USER` | `$SCRATCH` |
+| launcher | `mpirun -n` | `srun -n` |
+| optfile | Intel, from `crios_computing` | `linux_amd64_gnu+mpi_perlmutter` |
+| modules | from `~/.bashrc` | `PrgEnv-gnu`, `cray-*` |
+
+```bash
+source tools/machine_env.sh && impacts_check_env   # warns about a missing
+                                                   # tapenade, optfile, account
+```
+
+Force a machine with `IMPACTS_MACHINE=perlmutter`. An unknown machine is refused
+rather than silently treated as sverdrup. **See `PORTING.md`** before the first
+run somewhere new — notably that Tapenade is not in this repository and
+`input_binaries/` is not tracked.
+
+---
+
 ## Building
 
 Both build drivers resolve the MITgcm root relative to their own location, so
@@ -149,7 +177,7 @@ adjoint runs on 27 ranks, matching `nPx=3, nPy=9` in `SIZE.h_mpi`:
 
 ```bash
 cd MITgcm_c69m/mysetups/DINO_1deg
-sbatch tapAdj_submit_mpi_patched_on_sverdrup.sh
+../../../tools/submit.sh tapAdj_submit_mpi_patched.sh   # not plain sbatch
 ```
 
 A submit script:
@@ -165,7 +193,7 @@ A submit script:
 5. runs the executable and writes `run_timing.txt`.
 
 Serial SOMA scripts come pre-made for a range of durations
-(`submit_tapAdj_serial_on_sverdrup_{5,30,180,360}_day_patched.sh`) since adjoint
+(`submit_tapAdj_serial_{5,30,180,360}_day_patched.sh`) since adjoint
 cost grows quickly with integration length.
 
 > Run directories, scratch paths, and the notification e-mail address are
@@ -238,7 +266,7 @@ Both setups' submit scripts carry the equivalent `sed -i` lines **commented
 out**, since their namelists already have the packages off. Worth knowing when
 reading older run records: the archived `sr_soma` setup did it the other way
 round, leaving `input_tap/data.pkg` at `.TRUE.` and having each
-`submit_tapAdj_serial_on_sverdrup_*_day.sh` rewrite them to `.FALSE.` in the
+`submit_tapAdj_serial_*_day_patched.sh` rewrite them to `.FALSE.` in the
 staged run directory. So check both places before concluding a package is
 active.
 

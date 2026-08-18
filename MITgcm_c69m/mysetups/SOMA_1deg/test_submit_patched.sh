@@ -6,16 +6,22 @@
 #SBATCH -N 1
 #SBATCH -n 1
 #SBATCH -t 48:00:00
-#SBATCH --mail-user=tanvirshahriar@utexas.edu
+#SBATCH --mail-user=tanvirshahriar@utexas.edu   # override: sbatch --mail-user=...
 #SBATCH --mail-type=begin
 #SBATCH --mail-type=end
 
 # Enable command tracing for the entire script || all commands will be echoed (with variable expansions) into the .err file
 set -x
 
-# ========== LOAD NECESSARY MODULES ==========
+# ========== MACHINE SETTINGS & MODULES ==========
 
-# necessary modules have been loaded through .bashrc
+# Per-machine scratch root, MPI launcher and module stack. On sverdrup this
+# reproduces what ~/.bashrc already provides and changes nothing; on Perlmutter
+# it loads PrgEnv-gnu and friends. SLURM_SUBMIT_DIR is used rather than
+# BASH_SOURCE because Slurm runs this script from a spooled copy.
+REPO_ROOT="$(cd "$SLURM_SUBMIT_DIR/../../.." && pwd)"
+source "$REPO_ROOT/tools/machine_env.sh"
+impacts_load_modules
 
 # ========== SET SOME TIME STEPPING PARAMETERS (IN DAYS) IN input_tap/data ==========
 
@@ -43,7 +49,7 @@ done
 job_name="$SLURM_JOB_NAME"      # capture the job name set above
 base_dir="$SLURM_SUBMIT_DIR"    # directory from where the job was submitted
 build_dir="$base_dir/build_tapAdj_serial_patched"
-run_dir="/scratch2/tshahriar/SOMA_1deg_tapAdj_runs/${job_name}_${endTime_days}d_run$SLURM_JOB_ID"  # unique per job
+run_dir="$SCRATCH_ROOT/SOMA_1deg_tapAdj_runs/${job_name}_${endTime_days}d_run$SLURM_JOB_ID"  # unique per job
 
 # ========== STAGE THE RUN DIRECTORY ==========
 

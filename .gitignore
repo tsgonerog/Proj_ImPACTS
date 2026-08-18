@@ -7,6 +7,13 @@
 # Match any directory that starts with 'build' (e.g., build_test, build_upd)
 **/build*/
 
+# ...but NOT MITgcm's build_options/, which is upstream source, not a build
+# directory. The rule above was swallowing all 95 genmake2 optfiles, so a fresh
+# clone had none and could not build on any machine. A negation only works
+# because it un-excludes the directory itself; git cannot re-include a file
+# inside a directory that stays excluded.
+!**/build_options/
+
 # Ignore all Jupyter Notebook checkpoints directory an any depth
 **/.ipynb_checkpoints/
 

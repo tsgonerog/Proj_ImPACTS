@@ -16,7 +16,13 @@ use_TapProfile="NO"   # <-- change this to "YES" or "AFTER" as needed
 
 # Set root directory for MITgcm relative to THIS script (works after cd)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-MITGCM_ROOT="$SCRIPT_DIR/../MITgcm"
+# ../MITgcm was wrong: the tree lives one level higher, at MITgcm_c69m/MITgcm.
+MITGCM_ROOT="$SCRIPT_DIR/../../MITgcm"
+
+# Per-machine optfiles, module stack and Tapenade check. Defaults reproduce the
+# sverdrup settings; add a case block to tools/machine_env.sh for a new machine.
+source "$SCRIPT_DIR/../../../tools/machine_env.sh"
+impacts_load_modules
 
 # Replace SIZE.h with serial version
 cp code_tap/SIZE.h_serial code_tap/SIZE.h
@@ -62,7 +68,7 @@ make CLEAN || true
 # Configure the build (this creates the Makefile here)
 "$MITGCM_ROOT/tools/$GENMAKE_SCRIPT" -tap \
     -rd="$MITGCM_ROOT" \
-    -of="$MITGCM_ROOT/tools/build_options/linux_amd64_ifort" \
+    -of="$SERIAL_OPTFILE" \
     -mods=../code_tap \
     -adof="$MITGCM_ROOT/tools/adjoint_options/adjoint_tap"
 

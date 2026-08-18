@@ -28,6 +28,13 @@ else
     printf "        ${dim}run ./analyses/tools/install_git_filters.sh${off}\n"
 fi
 
+if ( source tools/machine_env.sh >/dev/null 2>&1 ); then
+    m=$( source tools/machine_env.sh >/dev/null 2>&1; echo "$MACHINE" )
+    ok "machine profile resolves (MACHINE=$m)"
+else
+    bad "tools/machine_env.sh does not source cleanly"
+fi
+
 echo
 echo "── side effects you did not author ──────────────────────────────────"
 # Submit scripts sed -i the tracked namelist in input_tap/, so submitting a job

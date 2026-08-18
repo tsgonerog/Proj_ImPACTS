@@ -1,0 +1,160 @@
+# Porting to another HPC machine
+
+Everything that differs between clusters lives in one file, `tools/machine_env.sh`.
+Build and submit scripts source it, so moving to a new machine means adding a
+case block there rather than editing a dozen scripts.
+
+Currently defined: **sverdrup** (default) and **perlmutter** (NERSC).
+
+The machine is detected from `$NERSC_HOST`, which NERSC sets on every login and
+compute node. sverdrup sets nothing reliable — its compute nodes are named
+`c1-1` and similar — so it is the fallback. Force one with
+`export IMPACTS_MACHINE=perlmutter`.
+
+---
+
+## What the profile controls
+
+| Variable | sverdrup | perlmutter |
+| --- | --- | --- |
+| `SCRATCH_ROOT` | `/scratch2/$USER` | `$SCRATCH` (`/pscratch/sd/<i>/<user>`) |
+| `MPI_LAUNCHER` | `mpirun -n` | `srun -n` |
+| `MPI_OPTFILE` | `crios_computing/.../linux_amd64_ifort+mpi_sverdrup` | `MITgcm/tools/build_options/linux_amd64_gnu+mpi_perlmutter` |
+| `SERIAL_OPTFILE` | `MITgcm/tools/build_options/linux_amd64_ifort` | same as MPI (Cray wrappers) |
+| `SBATCH_EXTRA` | *(empty)* | `-A $NERSC_ACCOUNT -C cpu -q $PERLMUTTER_QOS -t $PERLMUTTER_WALLTIME` |
+| modules | none — loaded from `~/.bashrc` | `PrgEnv-gnu`, `cray-mpich`, `cray-hdf5`, `cray-netcdf` |
+
+The optfiles are set **from the machine, not inherited from the environment**.
+`~/.bashrc` on sverdrup exports `MPI_OPTFILE`, and letting that win would
+silently build Perlmutter with the Intel sverdrup optfile. Override deliberately
+with `IMPACTS_MPI_OPTFILE` / `IMPACTS_SERIAL_OPTFILE`.
+
+---
+
+## First time on Perlmutter
+
+### 1. Environment
+
+```bash
+export NERSC_ACCOUNT=mXXXX          # required: sbatch rejects jobs without -A
+export TAPENADE_HOME=$HOME/tapenade_3.16-v2
+export PATH=$PATH:$TAPENADE_HOME/bin
+```
+
+**Tapenade is not a NERSC module and is not in this repository.** `genmake2 -tap`
+shells out to a `tapenade` command on `$PATH`. Download Tapenade 3.16-v2 from
+INRIA, unpack it, and make sure a JRE is available (`module load java`, or the
+system one). Without it every adjoint build fails at the differentiation step.
+
+Check before building:
+
+```bash
+source tools/machine_env.sh && impacts_check_env
+```
+
+It warns about a missing `tapenade`, a missing optfile, and an unset
+`NERSC_ACCOUNT` — the three things that otherwise fail deep into a build or at
+submission.
+
+### 2. Data that git does not carry
+
+| What | Size | How to get it |
+| --- | --- | --- |
+| `DINO_1deg/input_binaries/` | 179 MB, 23 files | copy from sverdrup — **produced outside this repo, nothing regenerates it** |
+| `DINO_1deg/input_adj_binaries/ones_64b.bin` | 2.8 MB | copy; every `xx_*_weight` in `data.ctrl` points at it |
+| `SOMA_1deg/input_binaries/` | 64 KB | regenerate with `input/gendata.py` |
+| `SOMA_1deg/input_adj_binaries/` | 1.2 MB | copy |
+| 180-year pickup | 20 MB | copy, if you want the main adjoint experiment |
+
+```bash
+# from sverdrup
+rsync -av MITgcm_c69m/mysetups/DINO_1deg/input_binaries/ \
+          MITgcm_c69m/mysetups/DINO_1deg/input_adj_binaries/ \
+          perlmutter.nersc.gov:~/Proj_ImPACTS/MITgcm_c69m/mysetups/DINO_1deg/
+```
+
+Both directories are gitignored, so a fresh clone has neither. There is no
+adjoint run until they are in place.
+
+MITgcm reads and writes big-endian MDS files. The Perlmutter optfile keeps
+`-fconvert=big-endian` for exactly this reason, so pickups and `ADJ*` output stay
+readable across the two machines.
+
+**Perlmutter `$SCRATCH` is purged on inactivity.** Pickups you care about belong
+on CFS (`/global/cfs/cdirs/<repo>/`), not scratch.
+
+### 3. Build
+
+```bash
+cd MITgcm_c69m/mysetups/DINO_1deg
+./tapAdj_build_mpi_patched.sh
+```
+
+No `export MPI_OPTFILE` needed — the profile supplies it. The build scripts call
+`impacts_load_modules` themselves.
+
+`linux_amd64_gnu+mpi_perlmutter` was written from the MITgcm gfortran and Cray
+templates plus NERSC's documented wrappers. **It has not been compile-tested on
+Perlmutter.** Expect to adjust `FOPTIM` on first use. If the adjoint misbehaves,
+drop `-march=znver3` and lower `-O2` before looking anywhere else: the adjoint is
+far more sensitive to aggressive optimisation than the forward model.
+
+### 4. Submit
+
+```bash
+./tools/submit.sh MITgcm_c69m/mysetups/DINO_1deg/tapAdj_submit_mpi_patched.sh
+```
+
+Use the wrapper rather than `sbatch` directly. Account, QOS, constraint and
+walltime cannot be written as `#SBATCH` directives without breaking the other
+machine, so the wrapper passes them on the command line, where sbatch lets them
+override the script. On sverdrup `SBATCH_EXTRA` is empty and this is exactly
+`sbatch <script>`; plain `sbatch` still works there.
+
+---
+
+## The one thing that is not a flag change
+
+The 200-year spin-up carries `#SBATCH -t 240:00:00` — ten days. **No Perlmutter
+QOS comes close**, so that job cannot run as configured. It needs splitting into
+a pickup/restart chain: run to a pickup, resubmit from it, repeat. `PERLMUTTER_WALLTIME`
+sets the per-job limit (default 24 h); the chaining itself is not automated here.
+
+Check current QOS limits before planning — NERSC changes them.
+
+The 5-year adjoint (`1830d`) and the 1-year viscosity runs should fit in a single
+job.
+
+Rank count is fixed by `SIZE.h`: DINO is `nPx=3, nPy=9` over `sNx=17, sNy=22`, so
+`-n 27`. Perlmutter CPU nodes have 128 cores, so 27 ranks fit on one node.
+Changing the decomposition means changing both `SIZE.h` and `-n`.
+
+---
+
+## Things still tied to sverdrup
+
+Known and deliberate, listed so they are not a surprise:
+
+- **Notebook scratch paths** are absolute `/scratch2/tshahriar/...`. The analysis
+  notebooks are not part of the run path, so they were left pointing at sverdrup.
+  Repoint them if you move the analysis too — `./tools/pre_push_check.sh` reports
+  every path that no longer resolves.
+- **`--mail-user`** is a `#SBATCH` directive in each submit script. Override per
+  job with `sbatch --mail-user=...`, or edit the scripts.
+- **`00_archive/` scripts** were not ported. They are history and reference dead
+  run directories already.
+- **No Python environment file.** The notebooks need `numpy`, `xarray`,
+  `xmitgcm`, `matplotlib`; on Perlmutter start from `module load python`.
+
+---
+
+## Adding a third machine
+
+1. Add a case block to `tools/machine_env.sh` setting `SCRATCH_ROOT`,
+   `MPI_LAUNCHER`, `MPI_OPTFILE`, `SERIAL_OPTFILE`, `SBATCH_EXTRA` and an
+   `impacts_load_modules` function.
+2. Add an optfile under `MITgcm_c69m/MITgcm/tools/build_options/`.
+3. Make sure the machine is detected, or set `IMPACTS_MACHINE`.
+
+Nothing else should need touching. An unknown machine is refused with a clear
+message rather than silently falling back to sverdrup's settings.

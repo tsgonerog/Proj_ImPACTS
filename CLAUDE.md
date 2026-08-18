@@ -30,6 +30,19 @@ The primary configuration is `MITgcm_c69m/mysetups/DINO_1deg/` (DINO, 51 × 198 
 
 **The vendored `MITgcm/` tree is not read-only upstream code.** `MITgcm/tools/` carries patched `genmake2` copies that the build depends on. Do not replace the tree wholesale, and do not assume a file under `MITgcm/` matches upstream.
 
+## Machines
+
+`tools/machine_env.sh` is the single place cluster differences live; `PORTING.md`
+is the walkthrough. Two blockers are worth knowing before assuming a new machine
+will work: **Tapenade is not in this repository** (`genmake2 -tap` calls a
+`tapenade` binary on `$PATH`, a Java tool installed out-of-tree), and
+`input_binaries/` is untracked — DINO's 179 MB of `dino_*.bin` is produced
+outside this repo and nothing regenerates it. `impacts_check_env` warns about
+both plus a missing `NERSC_ACCOUNT`.
+
+The 200-year spin-up's `-t 240:00:00` exceeds every Perlmutter QOS and would need
+a pickup/restart chain; that is not automated.
+
 ## Build
 
 Each setup builds itself; scripts resolve `MITGCM_ROOT` relative to their own location, so they can be invoked from anywhere but expect to be *run from the setup directory* (they use relative paths like `code_tap/`).
@@ -65,6 +78,25 @@ Both sides are tracked in git. So:
 
 Suffix meanings: `_mpi` / `_serial` (parallelism), `_OG` (original) vs `_aste_90x150x60` / `_adapted_frm_aste_90x150x60` (adapted from the ASTE regional setup — this is what the `asteMods` experiment variant selects), `_ForTapProfile` (Tapenade profiling build).
 
+### Build directories symlink back into `code_tap/`
+
+`genmake2` symlinks most staged sources into the build directory
+(`build_x/AUTODIFF_PARAMS.h -> ../code_tap/AUTODIFF_PARAMS.h`) rather than copying
+them. Only files the patch writes explicitly, such as `forward_step_b.f`, are real
+copies. **Building a second variant re-stages `code_tap/` and silently repoints
+every earlier build's symlinks.** After building `asteMods` and then `noTpatched`,
+the asteMods build directory's headers resolve to the `_OG` variants; running
+`make` there would recompile it as a plain build.
+
+The already-compiled `.o` and generated `.f` files are unaffected — those are real
+files frozen at compile time, and they are the reliable evidence of what a build
+actually used. To check which variant a build compiled against, diff its generated
+`.f` (e.g. `autodiff_readparms.f`), not its symlinked `.h`.
+
+Practical consequence: **build variants in the order you want `code_tap/` left in**,
+and never `make` in an older build directory after building a different variant —
+re-run its build script instead.
+
 ### The genmake2 patch
 
 The patch is one injected line that overrides Tapenade's generated reverse-mode routine with a hand-corrected one:
@@ -90,7 +122,7 @@ SLURM batch scripts targeting the **`sverdrup`** cluster:
 
 ```bash
 cd MITgcm_c69m/mysetups/DINO_1deg
-sbatch tapAdj_submit_mpi_patched_on_sverdrup.sh
+../../../tools/submit.sh tapAdj_submit_mpi_patched.sh
 ./clean_slurm_logs.sh          # prompts, then deletes *.out/*.err in cwd only
 ```
 
@@ -102,10 +134,12 @@ Things to know before editing or submitting one:
 - **Durations are written in days at the top of the script** (`simulation_duration_with_dT1800_days`, `monitorFreq_days`, `adjMonitorFreq_days`, `adjDumpFreq_days`). The script auto-detects every `*_days` variable, converts to seconds (`nTimeSteps` for the duration, assuming `dT=1800`), and `sed -i`-patches the namelist.
 - **That `sed -i` edits the tracked namelist in `$SLURM_SUBMIT_DIR/input_tap/`, not a copy.** Submitting a job modifies the repo. Expect and inspect the resulting diff.
 - **`nIter0` is *not* one of the auto-patched parameters — the start iteration and the pickup are coupled by hand.** `nIter0` is baked into whichever `data_<tag>` the `test_cases` string selects (`frmSt` → `0`, `frm50yPk` → `878400`, `frm180yPk` → `3162240`), while the pickup itself is a hardcoded `ln -s` line further down the same script. Changing `test_cases` to a different `frm*Pk` tag without editing that symlink to the matching `pickup.<nIter0>.{data,meta}` gets you a run that cannot find its pickup. Changing the duration is safe; changing the starting point is not.
-- **`asteMods` is a build *and* a namelist variant, not just a build.** `tapAdj_submit_mpi_patched_on_sverdrup_asteMods.sh` points `build_dir` at `build_tapAdj_mpi_patched_asteMods/` and additionally does `rm data.autodiff` + `mv data.autodiff_adapted-frm-aste-90x150x60 data.autodiff` in the staged run directory. Pairing the plain submit script with the asteMods build (or the reverse) silently runs a mismatched configuration.
-- **Paths and the notification address are hardcoded** (`/scratch2/tshahriar/...`, `tanvirshahriar@utexas.edu`, and absolute pickup paths). Change them before running as anyone else.
+- **`asteMods` is a build *and* a namelist variant, not just a build.** `tapAdj_submit_mpi_patched_asteMods.sh` points `build_dir` at `build_tapAdj_mpi_patched_asteMods/` and additionally does `rm data.autodiff` + `mv data.autodiff_adapted-frm-aste-90x150x60 data.autodiff` in the staged run directory. Pairing the plain submit script with the asteMods build (or the reverse) silently runs a mismatched configuration.
+- **Scratch paths come from `$SCRATCH_ROOT`, not literals.** Every live build and submit script sources `tools/machine_env.sh`, which sets `SCRATCH_ROOT`, `MPI_LAUNCHER`, `MPI_OPTFILE`, `SERIAL_OPTFILE` and `SBATCH_EXTRA` per machine (sverdrup by default, perlmutter when `$NERSC_HOST` is set). Do not reintroduce a literal `/scratch2/...`; add a case block instead. The notification address is still a hardcoded `#SBATCH --mail-user` directive.
+- **Submit with `tools/submit.sh <script>`, not `sbatch`.** Account, QOS, constraint and walltime cannot be `#SBATCH` directives without breaking the other machine, so the wrapper passes them on the command line where sbatch lets them override. On sverdrup `SBATCH_EXTRA` is empty, so it is exactly `sbatch <script>` and plain `sbatch` still works.
+- **The optfiles are machine-authoritative, deliberately.** `~/.bashrc` on sverdrup exports `MPI_OPTFILE`; honouring it would silently build Perlmutter with the Intel sverdrup optfile, so `machine_env.sh` overwrites it. `IMPACTS_MPI_OPTFILE` is the explicit override.
 - Namelist variants live beside `data` as `data_<tag>` and are chosen by `test_cases` (empty string = plain `input_tap/data`); tags compose. See README for the tag vocabulary.
-- Serial SOMA scripts are pre-made per duration (`submit_tapAdj_serial_on_sverdrup_{5,30,180,360}_day_patched.sh`) because adjoint cost grows fast with integration length.
+- Serial SOMA scripts are pre-made per duration (`submit_tapAdj_serial_{5,30,180,360}_day_patched.sh`) because adjoint cost grows fast with integration length.
 
 ### Where the output lands
 
@@ -193,6 +227,12 @@ outputs.
 
 ## Not tracked
 
-`**/build*/`, `**/.ipynb_checkpoints/`, and the `input_binaries/` + `input_adj_binaries/` directories for every DINO and SOMA setup. SOMA inputs regenerate with `input/gendata.py`; DINO's `dino_*.bin` files are produced outside this repository and must be staged into `input_binaries/` before a run.
+`**/build*/` **except `build_options/`**, `**/.ipynb_checkpoints/`, and the `input_binaries/` + `input_adj_binaries/` directories for every DINO and SOMA setup. SOMA inputs regenerate with `input/gendata.py`; DINO's `dino_*.bin` files are produced outside this repository and must be staged into `input_binaries/` before a run.
+
+The `!**/build_options/` negation is load-bearing: `**/build*/` was swallowing
+`MITgcm/tools/build_options/`, so all 95 genmake2 optfiles were untracked and a
+fresh clone could not build on any machine. A negation works only because it
+un-excludes the directory itself — git cannot re-include a file inside a
+directory that stays excluded.
 
 `input_adj_binaries/` is small but not optional: it holds `ones_64b.bin`, the uniform weight file that *every* `xx_gentim2d_weight`/`xx_genarr3d_weight` entry in `data.ctrl` points at. Since it is untracked and the submit script only symlinks the directory contents, a fresh clone has no adjoint run until it is put back.
