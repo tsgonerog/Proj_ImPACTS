@@ -1,4 +1,13 @@
 #!/bin/bash
+# Build the Tapenade ADJOINT. This is the one you normally want.
+#   sources : code_tap/ + input_tap/  ->  build_tapAdj/mitgcmuv_tap_adj
+#
+# Uses the PATCHED genmake2, which injects code_tap/forward_step_b.f_modified
+# over the routine Tapenade generates. Tapenade differentiates forward_step.F
+# automatically but its output needs manual correction; that corrected copy is
+# what makes the adjoint usable, and the patched genmake2 is how it survives a
+# rebuild. Compare with build_tapAdj_rawTapenade.sh, which does not.
+#
 # MPI Tapenade-adjoint build for MITgcm
 
 # Exit immediately if a command fails (-e),
@@ -18,9 +27,9 @@ impacts_load_modules
 
 # Replace SIZE.h with mpi version
 cp code_tap/SIZE.h_mpi code_tap/SIZE.h
-cp code_tap/AUTODIFF_PARAMS.h_aste_90x150x60 code_tap/AUTODIFF_PARAMS.h
-cp code_tap/autodiff_readparms.F_aste_90x150x60 code_tap/autodiff_readparms.F
-cp code_tap/autodiff_inadmode_set_ad.F_adapted_frm_aste_90x150x60 code_tap/autodiff_inadmode_set_ad.F
+cp code_tap/AUTODIFF_PARAMS.h_OG code_tap/AUTODIFF_PARAMS.h
+cp code_tap/autodiff_readparms.F_OG code_tap/autodiff_readparms.F
+cp code_tap/autodiff_inadmode_set_ad.F_OG code_tap/autodiff_inadmode_set_ad.F
 cp code_tap/forward_step_b.f_modified_mpi code_tap/forward_step_b.f_modified
 
 # MPI_OPTFILE is defaulted by machine_env.sh; this catches a machine with none.
@@ -66,13 +75,13 @@ case "$use_TapProfile" in
 esac
 
 # Ensure build directory exists
-if [ ! -d build_tapAdj_mpi_patched_asteMods ]; then
-    echo "Creating the directory build_tapAdj_mpi_patched_asteMods..."
-    mkdir build_tapAdj_mpi_patched_asteMods
+if [ ! -d build_tapAdj ]; then
+    echo "Creating the directory build_tapAdj..."
+    mkdir build_tapAdj
 fi
 
 # Go to build directory
-cd build_tapAdj_mpi_patched_asteMods || { echo "Failed to enter build_tapAdj_mpi_patched_asteMods"; exit 1; }
+cd build_tapAdj || { echo "Failed to enter build_tapAdj"; exit 1; }
 
 # Clean any previous build (ignore if Makefile not created yet)
 make CLEAN || true

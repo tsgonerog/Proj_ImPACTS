@@ -1,4 +1,7 @@
 #!/bin/bash
+# Submit the FORWARD model.        build_frd/mitgcmuv
+# Run it with ../../../tools/submit.sh so the per-machine sbatch flags are added.
+#
 
 #SBATCH -J DINO_1deg_frd     # Set main part of the job name once here
 #SBATCH -o %x.%j.out                   # %x = job name, %j = job ID
@@ -28,14 +31,14 @@ impacts_load_modules
 # ========== TEST CASE FLAG ==========
 
 # Set to "" for default (i.e., use input/data)
-test_cases="frmSt-vA4Gd-vAhGd"
+test_cases="from_rest_visc2x"
 
 # Build optional suffix; set suffix to "_<test_cases>" if non-empty, otherwise empty (avoids extra underscore)
 suffix=${test_cases:+_$test_cases}
 
 # ========== SET SOME TIME STEPPING PARAMETERS (IN DAYS) IN input/data ==========
 
-simulation_duration_with_dT1800_days=73200
+simulation_duration_with_dT1800_days=3660   # 10 years at 366 d/yr
 monitorFreq_days=30.5 # on average there is 30.5 days in a month
 
 #----------- do not edit below --------------------------
@@ -72,8 +75,15 @@ done
 
 job_name="$SLURM_JOB_NAME"      # capture the job name set above
 base_dir="$SLURM_SUBMIT_DIR"    # directory from where the job was submitted
-build_dir="$base_dir/build_frd_mpi"
-run_dir="$SCRATCH_ROOT/DINO_1deg_frd_runs/${job_name}_${simulation_duration_with_dT1800_days}d${suffix}_run$SLURM_JOB_ID"  # unique per job
+build_dir="$base_dir/build_frd"
+# Duration label: whole 366-day years as "<n>yr", otherwise "<n>d", so the run
+# directory matches the scratch naming convention.
+if (( simulation_duration_with_dT1800_days % 366 == 0 )); then
+    dur_label="$(( simulation_duration_with_dT1800_days / 366 ))yr"
+else
+    dur_label="${simulation_duration_with_dT1800_days}d"
+fi
+run_dir="$SCRATCH_ROOT/DINO_1deg_frd_runs/${job_name}_${dur_label}${suffix}_run$SLURM_JOB_ID"  # unique per job
 
 # ========== STAGE THE RUN DIRECTORY ==========
 

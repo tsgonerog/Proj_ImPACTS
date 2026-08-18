@@ -1,4 +1,11 @@
 #!/bin/bash
+# CONTROL BUILD - Tapenade's raw output, deliberately uncorrected.
+#   sources : code_tap/ + input_tap/  ->  build_tapAdj_rawTapenade/mitgcmuv_tap_adj
+#
+# Identical to build_tapAdj.sh except it calls the STOCK genmake2, so the
+# hand-corrected forward_step_b.f is NOT injected. Kept to show what raw
+# Tapenade output does. No submit script uses this build.
+#
 # Serial Tapenade-adjoint build for MITgcm
 
 # Exit immediately if a command fails (-e),
@@ -21,13 +28,13 @@ cp code_tap/SIZE.h_serial code_tap/SIZE.h
 #cp code_tap/the_main_loop_b.f_for_patched_genmake2_serialPatch code_tap/the_main_loop_b.f_for_patched_genmake2
 
 # Ensure build directory exists
-if [ ! -d build_tapAdj_serial_noTpatched ]; then
-    echo "Creating the directory build_tapAdj_serial_noTpatched..."
-    mkdir build_tapAdj_serial_noTpatched
+if [ ! -d build_tapAdj_rawTapenade ]; then
+    echo "Creating the directory build_tapAdj_rawTapenade..."
+    mkdir build_tapAdj_rawTapenade
 fi
 
 # Go to build directory
-cd build_tapAdj_serial_noTpatched || { echo "Failed to enter build_tapAdj_serial_noTpatched"; exit 1; }
+cd build_tapAdj_rawTapenade || { echo "Failed to enter build_tapAdj_rawTapenade"; exit 1; }
 
 # Clean any previous build (ignore if Makefile not created yet)
 make CLEAN || true

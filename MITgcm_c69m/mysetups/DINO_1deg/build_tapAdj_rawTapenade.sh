@@ -1,5 +1,13 @@
 #!/bin/bash
-# mpi build of forward DINO-MITgcm
+# CONTROL BUILD - Tapenade's raw output, deliberately uncorrected.
+#   sources : code_tap/ + input_tap/  ->  build_tapAdj_rawTapenade/mitgcmuv_tap_adj
+#
+# Identical to build_tapAdj.sh except it calls the STOCK genmake2, so the
+# hand-corrected forward_step_b.f is NOT injected and Tapenade's generated
+# routine is compiled as-is. Kept to demonstrate what raw Tapenade output does.
+# No submit script uses this build; it is not meant for production runs.
+#
+# MPI Tapenade-adjoint build for MITgcm
 
 # Exit immediately if a command fails (-e),
 # treat unset variables as errors (-u),
@@ -17,7 +25,10 @@ source "$SCRIPT_DIR/../../../tools/machine_env.sh"
 impacts_load_modules
 
 # Replace SIZE.h with mpi version
-cp code/SIZE.h_mpi code/SIZE.h
+cp code_tap/SIZE.h_mpi code_tap/SIZE.h
+cp code_tap/AUTODIFF_PARAMS.h_OG code_tap/AUTODIFF_PARAMS.h
+cp code_tap/autodiff_readparms.F_OG code_tap/autodiff_readparms.F
+cp code_tap/autodiff_inadmode_set_ad.F_OG code_tap/autodiff_inadmode_set_ad.F
 
 # MPI_OPTFILE is defaulted by machine_env.sh; this catches a machine with none.
 if [ -z "$MPI_OPTFILE" ] || [ ! -f "$MPI_OPTFILE" ]; then
@@ -26,27 +37,27 @@ if [ -z "$MPI_OPTFILE" ] || [ ! -f "$MPI_OPTFILE" ]; then
     exit 1
 fi
 
-
 # Ensure build directory exists
-if [ ! -d build_frd_mpi ]; then
-    echo "Creating the directory build_frd_mpi..."
-    mkdir build_frd_mpi
+if [ ! -d build_tapAdj_rawTapenade ]; then
+    echo "Creating the directory build_tapAdj_rawTapenade..."
+    mkdir build_tapAdj_rawTapenade
 fi
 
 # Go to build directory
-cd build_frd_mpi || { echo "Failed to enter build_frd_mpi"; exit 1; }
+cd build_tapAdj_rawTapenade || { echo "Failed to enter build_tapAdj_rawTapenade"; exit 1; }
 
 # Clean any previous build (ignore if Makefile not created yet)
 make CLEAN || true
 
 # Configure the build (this creates the Makefile here)
-"$MITGCM_ROOT/tools/genmake2" -mpi \
+"$MITGCM_ROOT/tools/genmake2" -mpi -tap \
     -rd="$MITGCM_ROOT" \
     -of="$MPI_OPTFILE" \
-    -mods=../code \
+    -mods=../code_tap \
+    -adof="$MITGCM_ROOT/tools/adjoint_options/adjoint_tap"
 
 # Generate dependency list
 make depend
 
-# Build the forward model using 8 threads
-make -j 8
+# Build the adjoint model using 8 threads
+make -j 8 tap_adj

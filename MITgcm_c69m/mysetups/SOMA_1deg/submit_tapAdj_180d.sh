@@ -1,4 +1,11 @@
 #!/bin/bash
+# Submit the SOMA adjoint for 180 days.   build_tapAdj/mitgcmuv_tap_adj
+#
+# Durations are pre-made as separate scripts because adjoint cost grows quickly
+# with integration length; edit endTime_days at the top to vary one.
+#
+# Run it with ../../../tools/submit.sh so the per-machine sbatch flags are added.
+#
 
 #SBATCH -J pd_StP_srl_no-kpp-GM     # Set job name once here
 #SBATCH -o %x.%j.out     # %x = job name, %j = job ID
@@ -52,7 +59,7 @@ done
 
 job_name="$SLURM_JOB_NAME"      # capture the job name set above
 base_dir="$SLURM_SUBMIT_DIR"    # directory from where the job was submitted
-build_dir="$base_dir/build_tapAdj_serial_patched"
+build_dir="$base_dir/build_tapAdj"
 run_dir="$SCRATCH_ROOT/SOMA_1deg_tapAdj_runs/${job_name}_${endTime_days}d_run$SLURM_JOB_ID"  # unique per job
 
 # ========== STAGE THE RUN DIRECTORY ==========

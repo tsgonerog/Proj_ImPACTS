@@ -87,7 +87,7 @@ on CFS (`/global/cfs/cdirs/<repo>/`), not scratch.
 
 ```bash
 cd MITgcm_c69m/mysetups/DINO_1deg
-./tapAdj_build_mpi_patched.sh
+./build_tapAdj.sh
 ```
 
 No `export MPI_OPTFILE` needed — the profile supplies it. The build scripts call
@@ -102,7 +102,7 @@ far more sensitive to aggressive optimisation than the forward model.
 ### 4. Submit
 
 ```bash
-./tools/submit.sh MITgcm_c69m/mysetups/DINO_1deg/tapAdj_submit_mpi_patched.sh
+./tools/submit.sh MITgcm_c69m/mysetups/DINO_1deg/submit_tapAdj.sh
 ```
 
 Use the wrapper rather than `sbatch` directly. Account, QOS, constraint and

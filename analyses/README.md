@@ -25,8 +25,8 @@ analyses/
 │       ├── 00_archive/                     earlier serial runs + the SciDAC poster
 │       ├── 01_5yr_from_180yr_pickup_visc2x.ipynb
 │       ├── 02_5yr_from_50yr_pickup_viscD2x_Zref.ipynb
-│       ├── 03_5yr_from_50yr_pickup_viscGrid1p8e-2_asteMods.ipynb
-│       └── 04_5yr_from_rest_viscGrid1p8e-2_asteMods.ipynb
+│       ├── 03_5yr_from_50yr_pickup_viscGrid1p8e-2_adjViscBoost.ipynb
+│       └── 04_5yr_from_rest_viscGrid1p8e-2_adjViscBoost.ipynb
 ├── SOMA_1deg/                        secondary configuration (62 x 62 x 31)
 ├── reference_notebooks/              collaborator material the above derives from
 └── tools/
@@ -65,7 +65,7 @@ file is that field doubled.
 | `viscD2x_Zref` | `viscAhDfile` at 2× but `viscAhZfile` left at the reference field — a **mixed** setting, not the same experiment as `visc2x` |
 | `viscRef` | both files at the unscaled reference |
 | `viscGrid<v>` | scalar `viscAhGrid` in `PARM01` instead, `PARM05` files commented out; `viscGrid1p8e-2` is `viscAhGrid=1.8E-2` |
-| `asteMods` | the ASTE-derived `data.autodiff` variant, selected by the `asteMods` build and submit scripts |
+| `adjViscBoost` | adjoint-mode viscosity inflation: `viscFacInAd = 10.` against `viscFacInFw = 1.`, from `data.autodiff_adjViscBoost`. Needs the matching build *and* submit script |
 
 Reading `p` as the decimal point keeps the tokens shell-safe: `1p135e-2` is
 `1.135E-2`. Every notebook repeats its setting in full in a banner directly
@@ -107,8 +107,8 @@ viscosity is set.
 | --- | --- | --- | --- |
 | `01_5yr_from_180yr_pickup_visc2x.ipynb` | 28486 | 180-year pickup (3162240) | `viscAhD` = `viscAhZ` = 2× reference |
 | `02_5yr_from_50yr_pickup_viscD2x_Zref.ipynb` | 24493 | 50-year pickup (878400) | `viscAhD` 2×, `viscAhZ` at reference |
-| `03_5yr_from_50yr_pickup_viscGrid1p8e-2_asteMods.ipynb` | 28461 | 50-year pickup (878400) | `viscAhGrid=1.8E-2`, ASTE `data.autodiff` |
-| `04_5yr_from_rest_viscGrid1p8e-2_asteMods.ipynb` | 28453 | rest (0) | `viscAhGrid=1.8E-2`, ASTE `data.autodiff` |
+| `03_5yr_from_50yr_pickup_viscGrid1p8e-2_adjViscBoost.ipynb` | 28461 | 50-year pickup (878400) | `viscAhGrid=1.8E-2`, adjoint-mode visc boost |
+| `04_5yr_from_rest_viscGrid1p8e-2_adjViscBoost.ipynb` | 28453 | rest (0) | `viscAhGrid=1.8E-2`, adjoint-mode visc boost |
 
 Settings in this table were read back from each run's own staged `data`
 namelist on scratch, not from the run-directory tag.

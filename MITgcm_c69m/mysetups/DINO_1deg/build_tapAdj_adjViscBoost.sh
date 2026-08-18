@@ -1,4 +1,22 @@
 #!/bin/bash
+# Adjoint built for ADJOINT-MODE VISCOSITY INFLATION.
+#   sources : code_tap/ + input_tap/  ->  build_tapAdj_adjViscBoost/mitgcmuv_tap_adj
+#
+# Same patched genmake2 as build_tapAdj.sh, but stages the ASTE-derived
+# AUTODIFF_PARAMS.h / autodiff_readparms.F / autodiff_inadmode_set_ad.F, which
+# add the inAd*/outAd* parameters. Those let the model run with larger viscosity
+# and diffusivity during the adjoint sweep than in the forward - the standard
+# trick for keeping a long adjoint from blowing up.
+#
+# The build only provides the machinery; the values come from
+# input_tap/data.autodiff_adjViscBoost at run time (viscFacInAd = 10 vs
+# viscFacInFw = 1, inAdviscArNr = 2.E-3 against a forward 1.2E-4, and added
+# inAddiffKhT/S). So this build MUST be paired with
+# submit_tapAdj_adjViscBoost.sh, which swaps that namelist in. Pairing it with
+# submit_tapAdj.sh silently runs the plain configuration.
+#
+# Numbers were adapted from the ASTE 90x150x60 regional setup.
+#
 # MPI Tapenade-adjoint build for MITgcm
 
 # Exit immediately if a command fails (-e),
@@ -18,9 +36,9 @@ impacts_load_modules
 
 # Replace SIZE.h with mpi version
 cp code_tap/SIZE.h_mpi code_tap/SIZE.h
-cp code_tap/AUTODIFF_PARAMS.h_OG code_tap/AUTODIFF_PARAMS.h
-cp code_tap/autodiff_readparms.F_OG code_tap/autodiff_readparms.F
-cp code_tap/autodiff_inadmode_set_ad.F_OG code_tap/autodiff_inadmode_set_ad.F
+cp code_tap/AUTODIFF_PARAMS.h_aste_90x150x60 code_tap/AUTODIFF_PARAMS.h
+cp code_tap/autodiff_readparms.F_aste_90x150x60 code_tap/autodiff_readparms.F
+cp code_tap/autodiff_inadmode_set_ad.F_adapted_frm_aste_90x150x60 code_tap/autodiff_inadmode_set_ad.F
 cp code_tap/forward_step_b.f_modified_mpi code_tap/forward_step_b.f_modified
 
 # MPI_OPTFILE is defaulted by machine_env.sh; this catches a machine with none.
@@ -66,13 +84,13 @@ case "$use_TapProfile" in
 esac
 
 # Ensure build directory exists
-if [ ! -d build_tapAdj_mpi_patched ]; then
-    echo "Creating the directory build_tapAdj_mpi_patched..."
-    mkdir build_tapAdj_mpi_patched
+if [ ! -d build_tapAdj_adjViscBoost ]; then
+    echo "Creating the directory build_tapAdj_adjViscBoost..."
+    mkdir build_tapAdj_adjViscBoost
 fi
 
 # Go to build directory
-cd build_tapAdj_mpi_patched || { echo "Failed to enter build_tapAdj_mpi_patched"; exit 1; }
+cd build_tapAdj_adjViscBoost || { echo "Failed to enter build_tapAdj_adjViscBoost"; exit 1; }
 
 # Clean any previous build (ignore if Makefile not created yet)
 make CLEAN || true

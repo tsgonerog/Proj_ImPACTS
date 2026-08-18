@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 MITgcm adjoint-sensitivity experiments built with the **Tapenade** AD toolchain (`pkg/tapenade`) instead of TAF/OpenAD. It contains experiment configurations, build/SLURM scripts, and analysis notebooks — plus a **fully vendored, locally patched MITgcm source tree**. Model output is not here; it lives on cluster scratch.
 
-`README.md` documents the science (cost function, controls, namelist tags, grids) in detail. This file covers the mechanics that only become clear from reading several scripts at once.
+`README.md` documents the science and the layout; each setup has its own `README.md` (grid, build/submit pairings, quirks); `analyses/README.md` indexes the notebooks; `PORTING.md` covers other clusters. This file covers the mechanics that only become clear from reading several scripts at once.
 
 `./tools/pre_push_check.sh` is the closest thing to a test here: a read-only
 pre-push sanity check covering the nbstrip filter, submit-script namelist churn,
@@ -50,10 +50,10 @@ Each setup builds itself; scripts resolve `MITGCM_ROOT` relative to their own lo
 ```bash
 cd MITgcm_c69m/mysetups/DINO_1deg
 export MPI_OPTFILE=/path/to/mpi/optfile      # required by every MPI build script
-./tapAdj_build_mpi_patched.sh                # -> build_tapAdj_mpi_patched/mitgcmuv_tap_adj
+./build_tapAdj.sh                # -> build_tapAdj/mitgcmuv_tap_adj
 ```
 
-Serial builds (`serial_tapAdj_build_patched.sh`, `tapAdj_build_serial_*.sh`) need no `MPI_OPTFILE` — they hardcode `MITgcm/tools/build_options/linux_amd64_ifort`. Forward-only builds use `frd_build_*.sh`. Every script does the same five steps: stage variant files, `make CLEAN`, run a patched `genmake2` with `-tap -adof=<root>/tools/adjoint_options/adjoint_tap -mods=../code_tap`, `make depend`, `make -j 8 tap_adj`.
+Both setups now name scripts action-first: `build_frd.sh`, `build_tapAdj.sh`, `build_tapAdj_rawTapenade.sh`, `build_tapAdj_adjViscBoost.sh` (DINO only), and `submit_*` counterparts. Optfiles come from `tools/machine_env.sh`, so nothing needs exporting. Every build script does the same five steps: stage variant files, `make CLEAN`, run a patched `genmake2` with `-tap -adof=<root>/tools/adjoint_options/adjoint_tap -mods=../code_tap`, `make depend`, `make -j 8 tap_adj`.
 
 **Parallelism is a property of the setup, not a flag you pass.** Only the adjoint build scripts that exist are usable: DINO is MPI-only, `SOMA_1deg` is serial-only. Both `SIZE.h` variants (and both `forward_step_b.f_modified_*` variants) are nonetheless present in most `code_tap/` directories, so finding `SIZE.h_serial` in the c69m DINO setup does not mean a serial adjoint build is wired up there — no script stages it and no submit script expects it.
 
@@ -76,7 +76,7 @@ Both sides are tracked in git. So:
 - **Edit the suffixed variant, never the bare destination file** — `SIZE.h`, `the_model_main.F`, `AUTODIFF_PARAMS.h`, `autodiff_readparms.F`, `autodiff_inadmode_set_ad.F`, `forward_step_b.f_modified` are all regenerated and your edits will vanish on the next build.
 - Running any build script dirties the working tree even when nothing was authored. Check `git diff` before assuming a change is yours.
 
-Suffix meanings: `_mpi` / `_serial` (parallelism), `_OG` (original) vs `_aste_90x150x60` / `_adapted_frm_aste_90x150x60` (adapted from the ASTE regional setup — this is what the `asteMods` experiment variant selects), `_ForTapProfile` (Tapenade profiling build).
+Suffix meanings: `_mpi` / `_serial` (parallelism), `_OG` (original) vs `_aste_90x150x60` / `_adapted_frm_aste_90x150x60` (adapted from the ASTE regional setup — this is what the `adjViscBoost` variant selects), `_ForTapProfile` (Tapenade profiling build).
 
 ### Build directories symlink back into `code_tap/`
 
@@ -84,8 +84,8 @@ Suffix meanings: `_mpi` / `_serial` (parallelism), `_OG` (original) vs `_aste_90
 (`build_x/AUTODIFF_PARAMS.h -> ../code_tap/AUTODIFF_PARAMS.h`) rather than copying
 them. Only files the patch writes explicitly, such as `forward_step_b.f`, are real
 copies. **Building a second variant re-stages `code_tap/` and silently repoints
-every earlier build's symlinks.** After building `asteMods` and then `noTpatched`,
-the asteMods build directory's headers resolve to the `_OG` variants; running
+every earlier build's symlinks.** After building `adjViscBoost` and then `rawTapenade`,
+the adjViscBoost build directory's headers resolve to the `_OG` variants; running
 `make` there would recompile it as a plain build.
 
 The already-compiled `.o` and generated `.f` files are unaffected — those are real
@@ -107,12 +107,12 @@ cp ../code_tap/forward_step_b.f_modified forward_step_b.f
 
 Tapenade differentiates `forward_step.F` automatically but the result needs manual correction; `forward_step_b.f_modified` is that correction and the patched `genmake2` is how it survives a rebuild.
 
-**`patched` vs `noTpatched` is the naming axis that runs through every script and build directory**, and it means exactly this patch:
+**The working build is unmarked; `rawTapenade` is the control** — this is the naming axis that runs through every script and build directory, and it means exactly this patch:
 
 - `*_patched.sh` → calls `$MITGCM_ROOT/tools/$GENMAKE_SCRIPT` (a `patched_*_genmake2`), so the hand-corrected `forward_step_b.f` wins. This is the working configuration; use it unless you specifically want otherwise.
-- `*_noTpatched.sh` → calls stock `$MITGCM_ROOT/tools/genmake2` with otherwise identical flags, leaving Tapenade's own `forward_step_b.f` in place. It is the control build, kept to demonstrate what raw Tapenade output does.
+- `*_rawTapenade.sh` → calls stock `$MITGCM_ROOT/tools/genmake2` with otherwise identical flags, leaving Tapenade's own `forward_step_b.f` in place. It is the control build, kept to demonstrate what raw Tapenade output does.
 
-The two write to sibling build directories (`build_tapAdj_mpi_patched/` vs `build_tapAdj_mpi_noTpatched/`), so both can exist at once — check which executable a submit script's `build_dir` actually points at.
+The two write to sibling build directories (`build_tapAdj/` vs `build_tapAdj_rawTapenade/`), so both can exist at once — check which executable a submit script's `build_dir` actually points at.
 
 `use_TapProfile` at the top of each build script selects the mode (`NO` / `YES` / `AFTER`) and picks both the `genmake2` variant and the matching `the_model_main.F`. **Only the `NO` mode works here:** `MITgcm_c69m/MITgcm/tools/` has just `patched_NoTapProfile_genmake2`, and DINO's `code_tap/` has no `the_model_main.F_ForTapProfile`. Setting `use_TapProfile` to `YES` or `AFTER` will fail. Reviving profiling needs two pieces, and only one of them is still here: `the_model_main.F_ForTapProfile` survives in `00_archive/code_tap_files_MITgcm_c69f/` (archive, so not staged by any script — it would have to be copied into `code_tap/`), but `patched_ForTapProfile_genmake2` and `patched_AfterTapProfile_genmake2` exist only in the archived c69f tree at `Proj_ImPACTS_old/MITgcm_c69f/MITgcm/tools/`.
 
@@ -122,7 +122,7 @@ SLURM batch scripts targeting the **`sverdrup`** cluster:
 
 ```bash
 cd MITgcm_c69m/mysetups/DINO_1deg
-../../../tools/submit.sh tapAdj_submit_mpi_patched.sh
+../../../tools/submit.sh submit_tapAdj.sh
 ./clean_slurm_logs.sh          # prompts, then deletes *.out/*.err in cwd only
 ```
 
@@ -133,13 +133,13 @@ Things to know before editing or submitting one:
 - **`-n` must match `SIZE.h`.** The MPI DINO adjoint requests 27 ranks because `SIZE.h_mpi` sets `nPx=3, nPy=9` over `sNx=17, sNy=22` tiles. Changing the decomposition means changing both.
 - **Durations are written in days at the top of the script** (`simulation_duration_with_dT1800_days`, `monitorFreq_days`, `adjMonitorFreq_days`, `adjDumpFreq_days`). The script auto-detects every `*_days` variable, converts to seconds (`nTimeSteps` for the duration, assuming `dT=1800`), and `sed -i`-patches the namelist.
 - **That `sed -i` edits the tracked namelist in `$SLURM_SUBMIT_DIR/input_tap/`, not a copy.** Submitting a job modifies the repo. Expect and inspect the resulting diff.
-- **`nIter0` is *not* one of the auto-patched parameters — the start iteration and the pickup are coupled by hand.** `nIter0` is baked into whichever `data_<tag>` the `test_cases` string selects (`frmSt` → `0`, `frm50yPk` → `878400`, `frm180yPk` → `3162240`), while the pickup itself is a hardcoded `ln -s` line further down the same script. Changing `test_cases` to a different `frm*Pk` tag without editing that symlink to the matching `pickup.<nIter0>.{data,meta}` gets you a run that cannot find its pickup. Changing the duration is safe; changing the starting point is not.
-- **`asteMods` is a build *and* a namelist variant, not just a build.** `tapAdj_submit_mpi_patched_asteMods.sh` points `build_dir` at `build_tapAdj_mpi_patched_asteMods/` and additionally does `rm data.autodiff` + `mv data.autodiff_adapted-frm-aste-90x150x60 data.autodiff` in the staged run directory. Pairing the plain submit script with the asteMods build (or the reverse) silently runs a mismatched configuration.
+- **`nIter0` is *not* one of the auto-patched parameters — the start iteration and the pickup are coupled by hand.** `nIter0` is baked into whichever `data_<tag>` the `test_cases` string selects (`from_rest` → `0`, `from50yrPk` → `878400`, `from70yrPk` → `1229760`, `from180yrPk` → `3162240`), while the pickup itself is a hardcoded `ln -s` line further down the same script. Changing `test_cases` to a different `from*Pk` tag without editing that symlink to the matching `pickup.<nIter0>.{data,meta}` gets you a run that cannot find its pickup. Changing the duration is safe; changing the starting point is not.
+- **`adjViscBoost` is a build *and* a namelist variant, not just a build.** It runs the adjoint with larger viscosity/diffusivity than the forward (`viscFacInAd = 10.` vs `viscFacInFw = 1.`), which is what keeps a long adjoint from blowing up. `submit_tapAdj_adjViscBoost.sh` points `build_dir` at `build_tapAdj_adjViscBoost/` and additionally does `rm data.autodiff` + `mv data.autodiff_adjViscBoost data.autodiff` in the staged run directory. Pairing the plain submit script with the adjViscBoost build (or the reverse) silently runs a mismatched configuration.
 - **Scratch paths come from `$SCRATCH_ROOT`, not literals.** Every live build and submit script sources `tools/machine_env.sh`, which sets `SCRATCH_ROOT`, `MPI_LAUNCHER`, `MPI_OPTFILE`, `SERIAL_OPTFILE` and `SBATCH_EXTRA` per machine (sverdrup by default, perlmutter when `$NERSC_HOST` is set). Do not reintroduce a literal `/scratch2/...`; add a case block instead. The notification address is still a hardcoded `#SBATCH --mail-user` directive.
 - **Submit with `tools/submit.sh <script>`, not `sbatch`.** Account, QOS, constraint and walltime cannot be `#SBATCH` directives without breaking the other machine, so the wrapper passes them on the command line where sbatch lets them override. On sverdrup `SBATCH_EXTRA` is empty, so it is exactly `sbatch <script>` and plain `sbatch` still works.
 - **The optfiles are machine-authoritative, deliberately.** `~/.bashrc` on sverdrup exports `MPI_OPTFILE`; honouring it would silently build Perlmutter with the Intel sverdrup optfile, so `machine_env.sh` overwrites it. `IMPACTS_MPI_OPTFILE` is the explicit override.
 - Namelist variants live beside `data` as `data_<tag>` and are chosen by `test_cases` (empty string = plain `input_tap/data`); tags compose. See README for the tag vocabulary.
-- Serial SOMA scripts are pre-made per duration (`submit_tapAdj_serial_{5,30,180,360}_day_patched.sh`) because adjoint cost grows fast with integration length.
+- Serial SOMA scripts are pre-made per duration (`submit_tapAdj_{001d_smoketest,005d,030d,180d,360d}.sh`, zero-padded so they sort) because adjoint cost grows fast with integration length.
 
 ### Where the output lands
 

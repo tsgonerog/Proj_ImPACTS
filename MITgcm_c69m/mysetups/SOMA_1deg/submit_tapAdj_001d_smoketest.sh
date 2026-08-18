@@ -1,12 +1,20 @@
 #!/bin/bash
+# Submit the SOMA adjoint for 1 days.   build_tapAdj/mitgcmuv_tap_adj
+#
+# Durations are pre-made as separate scripts because adjoint cost grows quickly
+# with integration length; edit endTime_days at the top to vary one.
+# Job name is "test"; this is the quick smoke test, not a production run.
+#
+# Run it with ../../../tools/submit.sh so the per-machine sbatch flags are added.
+#
 
-#SBATCH -J pd_StP_srl_no-kpp-GM     # Set job name once here
+#SBATCH -J test     # Set job name once here
 #SBATCH -o %x.%j.out     # %x = job name, %j = job ID
 #SBATCH -e %x.%j.err
 #SBATCH -N 1
 #SBATCH -n 1
 #SBATCH -t 48:00:00
-#SBATCH --mail-user=tanvirshahriar@utexas.edu
+#SBATCH --mail-user=tanvirshahriar@utexas.edu   # override: sbatch --mail-user=...
 #SBATCH --mail-type=begin
 #SBATCH --mail-type=end
 
@@ -23,13 +31,9 @@ REPO_ROOT="$(cd "$SLURM_SUBMIT_DIR/../../.." && pwd)"
 source "$REPO_ROOT/tools/machine_env.sh"
 impacts_load_modules
 
-# ========== LOAD NECESSARY MODULES ==========
-
-# necessary modules have been loaded through .bashrc
-
 # ========== SET SOME TIME STEPPING PARAMETERS (IN DAYS) IN input_tap/data ==========
 
-endTime_days=5
+endTime_days=1
 monitorFreq_days=1
 adjMonitorFreq_days=1
 adjDumpFreq_days=1
@@ -52,7 +56,7 @@ done
 
 job_name="$SLURM_JOB_NAME"      # capture the job name set above
 base_dir="$SLURM_SUBMIT_DIR"    # directory from where the job was submitted
-build_dir="$base_dir/build_tapAdj_serial_patched"
+build_dir="$base_dir/build_tapAdj"
 run_dir="$SCRATCH_ROOT/SOMA_1deg_tapAdj_runs/${job_name}_${endTime_days}d_run$SLURM_JOB_ID"  # unique per job
 
 # ========== STAGE THE RUN DIRECTORY ==========

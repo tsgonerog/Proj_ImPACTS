@@ -1,4 +1,14 @@
 #!/bin/bash
+# Build the Tapenade ADJOINT. This is the one you normally want.
+#   sources : code_tap/ + input_tap/  ->  build_tapAdj/mitgcmuv_tap_adj
+#
+# Uses the PATCHED genmake2, which injects code_tap/forward_step_b.f_modified
+# over the routine Tapenade generates. Tapenade differentiates forward_step.F
+# automatically but its output needs manual correction; that corrected copy is
+# what makes the adjoint usable.
+#
+# SOMA is serial-only: code_tap/SIZE.h_serial is nPx=nPy=1 over sNx=sNy=62.
+#
 # Serial Tapenade-adjoint build for MITgcm
 
 # Exit immediately if a command fails (-e),
@@ -54,13 +64,13 @@ case "$use_TapProfile" in
 esac
 
 # Ensure build directory exists
-if [ ! -d build_tapAdj_serial_patched ]; then
-    echo "Creating the directory build_tapAdj_serial_patched..."
-    mkdir build_tapAdj_serial_patched
+if [ ! -d build_tapAdj ]; then
+    echo "Creating the directory build_tapAdj..."
+    mkdir build_tapAdj
 fi
 
 # Go to build directory
-cd build_tapAdj_serial_patched || { echo "Failed to enter build_tapAdj_serial_patched"; exit 1; }
+cd build_tapAdj || { echo "Failed to enter build_tapAdj"; exit 1; }
 
 # Clean any previous build (ignore if Makefile not created yet)
 make CLEAN || true

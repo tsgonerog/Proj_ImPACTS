@@ -1,5 +1,9 @@
 #!/bin/bash
-# MPI Tapenade-adjoint build for MITgcm
+# Build the FORWARD model (no adjoint).
+#   sources : code/ + input/          ->  build_frd/mitgcmuv
+# DINO is MPI-only: code/SIZE.h is nPx=3, nPy=9 over sNx=17, sNy=22 = 27 ranks.
+#
+# mpi build of forward DINO-MITgcm
 
 # Exit immediately if a command fails (-e),
 # treat unset variables as errors (-u),
@@ -17,10 +21,7 @@ source "$SCRIPT_DIR/../../../tools/machine_env.sh"
 impacts_load_modules
 
 # Replace SIZE.h with mpi version
-cp code_tap/SIZE.h_mpi code_tap/SIZE.h
-cp code_tap/AUTODIFF_PARAMS.h_OG code_tap/AUTODIFF_PARAMS.h
-cp code_tap/autodiff_readparms.F_OG code_tap/autodiff_readparms.F
-cp code_tap/autodiff_inadmode_set_ad.F_OG code_tap/autodiff_inadmode_set_ad.F
+cp code/SIZE.h_mpi code/SIZE.h
 
 # MPI_OPTFILE is defaulted by machine_env.sh; this catches a machine with none.
 if [ -z "$MPI_OPTFILE" ] || [ ! -f "$MPI_OPTFILE" ]; then
@@ -29,27 +30,27 @@ if [ -z "$MPI_OPTFILE" ] || [ ! -f "$MPI_OPTFILE" ]; then
     exit 1
 fi
 
+
 # Ensure build directory exists
-if [ ! -d build_tapAdj_mpi_noTpatched ]; then
-    echo "Creating the directory build_tapAdj_mpi_noTpatched..."
-    mkdir build_tapAdj_mpi_noTpatched
+if [ ! -d build_frd ]; then
+    echo "Creating the directory build_frd..."
+    mkdir build_frd
 fi
 
 # Go to build directory
-cd build_tapAdj_mpi_noTpatched || { echo "Failed to enter build_tapAdj_mpi_noTpatched"; exit 1; }
+cd build_frd || { echo "Failed to enter build_frd"; exit 1; }
 
 # Clean any previous build (ignore if Makefile not created yet)
 make CLEAN || true
 
 # Configure the build (this creates the Makefile here)
-"$MITGCM_ROOT/tools/genmake2" -mpi -tap \
+"$MITGCM_ROOT/tools/genmake2" -mpi \
     -rd="$MITGCM_ROOT" \
     -of="$MPI_OPTFILE" \
-    -mods=../code_tap \
-    -adof="$MITGCM_ROOT/tools/adjoint_options/adjoint_tap"
+    -mods=../code \
 
 # Generate dependency list
 make depend
 
-# Build the adjoint model using 8 threads
-make -j 8 tap_adj
+# Build the forward model using 8 threads
+make -j 8
