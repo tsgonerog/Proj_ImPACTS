@@ -53,7 +53,7 @@ done
 job_name="$SLURM_JOB_NAME"      # capture the job name set above
 base_dir="$SLURM_SUBMIT_DIR"    # directory from where the job was submitted
 build_dir="$base_dir/build_tapAdj_serial_patched"
-run_dir="/scratch2/tshahriar/DINO_MITgcm_v011526_tapAdj_runs/${job_name}_${simulation_duration_with_dT1800_days}d_run$SLURM_JOB_ID"  # unique per job
+run_dir="/scratch2/tshahriar/DINO_1deg_tapAdj_runs/${job_name}_${simulation_duration_with_dT1800_days}d_run$SLURM_JOB_ID"  # unique per job
 
 # ========== STAGE THE RUN DIRECTORY ==========
 
@@ -78,8 +78,8 @@ mv data_debug data
 cp -p "$build_dir/mitgcmuv_tap_adj" .
 
 #----- pickups ---------------
-ln -s /scratch2/tshahriar/DINO_MITgcm_v011526_frd_runs/debug_tr11_73200d_viscAhD_2p00_run19369/pickup.0000878400.data pickup.0000878400.data
-ln -s /scratch2/tshahriar/DINO_MITgcm_v011526_frd_runs/debug_tr11_73200d_viscAhD_2p00_run19369/pickup.0000878400.meta pickup.0000878400.meta
+ln -s /scratch2/tshahriar/DINO_1deg_frd_runs/debug_tr11_73200d_viscAhD_2p00_run19369/pickup.0000878400.data pickup.0000878400.data
+ln -s /scratch2/tshahriar/DINO_1deg_frd_runs/debug_tr11_73200d_viscAhD_2p00_run19369/pickup.0000878400.meta pickup.0000878400.meta
 
 # ========== RUN & TIMING ==========
 

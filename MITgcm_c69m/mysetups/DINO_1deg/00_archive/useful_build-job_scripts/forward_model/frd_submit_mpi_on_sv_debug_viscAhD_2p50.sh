@@ -22,7 +22,7 @@ set -x
 job_name="$SLURM_JOB_NAME"      # capture the job name set above
 base_dir="$SLURM_SUBMIT_DIR"    # directory from where the job was submitted
 build_dir="$base_dir/build_frd_mpi"
-run_dir="/scratch2/tshahriar/DINO_MITgcm_v011526_frd_runs/${job_name}_73200d_viscAhD_2p50_run$SLURM_JOB_ID"  # unique per job
+run_dir="/scratch2/tshahriar/DINO_1deg_frd_runs/${job_name}_73200d_viscAhD_2p50_run$SLURM_JOB_ID"  # unique per job
 
 # ========== STAGE THE RUN DIRECTORY ==========
 
@@ -43,8 +43,8 @@ mv data_debug_viscAhD_2p50 data
 cp -p "$build_dir/mitgcmuv" .
 
 #----- pickups ---------------
-#ln -s /scratch2/tshahriar/DINO_MITgcm_v011526_frd_runs/DINO_MITgcm_v011526_frd_73200d_run18277_dT1800_crashed/pickup.0001229760.data pickup.0001229760.data
-#ln -s /scratch2/tshahriar/DINO_MITgcm_v011526_frd_runs/DINO_MITgcm_v011526_frd_73200d_run18277_dT1800_crashed/pickup.0001229760.meta pickup.0001229760.meta
+#ln -s /scratch2/tshahriar/DINO_1deg_frd_runs/DINO_MITgcm_v011526_frd_73200d_run18277_dT1800_crashed/pickup.0001229760.data pickup.0001229760.data
+#ln -s /scratch2/tshahriar/DINO_1deg_frd_runs/DINO_MITgcm_v011526_frd_73200d_run18277_dT1800_crashed/pickup.0001229760.meta pickup.0001229760.meta
 
 # ========== RUN & TIMING ==========
 

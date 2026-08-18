@@ -95,9 +95,9 @@ cp "$namelist_data" data
 cp -p "$build_dir/mitgcmuv_tap_adj" .
 
 #----- pickups ---------------
-ln -s /scratch2/tshahriar/DINO_MITgcm_v011526_frd_runs/runs_prod/DINO-MITgcm-v011526_frd_73200d_frmSt-vAhD-vAhZ-2p00_run28463/pickup.0003162240.data pickup.0003162240.data
+ln -s /scratch2/tshahriar/DINO_1deg_frd_runs/runs_prod/DINO_1deg_frd_200yr_from_rest_visc2x_run28463/pickup.0003162240.data pickup.0003162240.data
 
-ln -s /scratch2/tshahriar/DINO_MITgcm_v011526_frd_runs/runs_prod/DINO-MITgcm-v011526_frd_73200d_frmSt-vAhD-vAhZ-2p00_run28463/pickup.0003162240.meta pickup.0003162240.meta
+ln -s /scratch2/tshahriar/DINO_1deg_frd_runs/runs_prod/DINO_1deg_frd_200yr_from_rest_visc2x_run28463/pickup.0003162240.meta pickup.0003162240.meta
 
 # ========== RUN & TIMING ==========
 

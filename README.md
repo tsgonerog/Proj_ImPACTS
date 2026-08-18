@@ -189,7 +189,7 @@ read as follows:
 
 Whether viscosity is set through `PARM01` scalars or through `PARM05` binary
 files is itself an object of study — see
-`analyses/DINO_analyses/01_forward_analysis/experimenting_with_viscosity/`.
+`analyses/DINO_1deg/02_forward/01_viscosity_study/`.
 
 ---
 
@@ -198,7 +198,7 @@ files is itself an object of study — see
 **Cost** (`code_tap/cost_atlantic_heat.F`, enabled by `mult_atl` in
 `data.cost`): meridional heat transport across a zonal section. Section indices
 are compiled in — for DINO, `isecbeg=1, isecend=51, jsec=127`, chosen with
-`analyses/DINO_analyses/exploring_DINO_grids.ipynb`. Vertical extent is set by
+`analyses/DINO_1deg/00_grid_and_cost_sections.ipynb`. Vertical extent is set by
 `kmaxdepth`, also compiled in, and guarded by
 `#ifdef ALLOW_COST_ATLANTIC_HEAT_DOMASS`. Every setup that defines
 `ALLOW_COST_ATLANTIC_HEAT` also defines `DOMASS`, so the `#else` branch
@@ -254,25 +254,31 @@ there.
 
 ## Analyses
 
-Notebooks read run output straight from the cluster scratch directories with
+Notebooks read run output straight from the cluster scratch directories
+(`/scratch2/<user>/DINO_1deg_{frd,tapAdj}_runs/`) with
 `xmitgcm.open_mdsdataset` (`geometry="curvilinear"` for DINO) and, where raw
 tiled binaries are read directly, reconstruct shapes from the same
 `sNx/sNy/OLx/OLy/Nr` values used in `SIZE.h`.
 
 ```
 analyses/
-├── DINO_analyses/
-│   ├── exploring_DINO_grids.ipynb            # locate section indices for the cost function
-│   ├── getting_started_visualizing_DINOMITgcm_outputs.ipynb
-│   ├── 01_forward_analysis/                  # spin-up, plus the viscosity sensitivity series
-│   └── 02_adjoint_analysis/                  # ADJ* sensitivity fields, from-start vs from-pickup
-├── SOMA_analyses/                            # 40°N heat-transport adjoint, KPP/GM disabled
-└── resource_notebooks/                       # AMOC animation, DINO reference material
+├── DINO_1deg/
+│   ├── 00_grid_and_cost_sections.ipynb   # locate section indices for the cost function
+│   ├── 01_first_look_at_output.ipynb     # entry point for reading a DINO run
+│   ├── 02_forward/                       # 200-year spin-up, MOC/AMOC, viscosity study
+│   └── 03_adjoint/                       # ADJ* sensitivity fields, from-rest vs from-pickup
+├── SOMA_1deg/                            # 40°N heat-transport adjoint, KPP/GM disabled
+├── reference_notebooks/                  # collaborator material the above was derived from
+└── tools/                                # strip_animation_outputs.py
 ```
 
+Directories are numbered in the order the work is meant to be read, and
+`00_archive/` inside `02_forward/` and `03_adjoint/` holds superseded or
+crashed-run notebooks. See `analyses/README.md` for the per-notebook index.
+
 Python dependencies (no environment file is checked in): `numpy`, `xarray`,
-`xmitgcm`, `matplotlib`, and for the collaborator notebooks in `resources/`, the
-external `dinocean` package.
+`xmitgcm`, `matplotlib`, and for the notebooks in
+`analyses/reference_notebooks/`, the external `dinocean` package.
 
 ---
 

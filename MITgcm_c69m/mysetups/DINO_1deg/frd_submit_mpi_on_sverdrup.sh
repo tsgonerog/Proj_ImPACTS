@@ -91,8 +91,8 @@ cp "$namelist_data" data
 cp -p "$build_dir/mitgcmuv" .
 
 #----- pickups ---------------
-#ln -s /scratch2/tshahriar/DINO_MITgcm_v011526_frd_runs/DINO_MITgcm_v011526_frd_73200d_run18277_dT1800_crashed/pickup.0001229760.data pickup.0001229760.data
-#ln -s /scratch2/tshahriar/DINO_MITgcm_v011526_frd_runs/DINO_MITgcm_v011526_frd_73200d_run18277_dT1800_crashed/pickup.0001229760.meta pickup.0001229760.meta
+#ln -s /scratch2/tshahriar/DINO_1deg_frd_runs/runs_prod/crashed_runs/DINO_1deg_frd_200yr_from_rest_viscRef_crashed_78p8y_run18277/pickup.0001229760.data pickup.0001229760.data
+#ln -s /scratch2/tshahriar/DINO_1deg_frd_runs/runs_prod/crashed_runs/DINO_1deg_frd_200yr_from_rest_viscRef_crashed_78p8y_run18277/pickup.0001229760.meta pickup.0001229760.meta
 
 # ========== RUN & TIMING ==========
 

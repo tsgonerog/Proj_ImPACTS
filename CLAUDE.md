@@ -13,7 +13,7 @@ There is no root build system, no test suite, no linter, and no package manifest
 ## Layout
 
 - `MITgcm_c69m/` — checkpoint69m tree (`MITgcm/`) + setups under `mysetups/`
-- `analyses/` — notebooks reading run output from `/scratch2/...`
+- `analyses/` — notebooks reading run output from `/scratch2/...`, split `DINO_1deg/` + `SOMA_1deg/` to match the setup names
 - `resources/` — collaborator reference notebooks
 - `00_archive/` — frozen reference copies, at both tree level (`MITgcm_c69m/00_archive/MITgcm-pkg-tapenade`) and setup level (inside each of `DINO_1deg/` and `SOMA_1deg/`, holding ASTE-derived namelists, spare `code_tap` sources, and superseded build/submit scripts). Nothing here is live configuration; no build or submit script reads from it. Grep hits inside these directories are history, not current behaviour. The `00_` prefix exists to keep them sorted above `build*/` and `code*/` in a plain `ls`.
 
@@ -107,14 +107,32 @@ Two different places, which matters when a run fails:
 - **In the setup directory** (i.e. in the repo, untracked): `<job-name>.<job-id>.out` and `.err`. The scripts run under `set -x`, so the `.err` file is a full trace of the staging steps — this is where staging failures show up, not in the model output. `./clean_slurm_logs.sh` deletes these (prompts first, cwd only, non-recursive).
 - **In scratch**: `/scratch2/<user>/<setup>_tapAdj_runs/<job-name>_<duration>d<suffix>_run<job-id>/`, holding `output_tap_adj.txt` (all model stdout/stderr), `run_timing.txt`, the staged namelists, and the `ADJ*` / monitor output the notebooks read. The `<suffix>` is `_$test_cases`, so the run directory name records which namelist variant was used — the only durable record of it, since `test_cases` lives in a script that gets edited between runs.
 
-**Scratch output is split across old and new setup names.** Both setups were renamed on 2026-08-17, and only the `run_dir` in the live submit scripts was repointed:
+**Scratch run directories were renamed to match the setups on 2026-08-18.** The
+old `DINO_MITgcm_v011526_{frd,tapAdj}_runs` trees are gone; everything now lives
+under `/scratch2/<user>/DINO_1deg_{frd,tapAdj}_runs/`, with each run directory
+named `DINO_1deg_<mode>[_srl]_<duration>_<start>_<settings>_run<jobid>` using the
+same configuration tokens as the notebooks (`visc2x`, `viscD2x_Zref`, `viscRef`,
+`viscGrid<v>`). **The job ID is the durable key** — settings tokens were derived
+by reading each run's own staged `data` namelist, so if a name and a namelist
+ever disagree, the namelist wins.
 
-| Setup, now | Was | Runs before 2026-08-17 | Runs after |
-| --- | --- | --- | --- |
-| `DINO_1deg` | `DINO_MITgcm_v011526` | `/scratch2/tshahriar/DINO_MITgcm_v011526_{frd,tapAdj}_runs/` | `DINO_1deg_{frd,tapAdj}_runs/` |
-| `SOMA_1deg` | `v4_soma` | `/scratch2/tshahriar/v4_soma_tapAdj_runs/` | `SOMA_1deg_tapAdj_runs/` |
+An earlier version of this file said not to "fix" the notebook paths because
+they pointed at real directories carrying the old names. That is no longer
+true: the directories were renamed and every path was rewritten with them.
 
-The old trees were deliberately left in place: every analysis notebook reads absolute paths into them, and the run directory names themselves embed the old strings (`DINO-MITgcm-v011526_frd_…`, `pd_v4StP_srl_…`). Do not "fix" those notebook paths — they point at real directories that still carry those names. The pickup symlinks in the DINO submit scripts point into the old tree for the same reason.
+Three runs referenced by notebooks no longer exist on scratch at all — 18238
+(30 d), 18153 (`frd_defaultd`) and 24020 (`from50yPickup_afterProfile`). Those
+references were already dead before the rename and were left as-is rather than
+repointed at a different run. Everything else resolves; `00_archive/` submit
+scripts also carry pickup paths that never matched a real directory.
+
+`SOMA_1deg` scratch was not touched: it is still `/scratch2/<user>/v4_soma_tapAdj_runs/`.
+
+**Figures and animations are not in this repository.** Each notebook writes its
+output into the scratch run directory it reads, under `figures/` and
+`animations/`, deriving both from the `run_dir` variable it already defines. The
+`analyses/**/*.{png,jpg,gif,html}` ignore rules exist only to catch a cell that
+is re-run with a repo-local path.
 
 ## Forward vs adjoint configuration
 
@@ -124,7 +142,7 @@ The `code/` + `input/` pair is the forward model; `code_tap/` + `input_tap/` is 
 - `input_tap/` adds `data.autodiff`, `data.cost`, `data.ctrl`, `data.grdchk`.
 - `code_tap/COST_OPTIONS.h` defines `ALLOW_COST_ATLANTIC_HEAT` and `ALLOW_COST_ATLANTIC_HEAT_DOMASS`.
 
-The cost function `code_tap/cost_atlantic_heat.F` has its **section indices compiled in as `parameter` statements** — a zonal section (DINO: `isecbeg=1, isecend=51, jsec=127`) and a meridional one (`jsecbeg=1, jsecend=62, isec=30`) are both declared. Moving a section requires editing this file and rebuilding, not a namelist change; `mult_atl` in `data.cost` only scales the result. Indices are located with `analyses/DINO_analyses/exploring_DINO_grids.ipynb`. Because the values are compiled in, the authoritative record of what a past run measured is the `.f` file in that run's build directory, not the current source.
+The cost function `code_tap/cost_atlantic_heat.F` has its **section indices compiled in as `parameter` statements** — a zonal section (DINO: `isecbeg=1, isecend=51, jsec=127`) and a meridional one (`jsecbeg=1, jsecend=62, isec=30`) are both declared. Moving a section requires editing this file and rebuilding, not a namelist change; `mult_atl` in `data.cost` only scales the result. Indices are located with `analyses/DINO_1deg/00_grid_and_cost_sections.ipynb`. Because the values are compiled in, the authoritative record of what a past run measured is the `.f` file in that run's build directory, not the current source.
 
 `kmaxdepth` is likewise compiled in, and per-setup: DINO uses 25, SOMA 21. Both live in the `ALLOW_COST_ATLANTIC_HEAT_DOMASS` branch, which is the active one in every setup that enables this cost function — the `#else` value of 14 inherited from `pkg/cost` is dead code here, so don't read it as a default.
 
@@ -140,7 +158,17 @@ The second check used historically — the `tutorial_*_with_adj` setups reproduc
 
 Notebooks read output directly from cluster scratch with `xmitgcm.open_mdsdataset(grid_dir='/scratch2/...', prefix=['ADJtheta', ...], read_grid=True, delta_t=1800)`, `geometry="curvilinear"` for DINO. Where raw tiled binaries are read instead, shapes are reconstructed from the same `sNx/sNy/OLx/OLy/Nr` values as `SIZE.h` — keep those in sync when the decomposition changes.
 
-Notebooks are committed with outputs embedded, so they are large; `**/.ipynb_checkpoints/` is gitignored but some checkpoint dirs predate that rule.
+The tree mirrors the setup names: `analyses/DINO_1deg/` and `analyses/SOMA_1deg/`, with `02_forward/` and `03_adjoint/` under DINO, plus `reference_notebooks/` (collaborator originals) and `tools/`. Directories and notebooks are numbered in reading order and `00_archive/` holds superseded work. `analyses/README.md` is a per-notebook index saying which scratch run each one reads — that mapping is not recoverable from the file names alone, since several notebooks differ only by job ID.
+
+**Paths are the thing to be careful with here.** Notebooks build `run_dir` by
+concatenating adjacent string literals across separate lines, so a naive
+search-and-replace on a full path silently rewrites only the fragment it matched
+and leaves the rest stale. When run directories move, rewrite by *basename* as
+well as by full path, then verify by reassembling the literals and checking each
+path exists on disk. `code_tap/cost_atlantic_heat.F` also cites
+`analyses/DINO_1deg/00_grid_and_cost_sections.ipynb` by name in a comment.
+
+Notebooks are committed with outputs embedded, so they are large; `**/.ipynb_checkpoints/` is gitignored but some checkpoint dirs predate that rule. Before committing a notebook containing animations, run `python3 analyses/tools/strip_animation_outputs.py` — `anim.to_jshtml()` embeds every frame as base64 and has produced single notebooks over GitHub's 100 MB hard limit.
 
 ## Not tracked
 

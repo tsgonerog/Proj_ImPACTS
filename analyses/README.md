@@ -5,28 +5,164 @@ Jupyter notebooks that read MITgcm run output from cluster scratch
 project. Nothing here reads from the repository itself — the model output lives
 outside git.
 
+Directory and notebook names carry a leading number giving the order the work is
+meant to be read in. `00_archive/` holds superseded, crashed, or replaced
+notebooks; it is kept for provenance and nothing live depends on it.
+
 ## Layout
 
 ```
 analyses/
-├── DINO_analyses/                    primary configuration (51 x 198 x 36)
-│   ├── exploring_DINO_grids.ipynb        locates cost-function section indices
-│   ├── getting_started_visualizing_*     entry point for new readers
-│   ├── 01_forward_analysis/              forward runs: MOC, AMOC timeseries
-│   │   ├── archive/                        superseded / crashed-run notebooks
-│   │   └── experimenting_with_viscosity/   PARM01 vs PARM05 viscosity study
-│   └── 02_adjoint_analysis/              adjoint sensitivity (ADJ* fields)
-│       ├── archive/                        earlier exploratory runs
-│       └── temp/                           short-duration scratch runs (30d, 5yr)
-├── SOMA_analyses/                    secondary configuration (62 x 62 x 31)
-├── resource_notebooks/               collaborator reference notebooks
+├── DINO_1deg/                        primary configuration (51 x 198 x 36)
+│   ├── 00_grid_and_cost_sections.ipynb   locates the cost-function section indices
+│   ├── 01_first_look_at_output.ipynb     entry point for reading a DINO run
+│   ├── 02_forward/
+│   │   ├── 00_archive/                     crashed 200-year attempts
+│   │   ├── 01_viscosity_study/             PARM05 viscAh*file vs PARM01 viscAhGrid
+│   │   ├── 02_spinup_200yr_visc2x.ipynb
+│   │   └── 03_moc_amoc_animation_visc2x.ipynb
+│   └── 03_adjoint/
+│       ├── 00_archive/                     earlier serial runs + the SciDAC poster
+│       ├── 01_5yr_from_180yr_pickup_visc2x.ipynb
+│       ├── 02_5yr_from_50yr_pickup_viscD2x_Zref.ipynb
+│       ├── 03_5yr_from_50yr_pickup_viscGrid1p8e-2_asteMods.ipynb
+│       └── 04_5yr_from_rest_viscGrid1p8e-2_asteMods.ipynb
+├── SOMA_1deg/                        secondary configuration (62 x 62 x 31)
+├── reference_notebooks/              collaborator material the above derives from
 └── tools/
     └── strip_animation_outputs.py    keeps notebooks under GitHub's size limit
 ```
 
-Directory names are referenced by **absolute path** inside several notebooks
-(the cells that write animation frames), so renaming a directory here means
-editing those cells too.
+## Scratch layout
+
+Runs live in two campaign directories, named to match the setups:
+
+```
+/scratch2/<user>/DINO_1deg_frd_runs/      forward
+/scratch2/<user>/DINO_1deg_tapAdj_runs/   adjoint
+```
+
+Run directories follow
+`DINO_1deg_<mode>[_srl]_<duration>_<start>_<settings>_run<jobid>`, with the same
+configuration tokens the notebooks use. The job ID is the durable key: it is
+what ties a notebook to its run, and it never changes.
+
+Durations are quoted in years where the run tag used days: DINO runs on a
+366-day year at `dT=1800`, so `73200d` is 200 years, `1830d` is 5 years, and
+`366d` is 1 year.
+
+## Configuration tokens in file names
+
+DINO notebook names end in the viscosity setting the run used, because that is
+the axis most of these experiments vary. The reference field is
+`dino_viscAhD.bin`, built as `dxC * 0.27 / 2` by
+`02_forward/01_viscosity_study/00_build_viscAhD_binaries.ipynb`; the `_2p00`
+file is that field doubled.
+
+| Token | Meaning |
+| --- | --- |
+| `visc2x` | `viscAhDfile` = `viscAhZfile` = `dino_viscAhD_2p00.bin` — both components at **2× reference**, through `PARM05` |
+| `viscD2x_Zref` | `viscAhDfile` at 2× but `viscAhZfile` left at the reference field — a **mixed** setting, not the same experiment as `visc2x` |
+| `viscRef` | both files at the unscaled reference |
+| `viscGrid<v>` | scalar `viscAhGrid` in `PARM01` instead, `PARM05` files commented out; `viscGrid1p8e-2` is `viscAhGrid=1.8E-2` |
+| `asteMods` | the ASTE-derived `data.autodiff` variant, selected by the `asteMods` build and submit scripts |
+
+Reading `p` as the decimal point keeps the tokens shell-safe: `1p135e-2` is
+`1.135E-2`. Every notebook repeats its setting in full in a banner directly
+under the title, with the run number, so nothing depends on decoding the name.
+
+The distinction `visc2x` vs `viscD2x_Zref` is not cosmetic. The 200-year
+spin-up first ran as `viscD2x_Zref` and **crashed at 126.3 years** (run 19369);
+raising `viscAhZ` to 2× as well is what produced the run that completed
+(run 28463). Both notebooks are kept, the crashed one in `00_archive/`.
+
+## DINO_1deg
+
+`00_grid_and_cost_sections.ipynb` is the one other parts of the repo point at —
+it is how `isecbeg/isecend/jsec` in `code_tap/cost_atlantic_heat.F` were chosen,
+and both `README.md` and `CLAUDE.md` cite it by name.
+
+### 02_forward
+
+| Notebook | Run | What it shows |
+| --- | --- | --- |
+| `01_viscosity_study/00_build_viscAhD_binaries.ipynb` | 28402 | builds and verifies `dino_viscAhD.bin` against `dxC * 0.27 / 2`, and scales it to the `_2p50`/`_3p00`/`_5p00` variants |
+| `01_viscosity_study/01_viscRef_vs_viscGrid1p0e-2.ipynb` | 28402 vs 28447 | reference `PARM05` files against `viscAhGrid=1.0E-2` |
+| `01_viscosity_study/02_viscGrid1p135e-2_increased.ipynb` | 28402 vs 28448 | same comparison, `viscAhGrid` raised to `1.135E-2` |
+| `01_viscosity_study/03_viscGrid9p0e-3_decreased.ipynb` | 28402 vs 28451 | same comparison, `viscAhGrid` lowered to `9.0E-3` |
+| `02_spinup_200yr_visc2x.ipynb` | 28463 | the 200-year spin-up that completed: MOC in depth and density space, barotropic streamfunction, AMOC timeseries. Writes everything in `figures/` |
+| `03_moc_amoc_animation_visc2x.ipynb` | 28463 | renders the MOC + AMOC-timeseries frames into `moc_anim/` and `moc_anim_jpg_std2/` |
+
+`00_archive/` holds the two 200-year attempts that crashed:
+`200yr_from_rest_viscD2x_Zref_crashed_126y.ipynb` (run 19369) and
+`200yr_from_rest_viscGrid1p8e-2_crashed_13y.ipynb` (run 28452).
+
+### 03_adjoint
+
+All read `/scratch2/<user>/DINO_1deg_tapAdj_runs/`. Every one of these
+is a 5-year (1830-day) MPI adjoint; they differ in where they start and how
+viscosity is set.
+
+| Notebook | Run | Start (`nIter0`) | Viscosity / mods |
+| --- | --- | --- | --- |
+| `01_5yr_from_180yr_pickup_visc2x.ipynb` | 28486 | 180-year pickup (3162240) | `viscAhD` = `viscAhZ` = 2× reference |
+| `02_5yr_from_50yr_pickup_viscD2x_Zref.ipynb` | 24493 | 50-year pickup (878400) | `viscAhD` 2×, `viscAhZ` at reference |
+| `03_5yr_from_50yr_pickup_viscGrid1p8e-2_asteMods.ipynb` | 28461 | 50-year pickup (878400) | `viscAhGrid=1.8E-2`, ASTE `data.autodiff` |
+| `04_5yr_from_rest_viscGrid1p8e-2_asteMods.ipynb` | 28453 | rest (0) | `viscAhGrid=1.8E-2`, ASTE `data.autodiff` |
+
+Settings in this table were read back from each run's own staged `data`
+namelist on scratch, not from the run-directory tag.
+
+`00_archive/` holds five earlier serial exploratory runs at 180 and 360 days,
+named for their starting point and viscosity setting — `viscRef` from rest
+(runs 18232, 18222), `viscD2x_Zref` from the 80 yr pickup (runs 22038, 22039).
+The sixth, `serial_180d_from_50yr_pickup_after_profile.ipynb`, keeps no setting
+in its name: run 24020 is gone from scratch, so its namelist cannot be read
+back. Alongside them is
+`poster_scidac_pi_meeting_aug2026/` — the poster prepared for the SciDAC PI
+meeting in August 2026. Both of its notebooks read run 28486:
+`01_adj_field_animations.ipynb` animates the 3-D and 2-D `ADJ*` fields, and
+`02_poster_panel_frames.ipynb` is the trimmed version that writes the nine
+`poster_frames/*.png` panels of the 3 x 3 sensitivity grid.
+
+### Where the outputs go
+
+**No figures or animations live in this repository.** Every notebook writes its
+output into the scratch run directory it read, so a run directory is
+self-contained and deleting a run takes its figures with it:
+
+```
+<run>/
+├── figures/       PNGs, and poster_frames/ for the SciDAC panels
+└── animations/    gif + html exports, and the frame directories
+```
+
+Notebooks derive those paths from the `run_dir` they already define
+(`FIG_DIR = run_dir / "figures"`, `ANIM_DIR = os.path.join(run_dir, "animations")`),
+so the output follows the run automatically if it is ever moved again. Nothing
+needs editing in two places.
+
+Current locations:
+
+| Output | Lives in |
+| --- | --- |
+| 200-year spin-up figures, `moc.gif`, `moc_anim*/` | `DINO_1deg_frd_runs/runs_prod/DINO_1deg_frd_200yr_from_rest_visc2x_run28463/` |
+| `ADJ*` gif/html, `adj_*_z14/`, `poster_frames/` | `DINO_1deg_tapAdj_runs/DINO_1deg_tapAdj_5yr_from180yrPk_visc2x_run28486/` |
+
+The `.gitignore` rules for `analyses/**/*.{png,jpg,gif,html}` are only a safety
+net against a cell being re-run with a repo-local output path.
+
+## SOMA_1deg
+
+| Notebook | Runs | What it shows |
+| --- | --- | --- |
+| `01_first_look_at_dyndiag.ipynb` | `v4soma_tapAdj_test_run_5975` | first look at a SOMA run: `dynDiag` temperature and velocity |
+| `02_sensitivity_vs_run_length.ipynb` | `v4StP_srl_*` 5–150 d | manual tile stitching and halo removal, `adxx_theta` by depth, and an animation of how sensitivity grows with run length |
+| `03_sensitivity_theta_salt_diffkr.ipynb` | `pd_v4StP_srl_*` 30/180/360 d | three controls: temperature, salinity, vertical diffusivity |
+| `04_sensitivity_full_control_set.ipynb` | `pd_v4StP_srl_*` 30/180/360 d | the full control set — adds velocities, wind stress, and surface heat and freshwater fluxes |
+
+KPP and GM/Redi are disabled in all of them and the cost section is at 40°N, so
+neither is repeated in the file names.
 
 ## Notebook size discipline
 
@@ -49,18 +185,11 @@ the tree from 591 MB to 40 MB.
 
 ## What is deliberately not in git
 
-Regenerable output is gitignored but kept on disk (see the `analyses/` block in
-the root `.gitignore`):
+Only code and notebooks. Model output, figures and animations all live on
+cluster scratch. The notebooks are committed with their inline outputs, so the
+plots still render on GitHub even though no image files are tracked.
 
-| Ignored | Size | Regenerate by |
-| --- | --- | --- |
-| `*.html` animation exports | 218 MB | re-running the exporting cell |
-| `*.gif` animations | 68 MB | assembling the frame directories |
-| `moc_anim*/`, `adj_*_z14/`, `poster_frames/` | 90 MB | re-running the frame-writing cells |
-| `.ipynb_checkpoints/` | 420 MB | Jupyter recreates these automatically |
-| `.~*` editor autosaves | — | never wanted; one was a corrupt 155 MB file |
-
-Standalone result figures kept directly in `01_forward_analysis/`
-(`amoc_adjoint_schematic.png`, `moc_density_space.png`, the AMOC timeseries
-PNGs, …) **are** tracked — they are small and are referenced as results rather
-than being animation intermediates.
+Before committing a notebook containing animations, run
+`python3 analyses/tools/strip_animation_outputs.py` — `anim.to_jshtml()` embeds
+every frame as base64 and has produced single notebooks over GitHub's 100 MB
+hard limit.

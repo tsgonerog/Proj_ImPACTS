@@ -97,8 +97,8 @@ mv data.autodiff_adapted-frm-aste-90x150x60 data.autodiff
 cp -p "$build_dir/mitgcmuv_tap_adj" .
 
 #----- pickups ---------------
-#ln -s /scratch2/tshahriar/DINO_MITgcm_v011526_frd_runs/runs_prod/DINO_MITgcm_v011526_frd_73200d_viscAhD_2p00_run19369_crashed_at_126.3y/pickup.0000878400.data pickup.0000878400.data
-#ln -s /scratch2/tshahriar/DINO_MITgcm_v011526_frd_runs/runs_prod/DINO_MITgcm_v011526_frd_73200d_viscAhD_2p00_run19369_crashed_at_126.3y/pickup.0000878400.meta pickup.0000878400.meta
+#ln -s /scratch2/tshahriar/DINO_1deg_frd_runs/runs_prod/crashed_runs/DINO_1deg_frd_200yr_from_rest_viscD2x_Zref_crashed_126p3y_run19369/pickup.0000878400.data pickup.0000878400.data
+#ln -s /scratch2/tshahriar/DINO_1deg_frd_runs/runs_prod/crashed_runs/DINO_1deg_frd_200yr_from_rest_viscD2x_Zref_crashed_126p3y_run19369/pickup.0000878400.meta pickup.0000878400.meta
 
 # ========== RUN & TIMING ==========
 
