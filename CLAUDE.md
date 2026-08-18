@@ -8,6 +8,13 @@ MITgcm adjoint-sensitivity experiments built with the **Tapenade** AD toolchain 
 
 `README.md` documents the science (cost function, controls, namelist tags, grids) in detail. This file covers the mechanics that only become clear from reading several scripts at once.
 
+`./tools/pre_push_check.sh` is the closest thing to a test here: a read-only
+pre-push sanity check covering the nbstrip filter, submit-script namelist churn,
+build-script variant staging, stray images under `analyses/`, and notebook
+scratch paths that no longer resolve. Exits non-zero only on real breakage. Run
+it before concluding a tree is clean — `git status` alone does not distinguish a
+change the user authored from one a build or submit script made.
+
 There is no root build system, no test suite, no linter, and no package manifest. Fortran is built per-setup via `genmake2` + `make`; Python analysis happens in notebooks with no checked-in environment file (`numpy`, `xarray`, `xmitgcm`, `matplotlib`).
 
 ## Layout
@@ -168,7 +175,21 @@ well as by full path, then verify by reassembling the literals and checking each
 path exists on disk. `code_tap/cost_atlantic_heat.F` also cites
 `analyses/DINO_1deg/00_grid_and_cost_sections.ipynb` by name in a comment.
 
-Notebooks are committed with outputs embedded, so they are large; `**/.ipynb_checkpoints/` is gitignored but some checkpoint dirs predate that rule. Before committing a notebook containing animations, run `python3 analyses/tools/strip_animation_outputs.py` — `anim.to_jshtml()` embeds every frame as base64 and has produced single notebooks over GitHub's 100 MB hard limit.
+**Notebook outputs are stripped by a git `clean` filter, not by hand.**
+`.gitattributes` points `*.ipynb` at the `nbstrip` filter, defined by
+`analyses/tools/strip_animation_outputs.py --filter`. The working tree keeps its
+outputs; the committed blob does not. Filters live in `.git/config`, which is
+untracked, so **a fresh clone commits notebooks unstripped until
+`./analyses/tools/install_git_filters.sh` is run** — check `git config --get
+filter.nbstrip.clean` before concluding the filter is active. The default strips
+only `to_jshtml` payloads over 1 MB and keeps static figures; `--all-outputs`
+strips everything. The script keeps its original in-place mode for one-shot
+passes, so `--filter` (stdin to stdout, touches no file) and the default mode
+(rewrites files) are different things.
+
+Because git stores the stripped copy, anything that rewrites a notebook in the
+working tree (`checkout`, `stash`, `merge`, `reset --hard`) discards the local
+outputs.
 
 ## Not tracked
 

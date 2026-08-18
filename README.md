@@ -23,6 +23,7 @@ tracked.
 | --- | --- |
 | `MITgcm_c69m/` | MITgcm **checkpoint69m** (2026-03-30) source tree plus the experiments built against it |
 | `analyses/` | Jupyter notebooks that read run output from scratch and produce diagnostics/figures |
+| `tools/` | `pre_push_check.sh`, the repo-wide sanity check described below |
 | `resources/` | Reference notebooks from collaborators (e.g. `dinocean` package usage) |
 
 The MITgcm tree is vendored in full (~6,400 tracked files), not a submodule,
@@ -296,6 +297,60 @@ and SSS relaxation fields as big-endian `float32`). DINO's binaries — `dino_ba
 `dino_T0.bin`, `dino_S0.bin`, `dino_U0.bin`, `dino_V0.bin`, `dino_viscAhD.bin`,
 `dino_diffKr.bin` — are produced outside this repository and must be staged into
 `input_binaries/` before a run.
+
+## Workflow: before you push
+
+Run one command:
+
+```bash
+./tools/pre_push_check.sh
+```
+
+It is read-only — it never edits, stages, or pushes — and exits non-zero only if
+something would actually break. It checks the five things that go wrong here:
+
+| Check | Why it matters |
+| --- | --- |
+| `nbstrip` filter installed | Without it, notebooks commit with every embedded figure and animation. Git filters live in `.git/config`, which is untracked, so a fresh clone has none. |
+| `input_tap/data*` modified | **Submitting a job edits the repo.** The submit scripts `sed -i` the tracked namelist in place to set the duration, so a run leaves a diff you did not author. |
+| Build-staged variant files | Build scripts copy `SIZE.h_mpi` over `SIZE.h`, `the_model_main.F_OG` over `the_model_main.F`, and so on. Running a build dirties the tree even when nothing was authored — and edits to the bare file are lost on the next build. |
+| Images staged under `analyses/` | Figures and animations belong in the scratch run directory, not here. |
+| Notebook scratch paths resolve | These rot silently when a run directory is renamed or deleted. |
+
+The first four are quick; the last one reassembles the split string literals that
+notebooks use to build `run_dir` and stats each path, which is the only reliable
+way to catch a path that no longer exists.
+
+### The routine
+
+```bash
+# once per clone
+./analyses/tools/install_git_filters.sh
+
+# normal work — outputs stay in your working copy, nothing to remember
+jupyter lab
+
+# before pushing
+./tools/pre_push_check.sh
+git status                 # confirm the diff is what you intended
+git add -A && git commit
+git push origin main
+```
+
+Nothing needs stripping by hand. The clean filter removes oversized animation
+payloads on the way into git, so your local notebook keeps everything it
+rendered while the committed copy stays small.
+
+Two results are expected rather than errors:
+
+- **Namelist diffs after submitting a job.** Decide whether the new duration is
+  what you want to keep, then commit or `git checkout --` it. Do not push it
+  unnoticed.
+- **Unresolved scratch paths in `00_archive/` notebooks.** Runs 18238, 18153 and
+  24020 were deleted from scratch, and the SOMA notebooks reference runs that are
+  likewise gone. These are reported as notes, not failures.
+
+---
 
 ## Reference
 

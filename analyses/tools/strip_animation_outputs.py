@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Strip oversized animation payloads from Jupyter notebooks, keeping static figures.
+"""Strip notebook outputs, either the oversized ones only or all of them.
 
 Matplotlib's ``anim.to_jshtml()`` embeds every frame of an animation as a
 separate base64 PNG inside one ``text/html`` output. A few hundred frames turn a
 notebook into hundreds of megabytes, which is what pushed several notebooks in
 this repository past GitHub's hard 100 MB per-file limit.
 
-This script removes only those bulky payloads. Static ``image/png`` figures are
-left untouched, so the notebooks still render their plots on GitHub. Each
+By default only those bulky payloads are removed. Static ``image/png`` figures
+are left untouched, so the notebooks still render their plots on GitHub. Each
 stripped output is replaced by a short text/plain note saying how to get it back.
 
 Usage
@@ -18,6 +18,21 @@ With no paths, walks the analyses/ tree next to this script. Directories are
 searched recursively; ``.ipynb_checkpoints`` is always skipped.
 
 Exit status is 0 on success, 1 if any notebook failed to parse.
+
+Git clean-filter mode
+---------------------
+    python3 strip_animation_outputs.py --filter [--all-outputs] < in.ipynb > out.ipynb
+
+Reads one notebook on stdin and writes the stripped notebook on stdout, touching
+no file on disk. This is the shape git wants for a ``clean`` filter: git runs it
+on the way *into* the index, so the committed blob is stripped while the working
+copy keeps its outputs. ``install_git_filters.sh`` wires it up.
+
+``--all-outputs`` clears every output and execution count rather than only the
+oversized animation payloads.
+
+In filter mode, input that cannot be parsed as a notebook is echoed through
+unchanged, so a malformed file can never fail a commit.
 """
 
 from __future__ import annotations
@@ -50,12 +65,8 @@ def payload_size(value) -> int:
     return len(json.dumps(value))
 
 
-def strip_notebook(path: Path, threshold: int, dry_run: bool) -> tuple[int, int, int]:
-    """Return (bytes_before, bytes_after, outputs_stripped) for one notebook."""
-    before = path.stat().st_size
-    with path.open(encoding="utf-8") as fh:
-        nb = json.load(fh)
-
+def strip_heavy(nb, threshold: int) -> int:
+    """Drop oversized animation payloads in place. Returns how many were removed."""
     stripped = 0
     for cell in nb.get("cells", []):
         for output in cell.get("outputs", []):
@@ -65,9 +76,9 @@ def strip_notebook(path: Path, threshold: int, dry_run: bool) -> tuple[int, int,
             for mime in list(data):
                 if mime not in HEAVY_MIMES:
                     continue
-                if payload_size(data[mime]) < threshold:
-                    continue
                 size = payload_size(data[mime])
+                if size < threshold:
+                    continue
                 del data[mime]
                 stripped += 1
                 # Leave a visible breadcrumb, so a reader on GitHub can tell an
@@ -81,6 +92,52 @@ def strip_notebook(path: Path, threshold: int, dry_run: bool) -> tuple[int, int,
                     if isinstance(existing, str):
                         existing = [existing]
                     data["text/plain"] = existing + ["\n", note]
+    return stripped
+
+
+def strip_all(nb) -> int:
+    """Clear every output and execution count in place. Returns how many were cleared."""
+    cleared = 0
+    for cell in nb.get("cells", []):
+        if cell.get("cell_type") != "code":
+            continue
+        if cell.get("outputs"):
+            cleared += len(cell["outputs"])
+            cell["outputs"] = []
+        if cell.get("execution_count") is not None:
+            cell["execution_count"] = None
+    return cleared
+
+
+def run_filter(all_outputs: bool, threshold: int) -> int:
+    """Git clean filter: notebook JSON on stdin, stripped notebook on stdout."""
+    raw = sys.stdin.buffer.read()
+    try:
+        nb = json.loads(raw.decode("utf-8"))
+        if not isinstance(nb, dict) or "cells" not in nb:
+            raise ValueError("not a notebook")
+    except (json.JSONDecodeError, UnicodeDecodeError, ValueError):
+        # Never fail a commit over something we do not understand.
+        sys.stdout.buffer.write(raw)
+        return 0
+    if all_outputs:
+        strip_all(nb)
+    else:
+        strip_heavy(nb, threshold)
+    # indent=1 plus a trailing newline is what Jupyter itself writes, so a
+    # stripped notebook and a freshly saved one differ only in the outputs.
+    out = json.dumps(nb, indent=1, ensure_ascii=False) + "\n"
+    sys.stdout.buffer.write(out.encode("utf-8"))
+    return 0
+
+
+def strip_notebook(path: Path, threshold: int, dry_run: bool) -> tuple[int, int, int]:
+    """Return (bytes_before, bytes_after, outputs_stripped) for one notebook."""
+    before = path.stat().st_size
+    with path.open(encoding="utf-8") as fh:
+        nb = json.load(fh)
+
+    stripped = strip_heavy(nb, threshold)
 
     if stripped and not dry_run:
         # newline at EOF matches what Jupyter itself writes
@@ -111,9 +168,17 @@ def main() -> int:
     parser.add_argument("--threshold-mb", type=float, default=DEFAULT_THRESHOLD / 1e6,
                         help="strip payloads larger than this (default: 1 MB)")
     parser.add_argument("--dry-run", action="store_true", help="report without writing")
+    parser.add_argument("--filter", action="store_true",
+                        help="git clean-filter mode: notebook on stdin, stripped notebook on stdout")
+    parser.add_argument("--all-outputs", action="store_true",
+                        help="clear every output, not just oversized animation payloads")
     args = parser.parse_args()
 
     threshold = int(args.threshold_mb * 1e6)
+
+    if args.filter:
+        return run_filter(args.all_outputs, threshold)
+
     root = Path(__file__).resolve().parent.parent
     notebooks = collect(args.paths, root)
     if not notebooks:

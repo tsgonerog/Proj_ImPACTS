@@ -1,0 +1,11 @@
+# Notebook outputs are stripped on the way into git by a `clean` filter, so the
+# working copy keeps its figures and animations while the committed blob does
+# not. The filter lives in analyses/tools/strip_animation_outputs.py.
+#
+# Filters are configured in .git/config, which is NOT committed, so each clone
+# must run once:
+#
+#     ./analyses/tools/install_git_filters.sh
+#
+# Until it is run, this line is inert and notebooks are committed as-is.
+*.ipynb filter=nbstrip diff=ipynb

@@ -171,17 +171,50 @@ separate base64 PNG* in a single `text/html` output. Eight such animations were
 enough to make one notebook 228 MB — past GitHub's hard 100 MB per-file limit,
 which blocks the push outright.
 
-Before committing notebooks that contain animations, run:
+That is handled automatically now, by a git **clean filter**. Outputs stay in
+your working copy, so you can open a notebook and show it to someone; git
+strips the oversized ones on the way into the index, so what gets committed and
+pushed is small. Nothing has to be remembered before a push.
+
+Filters live in `.git/config`, which is not tracked, so **each clone runs this
+once**:
+
+```bash
+./analyses/tools/install_git_filters.sh                # default: >1 MB animations
+./analyses/tools/install_git_filters.sh --all-outputs  # strip every output
+./analyses/tools/install_git_filters.sh --uninstall
+```
+
+The default removes only animation payloads above 1 MB and leaves static figures
+alone, so plots still render for anyone reading the repository on GitHub. Each
+stripped output is replaced by a note saying what was removed and that re-running
+the cell regenerates it. `--all-outputs` clears everything, which takes the
+notebooks here from 29.6 MB to 1.4 MB but leaves no figures visible on GitHub.
+
+Until the installer is run, `.gitattributes` is inert and notebooks commit as-is.
+
+**One caveat.** The stored copy is the stripped one, so any git operation that
+overwrites a notebook in the working tree — `checkout`, `stash`, `merge`,
+`reset --hard` — replaces it with the stripped version, and whatever was
+stripped is gone locally. Re-run the cell, or keep an export outside the repo:
+
+```bash
+jupyter nbconvert --to html --output-dir ~/nb_for_advisor <notebook>
+```
+
+The same script still works as a one-shot pass over files on disk, which is what
+was used before the filter existed:
 
 ```bash
 python3 analyses/tools/strip_animation_outputs.py            # whole tree
 python3 analyses/tools/strip_animation_outputs.py --dry-run  # report only
 ```
 
-It removes only oversized animation payloads and leaves static figures in place,
-so the plots still render on GitHub. Each stripped output is replaced by a note
-saying what was removed and that re-running the cell regenerates it. This took
-the tree from 591 MB to 40 MB.
+That in-place mode rewrites the files themselves; the filter mode does not.
+
+Before pushing, `./tools/pre_push_check.sh` at the repo root confirms the filter
+is installed and that no figures or unresolved scratch paths have crept in. See
+"Workflow: before you push" in the root `README.md`.
 
 ## What is deliberately not in git
 
