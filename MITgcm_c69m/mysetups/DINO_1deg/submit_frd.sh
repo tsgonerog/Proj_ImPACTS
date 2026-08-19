@@ -42,7 +42,13 @@ simulation_duration_with_dT1800_days=3660   # 10 years at 366 d/yr
 monitorFreq_days=30.5 # on average there is 30.5 days in a month
 
 #----------- do not edit below --------------------------
-namelist_data="$SLURM_SUBMIT_DIR/input/data${suffix}"
+# Empty test_cases uses the live input/data; anything else names a file
+# in input/variants/. Adding a new alternative means putting it there.
+if [[ -z "$test_cases" ]]; then
+    namelist_data="$SLURM_SUBMIT_DIR/input/data"
+else
+    namelist_data="$SLURM_SUBMIT_DIR/input/variants/data_${test_cases}"
+fi
 
 # Safety check
 if [[ ! -f "$namelist_data" ]]; then
@@ -92,7 +98,9 @@ mkdir -p "$run_dir"
 cd "$run_dir"
 
 # copy and link input files into run directory
-cp "$base_dir/input"/* .
+# -maxdepth 1 -type f skips input/variants/; a plain glob would try to
+# copy that directory and abort the script under set -e.
+find "$base_dir/input" -maxdepth 1 -type f -exec cp {} . \;
 ln -s "$base_dir/input_binaries"/* .
 
 # Replace data file correctly

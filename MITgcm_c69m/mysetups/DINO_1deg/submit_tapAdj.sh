@@ -44,7 +44,13 @@ adjMonitorFreq_days=5
 adjDumpFreq_days=5
 
 #----------- do not edit below --------------------------
-namelist_data="$SLURM_SUBMIT_DIR/input_tap/data${suffix}"
+# Empty test_cases uses the live input_tap/data; anything else names a file
+# in input_tap/variants/. Adding a new alternative means putting it there.
+if [[ -z "$test_cases" ]]; then
+    namelist_data="$SLURM_SUBMIT_DIR/input_tap/data"
+else
+    namelist_data="$SLURM_SUBMIT_DIR/input_tap/variants/data_${test_cases}"
+fi
 
 # Safety check
 if [[ ! -f "$namelist_data" ]]; then
@@ -94,7 +100,9 @@ mkdir -p "$run_dir"
 cd "$run_dir"
 
 # copy and link input files into run directory
-cp "$base_dir/input_tap"/* .
+# -maxdepth 1 -type f skips input_tap/variants/; a plain glob would try to
+# copy that directory and abort the script under set -e.
+find "$base_dir/input_tap" -maxdepth 1 -type f -exec cp {} . \;
 ln -s "$base_dir/input_binaries"/* .
 ln -s "$base_dir/input_adj_binaries"/* .
 

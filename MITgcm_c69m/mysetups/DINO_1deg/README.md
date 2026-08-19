@@ -1,8 +1,7 @@
 # DINO_1deg
 
 Idealised single-basin "DINO" ocean, pole to pole. **51 × 198 × 36**, curvilinear,
-`delX = 1°`, `delY = 0.77°`, `dT = 1800 s`, 366-day year. This is the primary
-configuration; `SOMA_1deg/` is the secondary.
+`delX = 1°`, `delY = 0.77°`, `dT = 1800 s`, 366-day year.
 
 **MPI only.** `SIZE.h_serial` exists in `code_tap/` but no script stages it.
 
@@ -71,9 +70,46 @@ the duration is safe; changing the starting point means editing both.
 | --- | --- |
 | `code/`, `input/` | forward model |
 | `code_tap/`, `input_tap/` | adjoint model — adds `data.autodiff`, `data.cost`, `data.ctrl`, `data.grdchk` |
+| `input*/variants/` | alternative namelists; the submit script copies **one** in as `data` |
 | `input_binaries/` | **untracked, 179 MB.** Produced outside this repo; nothing here regenerates it |
 | `input_adj_binaries/` | **untracked.** `ones_64b.bin`, the uniform control weight every `data.ctrl` entry points at |
 | `00_archive/` | superseded scripts and ASTE reference files — nothing live reads it |
+
+## Namelists and variants
+
+`input/` and `input_tap/` hold exactly the files MITgcm reads — the same list a
+run directory ends up with. Alternatives live one level down:
+
+```
+input_tap/
+├── data              <- the live namelist
+├── data.autodiff     <- ... and the other ten MITgcm reads
+├── ...
+└── variants/
+    ├── data_from180yrPk_visc2x
+    ├── data_from50yrPk_viscGrid1p8e-2
+    ├── data_from_rest_viscGrid1p8e-2
+    └── data.autodiff_adjViscBoost
+```
+
+Selecting one is a single edit at the top of a submit script:
+
+```bash
+test_cases="from180yrPk_visc2x"      # -> variants/data_from180yrPk_visc2x
+test_cases=""                        # -> the live input_tap/data
+```
+
+The script copies it in as `data`, and the run directory name records which was
+used. A typo aborts the job immediately rather than silently running the wrong
+configuration.
+
+**Adding an alternative means putting it in `variants/`**, named
+`data_<start>_<viscosity>[_extras]` — see the root `README.md` for that
+vocabulary. Files directly in `input_tap/` are staged into every run, so a stray
+one there becomes part of every configuration.
+
+Only the selected variant is copied to scratch, so a run directory contains the
+12 namelists MITgcm reads and nothing else.
 
 ## Reading the code
 
@@ -145,9 +181,18 @@ compiled in as `parameter` statements (`isecbeg=1, isecend=51, jsec=127`,
 not a namelist setting. Indices are located with
 `analyses/DINO_1deg/00_grid_and_cost_sections.ipynb`.
 
-`useGrdchk = .TRUE.` in `input_tap/data.grdchk`, so **every adjoint job also runs
-the finite-difference gradient check** and pays for it. Check this first if a run
-seems to be doing more work than expected.
+`useGrdchk = .TRUE.`, so **every adjoint job also runs the finite-difference
+gradient check** and pays for it — a 30-day adjoint recorded 18,622 forward-step
+calls against the 1,440 the adjoint itself needs. Check this first if a run seems
+to be doing more work than expected.
+
+**The check does not currently verify anything.** It perturbs `xx_theta` at
+`iGloPos=4, jGloPos=8, kGloPos=1`, but the cost section is at `j=127` and
+sensitivity at the check point is ~6e-10 against a field maximum of ~3.9e-02. The
+finite difference measures run-to-run noise, not the perturbation, and fails by
+~8 orders of magnitude. It has always done so. To make it meaningful use
+`iGloPos=2, jGloPos=127, kGloPos=26` with `grdchk_eps` around 1e-3. See
+"Verification status" in the root `README.md`.
 
 KPP and GM/Redi are off (`input_tap/data.pkg`), which makes the
 `useKPPinAdMode` / `useGMRediInAdMode` flags in `data.autodiff` inert.

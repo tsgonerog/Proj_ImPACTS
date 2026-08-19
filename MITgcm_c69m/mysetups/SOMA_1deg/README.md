@@ -2,7 +2,7 @@
 
 Wind-driven, bowl-shaped idealised basin. **62 × 62 × 31**, spherical polar,
 `delX = delY = 1°`, `ygOrigin = 14.` so the domain spans **14°N–76°N**,
-~3500 m deep, `dT = 1200 s`. Secondary configuration; `DINO_1deg/` is primary.
+~3500 m deep, `dT = 1200 s`.
 
 **Serial only.** `SIZE.h_mpi` exists in `code_tap/` but no script stages it, and
 no submit script expects it.
@@ -71,7 +71,10 @@ The cost function is `code_tap/cost_atlantic_heat.F` with indices compiled in
 `kmaxdepth=21`). Changing the section means editing the file and rebuilding.
 
 `useGrdchk = .TRUE.`, so every adjoint job also runs the finite-difference
-gradient check. KPP and GM/Redi are off in `input_tap/data.pkg`.
+gradient check and pays for it. As in DINO, whether its perturbation point sits
+where the adjoint actually has sensitivity has not been checked here — see
+"Verification status" in the root `README.md` before trusting its output.
+KPP and GM/Redi are off in `input_tap/data.pkg`.
 
 ## A trap that cost real time
 

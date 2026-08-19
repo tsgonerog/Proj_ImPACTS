@@ -181,6 +181,7 @@ The `code/` + `input/` pair is the forward model; `code_tap/` + `input_tap/` is 
 
 - `code_tap/packages.conf` drops `cd_code` and adds `tapenade` plus the `adjoint` pkg group (`autodiff, ctrl, cost, grdchk`).
 - `input_tap/` adds `data.autodiff`, `data.cost`, `data.ctrl`, `data.grdchk`.
+- **`input*/` holds only what MITgcm reads; alternatives live in `input*/variants/`.** A submit script resolves `test_cases` to `variants/data_<tag>` (empty `test_cases` means the live `input*/data`) and stages only that one, so a run directory carries no unused namelists. Anything placed directly in `input*/` is copied into *every* run. The staging uses `find -maxdepth 1 -type f` rather than a glob, because `cp dir/*` would hit `variants/` and abort under `set -e`.
 - `code_tap/COST_OPTIONS.h` defines `ALLOW_COST_ATLANTIC_HEAT` and `ALLOW_COST_ATLANTIC_HEAT_DOMASS`.
 
 The cost function `code_tap/cost_atlantic_heat.F` has its **section indices compiled in as `parameter` statements** — a zonal section (DINO: `isecbeg=1, isecend=51, jsec=127`) and a meridional one (`jsecbeg=1, jsecend=62, isec=30`) are both declared. Moving a section requires editing this file and rebuilding, not a namelist change; `mult_atl` in `data.cost` only scales the result. Indices are located with `analyses/DINO_1deg/00_grid_and_cost_sections.ipynb`. Because the values are compiled in, the authoritative record of what a past run measured is the `.f` file in that run's build directory, not the current source.
@@ -191,9 +192,59 @@ The cost function `code_tap/cost_atlantic_heat.F` has its **section indices comp
 
 ## Verifying correctness
 
-There are no unit tests. Adjoint correctness is checked by **finite-difference gradient checks** — configured by `input_tap/data.grdchk` (`grdchk_eps=1e-5`, a `grdchkvarname` such as `xx_theta`, and the `iGloPos/jGloPos/kGloPos` point to perturb). This runs inside the model executable, not as a separate command. **`useGrdchk = .TRUE.` in both the DINO and SOMA setups**, so this is not an opt-in mode — every adjoint job as currently configured also does the perturbed forward runs, and pays for them. If a run seems to be doing more work than the adjoint alone should require, check this flag before looking elsewhere.
+There are no unit tests. Three things stand in for them, and their status as of
+2026-08-18 is:
 
-The second check used historically — the `tutorial_*_with_adj` setups reproducing stock MITgcm tutorials through the Tapenade path, with `tutorial_global_oce_biogeo/` keeping `code_ad` / `code_oad` / `code_tap` side by side to compare AD backends — lived in the c69f tree and is now only in `Proj_ImPACTS_old`. There is no tutorial-level regression check in this repository.
+**1. Forward reproducibility — verified.** A 10-year run from rest with
+`from_rest_visc2x` reproduces the first 10 years of the 200-year production run
+(28463) **bit-identically**: 161 `dynDiag` field comparisons, all of
+`surfDiag`/`atmDiag`/`viscDiag`, 1334 monitor values across 134 variables, and
+the AMOC series, every one at exactly zero difference. This is the cheap
+regression test — rebuild, run 10 years, diff against 28463. It catches a
+compiler or source change that alters the physics.
+
+**2. Adjoint runs end to end — verified.** A 30-day adjoint from the 180-year
+pickup produces `ADJ*` and `adxx*` output with sensitivity concentrated on the
+cost section (peak `|adxx_theta|` at `i=2, j=127, k=26`, decaying away from it).
+That is consistent with a correct adjoint but is not a proof.
+
+**3. The finite-difference gradient check — NOT currently meaningful.**
+`input_tap/data.grdchk` perturbs `xx_theta` at `iGloPos=4, jGloPos=8, kGloPos=1`
+and compares against the adjoint. It fails by ~8 orders of magnitude, and **it
+has always failed** — the May 2026 production run (28486) shows the same, with a
+worse RMS ratio (8.0e+12 against 6.6e+08).
+
+The cause is the check point, not the adjoint. `j=8` is near the southern
+boundary; the cost section is at `j=127`. Sensitivity there is ~6e-10 against a
+field maximum of ~3.9e-02. The cost change the adjoint predicts for
+`grdchk_eps=1e-5` is 6e-15, while the perturbed runs differ from the base by
+~9e-06 — a billion times larger. Both `FC1` and `FC2` land on the *same side* of
+`FC`, which a real first derivative cannot produce. The check is dividing its own
+noise by `2*eps` and reporting the result as a gradient.
+
+**So the adjoint is not currently verified by anything in this repository.** To
+make the check mean something, move the point into the sensitive region —
+`iGloPos=2, jGloPos=127, kGloPos=26` — and raise `grdchk_eps` (1e-3) so the
+response clears the noise floor. Until that is done, do not cite `grdchk` output
+as evidence either way.
+
+**`useGrdchk = .TRUE.` in both setups**, so this is not opt-in: every adjoint job
+pays for the perturbed forward runs. In the 30-day run above, `MAIN_DO_LOOP`
+recorded 18,622 forward-step calls against the 1,440 the adjoint itself needs.
+If a run is doing far more work than expected, check this flag first.
+
+The historical fourth check — the `tutorial_*_with_adj` setups reproducing stock
+MITgcm tutorials through the Tapenade path, with `tutorial_global_oce_biogeo/`
+holding `code_ad` / `code_oad` / `code_tap` side by side — lived in the c69f tree
+and is now only in `Proj_ImPACTS_old`. There is no tutorial-level regression
+check here.
+
+## Reading MDS output
+
+`adxx_*` and `xx_*` control files are **`float64`** (hence `ones_64b.bin`), while
+the `ADJ*` diagnostic dumps follow `data.diagnostics` and are `float32`. Read the
+`.meta` beside a file rather than assuming — guessing the precision silently
+reshapes the array and produces plausible-looking garbage.
 
 ## Analyses
 

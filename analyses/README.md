@@ -164,6 +164,20 @@ net against a cell being re-run with a repo-local output path.
 KPP and GM/Redi are disabled in all of them and the cost section is at 40°N, so
 neither is repeated in the file names.
 
+## Reading the output files
+
+`adxx_*` and `xx_*` control files are **`float64`**; the `ADJ*` diagnostic dumps
+follow `data.diagnostics` and are `float32`. Read the `.meta` beside a file rather
+than assuming — guessing wrong silently reshapes the array into plausible-looking
+garbage. `xmitgcm.open_mdsdataset` handles this for you; raw `np.fromfile` does not.
+
+Two runs were added on 2026-08-18 for verification rather than science:
+
+| Run | What it is |
+| --- | --- |
+| `DINO_1deg_frd_10yr_from_rest_visc2x_run30945` | 10-year forward, confirmed **bit-identical** to the first 10 years of run 28463. Carries `figures/` with the MOC, AMOC and reproduction-check plots |
+| `DINO_1deg_tapAdj_30d_from180yrPk_visc2x_run30948` | 30-day adjoint, confirms `ADJ*`/`adxx*` output and sensitivity on the cost section |
+
 ## Notebook size discipline
 
 `matplotlib`'s `anim.to_jshtml()` embeds *every frame of an animation as a
