@@ -73,7 +73,7 @@ the duration is safe; changing the starting point means editing both.
 | `input*/variants/` | alternative namelists; the submit script copies **one** in as `data` |
 | `input_binaries/` | **untracked, 179 MB.** Produced outside this repo; nothing here regenerates it |
 | `input_adj_binaries/` | **untracked.** `ones_64b.bin`, the uniform control weight every `data.ctrl` entry points at |
-| `00_archive/` | superseded scripts and ASTE reference files — nothing live reads it |
+| `00_archive/` | superseded config in `code_tap/`, `input_tap/`, `scripts/`, mirroring the live dirs — nothing live reads it; has its own `README.md` |
 
 ## Namelists and variants
 

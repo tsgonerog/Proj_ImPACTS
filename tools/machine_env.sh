@@ -68,8 +68,13 @@ perlmutter)
     : "${SCRATCH_ROOT:=${SCRATCH:-/pscratch/sd/${USER:0:1}/$USER}}"
     # NERSC wants srun; mpirun is not supported on Perlmutter.
     : "${MPI_LAUNCHER:=srun -n}"
-    MPI_OPTFILE="${IMPACTS_MPI_OPTFILE:-$MITGCM_ROOT/tools/build_options/linux_amd64_gnu+mpi_perlmutter}"
-    SERIAL_OPTFILE="${IMPACTS_SERIAL_OPTFILE:-$MITGCM_ROOT/tools/build_options/linux_amd64_gnu+mpi_perlmutter}"
+    # UNTESTED template, deliberately kept out of MITgcm/tools/build_options/ so
+    # it is not mistaken for one of the 95 working upstream optfiles. It is used
+    # as-is so a first build produces real errors to fix; impacts_check_env warns
+    # while it is still the template. Once adapted, point IMPACTS_MPI_OPTFILE at
+    # your copy. See tools/optfile_templates/README.md and PORTING.md.
+    MPI_OPTFILE="${IMPACTS_MPI_OPTFILE:-$IMPACTS_ROOT/tools/optfile_templates/linux_amd64_gnu+mpi_perlmutter}"
+    SERIAL_OPTFILE="${IMPACTS_SERIAL_OPTFILE:-$IMPACTS_ROOT/tools/optfile_templates/linux_amd64_gnu+mpi_perlmutter}"
     # -A and -C are mandatory on Perlmutter; a job without them is rejected.
     # NERSC_ACCOUNT must be set (e.g. in ~/.bashrc): export NERSC_ACCOUNT=mXXXX
     : "${NERSC_ACCOUNT:=}"
@@ -113,5 +118,15 @@ impacts_check_env() {
         echo "WARNING: NERSC_ACCOUNT is unset; sbatch will reject the job." >&2
         bad=1
     fi
+    case "$MPI_OPTFILE$SERIAL_OPTFILE" in
+      *"/tools/optfile_templates/"*)
+        echo "WARNING: building with an UNTESTED optfile template:" >&2
+        echo "         $MPI_OPTFILE" >&2
+        echo "         It has never been compile-tested. Expect to adjust FOPTIM" >&2
+        echo "         and the netCDF paths. Once it works, copy it somewhere of" >&2
+        echo "         your own and export IMPACTS_MPI_OPTFILE to silence this." >&2
+        bad=1
+        ;;
+    esac
     return $bad
 }

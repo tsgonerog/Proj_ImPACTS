@@ -50,9 +50,13 @@ fi
 
 ###############################################
 # Choose TapProfile behavior here:
-#   NO    : Don't want to use Tapenade profiling, use patched_NoTapProfile_genmake2
-#   YES   : Want to use Tapenade profiling, use patched_ForTapProfile_genmake2
-#   AFTER : After implementing suggession provided by Tapenade profiling tool, use patched_AfterTapProfile_genmake2
+#   NO    : no Tapenade profiling      -> tools/genmake2_override_forward_step_b
+#   YES   : use Tapenade profiling      -> patched_ForTapProfile_genmake2    (NOT here)
+#   AFTER : after acting on its advice  -> patched_AfterTapProfile_genmake2  (NOT here)
+#
+# Only NO works in this repository. The YES/AFTER variants keep their original
+# names because that is what they are called in the one place they still exist,
+# Proj_ImPACTS_old/MITgcm_c69f/MITgcm/tools/.
 ###############################################
 
 use_TapProfile="NO"   # <-- change this to "YES" or "AFTER" as needed
@@ -62,7 +66,7 @@ case "$use_TapProfile" in
     "NO")
         echo "Not Using Tapenade Profiling Tool"
         cp code_tap/the_model_main.F_OG code_tap/the_model_main.F
-        GENMAKE_SCRIPT="patched_NoTapProfile_genmake2"
+        GENMAKE_SCRIPT="genmake2_override_forward_step_b"
         ;;
 
     "YES")

@@ -59,7 +59,7 @@ mechanism — SOMA has a single `input_tap/data`.
 | `code_tap/`, `input_tap/` | adjoint model — adds `data.autodiff`, `data.cost`, `data.ctrl`, `data.grdchk` |
 | `input_binaries/` | **untracked**, but regenerates: `python3 input/gendata.py` |
 | `input_adj_binaries/` | **untracked.** `ones_64b.bin`, the uniform control weight |
-| `00_archive/` | superseded scripts and namelists — nothing live reads it |
+| `00_archive/` | superseded submit scripts in `scripts/`, mirroring the live dirs — nothing live reads it; has its own `README.md` |
 | `.gitignore` | setup-local, ignores `*.out` / `*.err` |
 
 For what the individual `code_tap/` sources and `input_tap/` namelists do, see

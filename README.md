@@ -60,7 +60,7 @@ already define, so nothing has to be kept in sync by hand.
 | --- | --- |
 | `MITgcm_c69m/` | MITgcm **checkpoint69m** (2026-03-30) source tree plus the experiments built against it |
 | `analyses/` | Jupyter notebooks that read run output from scratch and produce diagnostics/figures |
-| `tools/` | `machine_env.sh` (per-machine settings), `submit.sh`, `pre_push_check.sh` |
+| `tools/` | `machine_env.sh` (per-machine settings), `submit.sh`, `pre_push_check.sh`, and `optfile_templates/` — project optfiles not yet validated on their target machine |
 | `resources/` | Reference notebooks from collaborators (e.g. `dinocean` package usage) |
 
 Four documents, each with a different job:
@@ -114,7 +114,7 @@ DINO_1deg/
 │   └── variants/             alternative namelists (4)
 ├── input_binaries/           bathymetry, forcing, initial state — NOT tracked, 179 MB
 ├── input_adj_binaries/       ones_64b.bin, the uniform control weight — NOT tracked
-├── 00_archive/               superseded scripts and ASTE-derived reference files
+├── 00_archive/               superseded config, mirroring the live dirs it came from
 │
 ├── build_frd.sh                   ─┐
 ├── build_tapAdj.sh                 │  build drivers,
@@ -185,15 +185,17 @@ itself:
 This is the part of the repository that differs most from stock MITgcm, and the
 reason the model source is vendored rather than referenced.
 
-**Patched `genmake2`.** `MITgcm/tools/` contains `patched_NoTapProfile_genmake2`
-alongside the original `genmake2`. Two further variants —
+**Patched `genmake2`.** `MITgcm/tools/` contains `genmake2_override_forward_step_b`
+alongside the original `genmake2` — named for what it does, and sorting beside
+the file it is a copy of. Two further variants —
 `patched_ForTapProfile_genmake2` (instrumented for Tapenade's profiling tool)
 and `patched_AfterTapProfile_genmake2` (after acting on the profiler's advice) —
-exist only in the archived c69f tree and would need porting before profiling
-could be run here.
+exist only in the archived c69f tree, under those original names, and would need
+porting before profiling could be run here.
 
-The patch itself is a single line that injects a hand-modified
-`forward_step_b.f` into the Tapenade-generated code:
+The patch itself is a single line, injected into the `adj_tap_all` make rule
+immediately after Tapenade runs, so the hand-corrected copy overwrites the
+generated `forward_step_b.f` before the AD sources are concatenated:
 
 ```diff
 + cp ../code_tap/forward_step_b.f_modified forward_step_b.f
@@ -215,7 +217,7 @@ Each mode also swaps in the matching `the_model_main.F` variant. Setting this to
 `AfterTapProfile` `genmake2` copies are not in this tree — see
 [The checkpoint69f tree](#the-checkpoint69f-tree). The matching
 `the_model_main.F_ForTapProfile` *is* still available, under
-`DINO_1deg/00_archive/code_tap_files_MITgcm_c69f/`.
+`DINO_1deg/00_archive/code_tap/`.
 
 **Hand-adapted AD sources.** `code_tap/` carries several files in `_OG`
 (original) and `_aste_90x150x60` (adapted from the ASTE regional setup) flavours
@@ -237,7 +239,7 @@ means adding one case block rather than editing a dozen files.
 | detected by | fallback | `$NERSC_HOST` |
 | scratch | `/scratch2/$USER` | `$SCRATCH` |
 | launcher | `mpirun -n` | `srun -n` |
-| optfile | Intel, from `crios_computing` | `linux_amd64_gnu+mpi_perlmutter` |
+| optfile | Intel, from `crios_computing` | `tools/optfile_templates/linux_amd64_gnu+mpi_perlmutter` — **untested**, see `PORTING.md` |
 | modules | from `~/.bashrc` | `PrgEnv-gnu`, `cray-*` |
 
 ```bash

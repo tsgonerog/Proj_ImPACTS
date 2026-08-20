@@ -38,8 +38,10 @@ fi
 echo
 echo "── side effects you did not author ──────────────────────────────────"
 # Submit scripts sed -i the tracked namelist in input_tap/, so submitting a job
-# edits the repo.
-nl=$(git diff --name-only HEAD -- '*/input_tap/data*' 2>/dev/null)
+# edits the repo. 00_archive/ is excluded: it mirrors the live directory names,
+# so it contains 00_archive/input_tap/data* paths that no submit script can ever
+# touch.
+nl=$(git diff --name-only HEAD -- '*/input_tap/data*' ':(exclude)*/00_archive/*' 2>/dev/null)
 if [[ -n "$nl" ]]; then
     warn "namelists rewritten by a submit script — keep or restore deliberately:"
     printf "        %s\n" $nl
@@ -51,7 +53,7 @@ fi
 staged_variants=$(git diff --name-only HEAD -- \
     '*/code_tap/SIZE.h' '*/code_tap/the_model_main.F' '*/code_tap/AUTODIFF_PARAMS.h' \
     '*/code_tap/autodiff_readparms.F' '*/code_tap/autodiff_inadmode_set_ad.F' \
-    '*/code_tap/forward_step_b.f_modified' 2>/dev/null)
+    '*/code_tap/forward_step_b.f_modified' ':(exclude)*/00_archive/*' 2>/dev/null)
 if [[ -n "$staged_variants" ]]; then
     warn "build-staged variant files differ — edit the suffixed sibling, not these:"
     printf "        %s\n" $staged_variants

@@ -19,7 +19,7 @@ compute node. sverdrup sets nothing reliable — its compute nodes are named
 | --- | --- | --- |
 | `SCRATCH_ROOT` | `/scratch2/$USER` | `$SCRATCH` (`/pscratch/sd/<i>/<user>`) |
 | `MPI_LAUNCHER` | `mpirun -n` | `srun -n` |
-| `MPI_OPTFILE` | `crios_computing/.../linux_amd64_ifort+mpi_sverdrup` | `MITgcm/tools/build_options/linux_amd64_gnu+mpi_perlmutter` |
+| `MPI_OPTFILE` | `crios_computing/.../linux_amd64_ifort+mpi_sverdrup` | `tools/optfile_templates/linux_amd64_gnu+mpi_perlmutter` **(untested)** |
 | `SERIAL_OPTFILE` | `MITgcm/tools/build_options/linux_amd64_ifort` | same as MPI (Cray wrappers) |
 | `SBATCH_EXTRA` | *(empty)* | `-A $NERSC_ACCOUNT -C cpu -q $PERLMUTTER_QOS -t $PERLMUTTER_WALLTIME` |
 | modules | none — loaded from `~/.bashrc` | `PrgEnv-gnu`, `cray-mpich`, `cray-hdf5`, `cray-netcdf` |
@@ -95,9 +95,17 @@ No `export MPI_OPTFILE` needed — the profile supplies it. The build scripts ca
 
 `linux_amd64_gnu+mpi_perlmutter` was written from the MITgcm gfortran and Cray
 templates plus NERSC's documented wrappers. **It has not been compile-tested on
-Perlmutter.** Expect to adjust `FOPTIM` on first use. If the adjoint misbehaves,
-drop `-march=znver3` and lower `-O2` before looking anywhere else: the adjoint is
-far more sensitive to aggressive optimisation than the forward model.
+Perlmutter**, which is why it sits in `tools/optfile_templates/` rather than in
+`MITgcm/tools/build_options/` alongside the 95 upstream optfiles that do work.
+`machine_env.sh` still points at it, so the build runs and gives you real
+compiler errors to work from; `impacts_check_env` warns for as long as the
+template is what is in use.
+
+Expect to adjust `FOPTIM` on first use. If the adjoint misbehaves, drop
+`-march=znver3` and lower `-O2` before looking anywhere else: the adjoint is far
+more sensitive to aggressive optimisation than the forward model. Once it
+builds, copy it somewhere of your own and `export IMPACTS_MPI_OPTFILE` at it —
+that silences the warning. See `tools/optfile_templates/README.md`.
 
 ### 4. Submit
 

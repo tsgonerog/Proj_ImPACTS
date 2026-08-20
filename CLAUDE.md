@@ -22,13 +22,53 @@ There is no root build system, no test suite, no linter, and no package manifest
 - `MITgcm_c69m/` — checkpoint69m tree (`MITgcm/`) + setups under `mysetups/`
 - `analyses/` — notebooks reading run output from `/scratch2/...`, split `DINO_1deg/` + `SOMA_1deg/` to match the setup names
 - `resources/` — collaborator reference notebooks
-- `00_archive/` — frozen reference copies, at both tree level (`MITgcm_c69m/00_archive/MITgcm-pkg-tapenade`) and setup level (inside each of `DINO_1deg/` and `SOMA_1deg/`, holding ASTE-derived namelists, spare `code_tap` sources, and superseded build/submit scripts). Nothing here is live configuration; no build or submit script reads from it. Grep hits inside these directories are history, not current behaviour. The `00_` prefix exists to keep them sorted above `build*/` and `code*/` in a plain `ls`.
+- `00_archive/` — frozen reference copies, at tree level (`MITgcm_c69m/00_archive/`) and setup level (inside each of `DINO_1deg/` and `SOMA_1deg/`). **Every archive mirrors the path its contents came from**, so `00_archive/code_tap/X` means "X, which was or would be `code_tap/X`", and `MITgcm_c69m/00_archive/removed_from_MITgcm/pkg/tapenade/` holds what was pulled out of the vendored `MITgcm/pkg/tapenade/`. Each has its own `README.md` giving what/where-from/why-not-live per file — read that before assuming anything here is revivable; `dummy_tap.F` in particular collides with the setups' `code_tap/addummy_*.F` and would break the link if reinstalled. Nothing here is live configuration; no build or submit script reads from it. Grep hits inside these directories are history, not current behaviour. The `00_` prefix exists to keep them sorted above `build*/` and `code*/` in a plain `ls`.
 
 The primary configuration is `MITgcm_c69m/mysetups/DINO_1deg/` (DINO, 51 × 198 × 36 curvilinear). `MITgcm_c69m/mysetups/SOMA_1deg/` is the secondary.
 
 **The checkpoint69f tree is no longer in this repository.** `MITgcm_c69f/` — the c69f source tree, the earlier DINO and `sr_soma` ports, and the `tutorial_*_with_adj` / `tutorial_global_oce_biogeo` test-bed setups — was removed on 2026-08-17 because work has moved entirely to c69m. It survives in full, working tree and history both, at `/home/tshahriar/Proj_ImPACTS_old` (remote `git@github.com:tsgonerog/Proj_ImPACTS_old.git`). Go there rather than trying to reconstruct it; several things documented below (Tapenade profiling, the tutorial cross-checks against `code_ad`/`code_oad`) exist only in that copy.
 
-**The vendored `MITgcm/` tree is not read-only upstream code.** `MITgcm/tools/` carries patched `genmake2` copies that the build depends on. Do not replace the tree wholesale, and do not assume a file under `MITgcm/` matches upstream.
+**The vendored `MITgcm/` tree is not read-only upstream code.** `MITgcm/tools/` carries patched `genmake2` copies that the build depends on. Do not replace the tree wholesale.
+
+### How the vendored tree deviates — verified 2026-08-20
+
+A reference copy of the c69m tree sits outside the repo at `~/tools_and_software/MITgcm_collections/MITgcm_c69m/MITgcm/`. Diffed against it, **every file present in both trees is byte-identical** — there are no modified upstream sources. The deviation set is exactly two entries:
+
+| Deviation | What |
+| --- | --- |
+| **added** `tools/genmake2_override_forward_step_b` | The patch. One line, `cp ../code_tap/forward_step_b.f_modified forward_step_b.f`, injected into the `adj_tap_all` rule — see "The genmake2 patch" below |
+| **removed** `pkg/tapenade/dummy_tap.F` | Collides with the setups' `code_tap/addummy_*.F`, which define the same symbols with real bodies. Archived at `MITgcm_c69m/00_archive/removed_from_MITgcm/pkg/tapenade/` — read that README before considering putting it back |
+
+So "do not assume a file matches upstream" is narrower than it sounds: the one added file is new alongside upstream, not an edit to it, and one file is missing. Anything else this project supplies is kept *outside* the vendored tree on purpose — the Perlmutter optfile lives in `tools/optfile_templates/` rather than `MITgcm/tools/build_options/`, so it is not mistaken for one of the 95 working upstream optfiles. Re-verify with the commands below rather than trusting this table.
+
+### Building writes into the source tree
+
+`genmake2` expands ~210 type-specialised sources from `.template` files **in place, under `MITgcm/`** — not into the build directory — as its first step, before configuring anything (`tools/genmake2:2374` for `eesupp/src`, `:2391` for `pkg/exch2` + `pkg/regrid`, `:2571` for `pkg/mnc`). Each is one `sed 's/RX/RL/g' exch_xy_rx.template > exch_xy_rl.F` per type, per `eesupp/src/Makefile`.
+
+Consequences:
+
+- **A built tree is not a pristine tree.** `eesupp/src/`, `pkg/exch2/`, `pkg/regrid/`, `pkg/mnc/` gain `*_r4`/`*_r8`/`*_rl`/`*_rs` files (~2.1 MB) the moment you first build.
+- **They never reach git.** All 210 are ignored by MITgcm's *own* upstream `.gitignore`, which lists them because they are build products. A fresh clone has none; the first build creates them. Nothing to clean up, and deleting them only means `make` regenerates them byte-identically.
+- **They make a naive `diff -qr` useless** — they drown the two real deviations in ~210 "Only in" lines. Filtering by extension does not work either: it hides `dummy_tap.F` and leaks `pkg/mnc/MNC_ID_HEADER.h`. The reliable filter is `git check-ignore`, since every build product is covered by MITgcm's own `.gitignore`.
+
+Run from the repo root, and re-verify the table above rather than trusting it:
+
+```bash
+GT=~/tools_and_software/MITgcm_collections/MITgcm_c69m/MITgcm
+
+# 1. modified upstream files — MUST be empty
+diff -qr "$GT/" MITgcm_c69m/MITgcm/ | grep '^Files '
+
+# 2. removed from the tree
+diff -qr "$GT/" MITgcm_c69m/MITgcm/ | grep "^Only in $GT"
+
+# 3. added, excluding build products
+diff -qr "$GT/" MITgcm_c69m/MITgcm/ \
+  | sed -n 's|^Only in \(MITgcm_c69m[^:]*\): |\1/|p' \
+  | xargs -r -n1 sh -c 'git check-ignore -q "$0" || echo "$0"'
+```
+
+Any output from (1) means someone edited an upstream source, which nothing here is supposed to do.
 
 ## Machines
 
@@ -109,12 +149,12 @@ Tapenade differentiates `forward_step.F` automatically but the result needs manu
 
 **The working build is unmarked; `rawTapenade` is the control** — this is the naming axis that runs through every script and build directory, and it means exactly this patch:
 
-- `*_patched.sh` → calls `$MITGCM_ROOT/tools/$GENMAKE_SCRIPT` (a `patched_*_genmake2`), so the hand-corrected `forward_step_b.f` wins. This is the working configuration; use it unless you specifically want otherwise.
+- `*_patched.sh` → calls `$MITGCM_ROOT/tools/$GENMAKE_SCRIPT`, which resolves to `genmake2_override_forward_step_b`, so the hand-corrected `forward_step_b.f` wins. This is the working configuration; use it unless you specifically want otherwise.
 - `*_rawTapenade.sh` → calls stock `$MITGCM_ROOT/tools/genmake2` with otherwise identical flags, leaving Tapenade's own `forward_step_b.f` in place. It is the control build, kept to demonstrate what raw Tapenade output does.
 
 The two write to sibling build directories (`build_tapAdj/` vs `build_tapAdj_rawTapenade/`), so both can exist at once — check which executable a submit script's `build_dir` actually points at.
 
-`use_TapProfile` at the top of each build script selects the mode (`NO` / `YES` / `AFTER`) and picks both the `genmake2` variant and the matching `the_model_main.F`. **Only the `NO` mode works here:** `MITgcm_c69m/MITgcm/tools/` has just `patched_NoTapProfile_genmake2`, and DINO's `code_tap/` has no `the_model_main.F_ForTapProfile`. Setting `use_TapProfile` to `YES` or `AFTER` will fail. Reviving profiling needs two pieces, and only one of them is still here: `the_model_main.F_ForTapProfile` survives in `00_archive/code_tap_files_MITgcm_c69f/` (archive, so not staged by any script — it would have to be copied into `code_tap/`), but `patched_ForTapProfile_genmake2` and `patched_AfterTapProfile_genmake2` exist only in the archived c69f tree at `Proj_ImPACTS_old/MITgcm_c69f/MITgcm/tools/`.
+`use_TapProfile` at the top of each build script selects the mode (`NO` / `YES` / `AFTER`) and picks both the `genmake2` variant and the matching `the_model_main.F`. **Only the `NO` mode works here:** `MITgcm_c69m/MITgcm/tools/` has just `genmake2_override_forward_step_b`, and DINO's `code_tap/` has no `the_model_main.F_ForTapProfile`. Setting `use_TapProfile` to `YES` or `AFTER` will fail. Reviving profiling needs two pieces, and only one of them is still here: `the_model_main.F_ForTapProfile` survives in `00_archive/code_tap/` (archive, so not staged by any script — it would have to be copied into `code_tap/`), but `patched_ForTapProfile_genmake2` and `patched_AfterTapProfile_genmake2` exist only in the archived c69f tree at `Proj_ImPACTS_old/MITgcm_c69f/MITgcm/tools/`.
 
 ## Run
 
