@@ -26,7 +26,7 @@ There is no root build system, no test suite, no linter, and no package manifest
 
 The primary configuration is `MITgcm_c69m/mysetups/DINO_1deg/` (DINO, 51 × 198 × 36 curvilinear). `MITgcm_c69m/mysetups/SOMA_1deg/` is the secondary.
 
-**The checkpoint69f tree is no longer in this repository.** `MITgcm_c69f/` — the c69f source tree, the earlier DINO and `sr_soma` ports, and the `tutorial_*_with_adj` / `tutorial_global_oce_biogeo` test-bed setups — was removed on 2026-08-17 because work has moved entirely to c69m. It survives in full, working tree and history both, at `/home/tshahriar/Proj_ImPACTS_old` (remote `git@github.com:tsgonerog/Proj_ImPACTS_old.git`). Go there rather than trying to reconstruct it; several things documented below (Tapenade profiling, the tutorial cross-checks against `code_ad`/`code_oad`) exist only in that copy.
+**The checkpoint69f tree is no longer in this repository.** `MITgcm_c69f/` — the c69f source tree, the earlier DINO and `sr_soma` ports, and the `tutorial_*_with_adj` / `tutorial_global_oce_biogeo` test-bed setups — was removed on 2026-08-17 because work has moved entirely to c69m. It survives in full, working tree and history both, as its own repository `git@github.com:tsgonerog/Proj_ImPACTS_old.git` — clone that. On this machine the working clone was moved on 2026-08-21 to `/home/tshahriar/backups_and_resources/Proj_ImPACTS/02_20260817_Proj_ImPACTS_old_c69f_tree`. Go there rather than trying to reconstruct it; several things documented below (Tapenade profiling, the tutorial cross-checks against `code_ad`/`code_oad`) exist only in that copy.
 
 **The vendored `MITgcm/` tree is not read-only upstream code.** `MITgcm/tools/` carries patched `genmake2` copies that the build depends on. Do not replace the tree wholesale.
 
@@ -154,7 +154,16 @@ Tapenade differentiates `forward_step.F` automatically but the result needs manu
 
 The two write to sibling build directories (`build_tapAdj/` vs `build_tapAdj_rawTapenade/`), so both can exist at once — check which executable a submit script's `build_dir` actually points at.
 
-`use_TapProfile` at the top of each build script selects the mode (`NO` / `YES` / `AFTER`) and picks both the `genmake2` variant and the matching `the_model_main.F`. **Only the `NO` mode works here:** `MITgcm_c69m/MITgcm/tools/` has just `genmake2_override_forward_step_b`, and DINO's `code_tap/` has no `the_model_main.F_ForTapProfile`. Setting `use_TapProfile` to `YES` or `AFTER` will fail. Reviving profiling needs two pieces, and only one of them is still here: `the_model_main.F_ForTapProfile` survives in `00_archive/code_tap/` (archive, so not staged by any script — it would have to be copied into `code_tap/`), but `patched_ForTapProfile_genmake2` and `patched_AfterTapProfile_genmake2` exist only in the archived c69f tree at `Proj_ImPACTS_old/MITgcm_c69f/MITgcm/tools/`.
+`use_TapProfile` at the top of each build script selects the mode (`NO` / `YES` / `AFTER`) and picks both the `genmake2` variant and the matching `the_model_main.F`. **Only the `NO` mode works:** `MITgcm_c69m/MITgcm/tools/` has just `genmake2_override_forward_step_b`, and DINO's `code_tap/` has no `the_model_main.F_ForTapProfile`. Setting `use_TapProfile` to `YES` or `AFTER` fails.
+
+**That switch is the wrong shape for c69m and should not be repaired as-is.** It selects among three patched `genmake2` copies, which is how c69f had to do it. c69m's `genmake2` takes `-tap_extra`, passed straight through to the Tapenade command line (`genmake2:1568`, expanded by the rule at `:3751`), so both profiling modes are now flags rather than files:
+
+| Mode | c69m |
+| --- | --- |
+| profile the adjoint | `-tap_extra "-profile"`, plus a `pkg/tapenade/adProfile.c` symlink — c69m ships the source but does not expose it to the build |
+| skip checkpointing on chosen routines | `-tap_extra '-nocheckpoint "…"'` — nothing else needed |
+
+`tools/tapenade_profiling/` documents both, and carries the 64-routine `-nocheckpoint` list extracted from the c69f work plus the two c69f originals for reference. Those originals are full copies of the *c69f* `genmake2` (~200 lines adrift of c69m's) and must not be installed into `MITgcm/tools/`. `the_model_main.F_ForTapProfile` is still in `00_archive/code_tap/` and would have to be copied into `code_tap/` by hand.
 
 ## Run
 

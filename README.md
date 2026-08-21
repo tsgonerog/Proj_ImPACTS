@@ -60,7 +60,7 @@ already define, so nothing has to be kept in sync by hand.
 | --- | --- |
 | `MITgcm_c69m/` | MITgcm **checkpoint69m** (2026-03-30) source tree plus the experiments built against it |
 | `analyses/` | Jupyter notebooks that read run output from scratch and produce diagnostics/figures |
-| `tools/` | `machine_env.sh` (per-machine settings), `submit.sh`, `pre_push_check.sh`, and `optfile_templates/` — project optfiles not yet validated on their target machine |
+| `tools/` | `machine_env.sh` (per-machine settings), `submit.sh`, `pre_push_check.sh`, `optfile_templates/` (project optfiles not yet validated on their target machine), `tapenade_profiling/` (profiling and `-nocheckpoint` tuning, not wired into any build script) |
 | `resources/` | Reference notebooks from collaborators (e.g. `dinocean` package usage) |
 
 Four documents, each with a different job:
@@ -187,11 +187,16 @@ reason the model source is vendored rather than referenced.
 
 **Patched `genmake2`.** `MITgcm/tools/` contains `genmake2_override_forward_step_b`
 alongside the original `genmake2` — named for what it does, and sorting beside
-the file it is a copy of. Two further variants —
-`patched_ForTapProfile_genmake2` (instrumented for Tapenade's profiling tool)
-and `patched_AfterTapProfile_genmake2` (after acting on the profiler's advice) —
-exist only in the archived c69f tree, under those original names, and would need
-porting before profiling could be run here.
+the file it is a copy of. It is the only such variant, and the only one needed.
+
+checkpoint69f additionally carried `patched_ForTapProfile_genmake2` (Tapenade
+profiling) and `patched_AfterTapProfile_genmake2` (acting on the profiler's
+advice). Neither is needed on c69m: `genmake2` now takes `-tap_extra`, which
+passes flags straight to Tapenade, so both are options rather than files. See
+`tools/tapenade_profiling/` — it documents the c69m recipe, carries the
+64-routine `-nocheckpoint` list that work produced, and keeps the two c69f
+originals as reference. They are full copies of the c69f `genmake2` and do not
+work here.
 
 The patch itself is a single line, injected into the `adj_tap_all` make rule
 immediately after Tapenade runs, so the hand-corrected copy overwrites the
