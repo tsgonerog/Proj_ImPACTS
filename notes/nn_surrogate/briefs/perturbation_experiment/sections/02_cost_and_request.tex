@@ -1,0 +1,56 @@
+% !TEX root = ../main.tex
+%-----------------------------------------------------------------------
+%  What it costs, the gradient-check saving, and the request.
+%  \input by ../main.tex -- not compiled on its own.
+%-----------------------------------------------------------------------
+\hd{What it costs.}
+Both halves of a member have been measured on completed runs at this
+configuration and rank count, so these are not extrapolations. Two adjoint
+measurements at very different window lengths agree to $3\,\%$, so cost is
+linear in window length.
+
+\smallskip
+\begin{tabularx}{\textwidth}{@{}Y{1.6}Y{0.6}Y{0.8}@{}}
+\toprule
+\textbf{Configuration} & \textbf{Per member} & \textbf{Seven members}\\
+\midrule
+As the reference run was configured & 24.7 h & \textbf{173 node-h}\\
+With the built-in gradient check disabled & $\sim$10.5 h & \textbf{$\sim$75 node-h}\\
+Gradient check disabled, four runs packed per node & --- & \textbf{$\sim$19 node-h}\\
+\bottomrule
+\end{tabularx}
+\smallskip
+
+\hd{Most of that cost is avoidable, and should be avoided.}
+Every adjoint job in this configuration also runs the model's built-in
+finite-difference gradient check, and pays for the perturbed forward
+integrations it needs. On an instrumented 30-day run the model executed
+$18{,}622$ forward steps in order to integrate $1{,}440$ --- a factor of
+$12.9$, and the reason the adjoint costs about $28$ forward steps per timestep
+where checkpointing alone would predict three to five. Strip the check out and
+the remainder falls squarely inside that expected range.
+
+Turning it off for ensemble members is the largest single saving available and
+the easiest to take. Nothing is lost by doing so, for the reason the next
+section gives.
+
+\hd{The request.}
+
+\smallskip
+\begin{tabularx}{\textwidth}{@{}Y{0.42}Y{1.58}@{}}
+\toprule
+\textbf{Compute} & \textbf{$\sim$75 node-hours} expected; \textbf{200 requested}
+  as a ceiling\\
+\textbf{Node type} & CPU only, MPI, no GPU. 27 ranks per run\\
+\textbf{Storage} & $\sim$23 GB retained. Not a constraint\\
+\textbf{Duration} & 2--3 weeks including setup and analysis\\
+\bottomrule
+\end{tabularx}
+\smallskip
+
+The ceiling is requested rather than the estimate for three reasons: the
+$2.6\times$ saving above is inferred from call counts rather than measured on a
+completed run; strongly perturbed members may need a reduced timestep or extra
+solver iterations; and some of seven never-before-integrated settings will need
+repeating. A benchmark costing well under one node-hour settles all three, and
+it is the first step of the sequence below.

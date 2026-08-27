@@ -1,0 +1,63 @@
+% !TEX root = ../main.tex
+%-----------------------------------------------------------------------
+%  Appendix: verification before production.
+%  \input by ../main.tex -- not compiled on its own.
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
+\section{Verification before production}
+%-----------------------------------------------------------------------
+
+\subsection{Verifying a build}
+\label{app:verify}
+
+Applies to any new machine, and to this one if the build is ever regenerated.
+
+\begin{enumerate}[nosep]
+  \item Re-run the reference adjoint configuration (unperturbed $\kv$,
+        \code{nIter0 = 3162240}) for a few hundred timesteps.
+  \item Compare the cost function value and a few \code{ADJ*} fields against the
+        reference run's output on scratch (job 28486).
+  \item Expect agreement to near round-off. Large differences indicate a build or
+        input problem rather than physics.
+\end{enumerate}
+
+A cheaper and stronger check exists for the forward model: a 10-year run from
+rest with \code{from\_rest\_visc2x} reproduces the first 10 years of the 200-year
+spin-up \textbf{bit-identically} --- 161 \code{dynDiag} field comparisons, all of
+\code{surfDiag}, \code{atmDiag} and \code{viscDiag}, and 1334 monitor values
+across 134 variables, every one at exactly zero difference. This should be run
+first on a new build, as it catches a compiler or source change that alters the
+physics.
+
+\subsection{The gradient check cannot be used as a verification}
+\label{app:grdchk}
+
+\code{useGrdchk = .TRUE.} is set, so the check does run on every adjoint job,
+its settings held in \code{input\_tap/data.grdchk}. It cannot pass at its
+current setting, and it never has.
+
+The check perturbs \code{xx\_theta} at
+\code{iGloPos=4, jGloPos=8, kGloPos=1}, near the southern boundary, while the
+cost section is at $j=127$. Sensitivity at that point is about
+$6\times10^{-10}$ against a field maximum of about $3.9\times10^{-2}$, so the
+finite difference measures run-to-run noise rather than the perturbation. Both
+perturbed runs land on the \emph{same side} of the base cost, which a genuine
+first derivative cannot produce. The check fails by roughly eight orders of
+magnitude, on this build and on the May 2026 production run alike.
+
+The cause is the location of the check, not the adjoint. To make it meaningful,
+move the point into the sensitive region ---
+\code{iGloPos=2, jGloPos=127, kGloPos=26} --- and raise \code{grdchk\_eps} to
+about \code{1e-3} so the response clears the noise floor. That is worth doing
+once. For the ensemble itself, the finite-difference validation in
+Section~\ref{sec:fd} is the real check and a considerably stronger one.
+
+\subsection{Benchmarking}
+
+This machine is already measured; the figures are in
+Section~\ref{sec:compute}. On a new machine, repeat the three measurements
+there, then time four runs packed on one node ($4\times27 = 108$ of 128 cores)
+against one run per node. A 27-rank job is billed for the whole node either way,
+so if contention is mild, packing cuts charged node-hours by up to 4$\times$.
+This does not apply here, where a run occupies its node.
+

@@ -1,0 +1,79 @@
+% !TEX root = ../main.tex
+%-----------------------------------------------------------------------
+%  The adjoint-validation result, the sequence, and where input is wanted.
+%  \input by ../main.tex -- not compiled on its own.
+%-----------------------------------------------------------------------
+\hd{A second result: the first real check on this adjoint.}
+The ensemble validates the adjoint as a by-product. The adjoint returns a
+derivative at the reference point; the ensemble returns a finite difference
+across members. For small perturbations the two should agree, and where they
+part company marks the perturbation size beyond which the linearisation stops
+holding --- which tells us whether anything built on these gradients has to be
+nonlinear in \kv.
+
+This matters more than it may sound, because \textbf{nothing else currently
+checks this adjoint.} The model's built-in gradient check runs on every job
+here, but it perturbs a point near the southern boundary while the cost section
+sits at 26\dg N. Sensitivity there is nearly eight orders of magnitude below the
+field maximum, so the check divides its own run-to-run noise by the perturbation
+size and reports the result as a gradient. Both perturbed runs land on the
+\emph{same side} of the base value, which a first derivative cannot produce. It
+fails by roughly eight orders of magnitude, and always has.
+
+The cause is where the check is taken, not the adjoint. Moving it into the
+sensitive region is cheap and worth doing once --- but the ensemble's own
+comparison is the stronger check of the same property, and would be the first
+meaningful validation this configuration has had.
+
+\hd{Sequence, and where the decision point sits.}
+
+\smallskip
+\begin{tabularx}{\textwidth}{@{}cY{1.85}Y{0.45}@{}}
+\toprule
+\textbf{Step} & \textbf{Content} & \textbf{Cost}\\
+\midrule
+1 & Build, verify against the reference result, and benchmark to confirm both
+    the adjoint/forward ratio and the gradient-check saving & $<$ 1 node-h\\
+2 & Generate the seven diffusivity fields and configurations & ---\\
+3 & Pilot member, forward leg: check overturning drift and convective activity
+  & $\sim$1.6 h\\
+4 & Pilot adjoint; compare against the reference & $\sim$9 h\\
+5 & \textbf{Review --- confirm the design before committing the remainder}
+  & ---\\
+6 & Remaining six members, run concurrently & $\sim$64 node-h\\
+7 & Cross-member comparison; finite-difference validation of the gradient
+  & ---\\
+\bottomrule
+\end{tabularx}
+\smallskip
+
+Steps 3 and 4 are one of seven runs, about $15\,\%$ of the ensemble, and would
+expose a design problem before the rest is committed. The strongly perturbed
+member is used for the pilot because it gives the clearest signal on both of the
+things that could invalidate the design.
+
+\hd{Where input would help most.}
+Two questions change the experiment if they are answered differently. Both are
+cheap to settle now and expensive to correct later, and both are better settled
+before the pilot runs.
+
+\begin{itemize}[nosep,leftmargin=1.3em]
+  \item \textbf{Is ten years enough re-equilibration?} If the overturning is
+        still drifting at year ten, the sensitivities partly reflect drift
+        rather than a new equilibrium. The pilot member tests this directly.
+  \item \textbf{Should the perturbation carry spatial structure?} The reference
+        diffusivity is uniform, so as proposed every member is a constant field.
+        A real ocean mixes harder over rough topography, and adding structure
+        later means re-running the ensemble.
+\end{itemize}
+\smallskip
+
+A third is worth flagging rather than asking about. A large implicit diffusivity
+already applies wherever the column is unstable, so at the high-mixing end
+explicit mixing may suppress convection --- part of the response would then be
+convection triggering less often rather than a smooth dependence on \kv.
+Convective activity will be diagnosed per member so the two can be told apart.
+
+\smallskip
+{\footnotesize\emph{A longer companion note covers all of this in detail, along
+with a second phase that would use the ensemble as training data.}}

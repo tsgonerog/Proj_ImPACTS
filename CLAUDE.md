@@ -8,14 +8,23 @@ MITgcm adjoint-sensitivity experiments built with the **Tapenade** AD toolchain 
 
 `README.md` documents the science and the layout; each setup has its own `README.md` (grid, build/submit pairings, quirks); `analyses/README.md` indexes the notebooks; `PORTING.md` covers other clusters. This file covers the mechanics that only become clear from reading several scripts at once.
 
-`./tools/pre_push_check.sh` is the closest thing to a test here: a read-only
+`./tools/overleaf_sync_selftest.sh` is the one real test in the repository — 40
+assertions over `tools/overleaf_sync.sh`, run against a throwaway bare repo
+standing in for Overleaf, so it needs no credential and never contacts
+overleaf.com. It exists because `overleaf_sync.sh pull` deletes tracked files as
+a normal step — and more so since `push --wip`, which sends the working tree and
+so makes it routine for a pull to overwrite work that is in no commit. Takes an
+optional direction argument; refuses to start on a dirty tree under the
+direction it tests, and never commits or moves `HEAD`.
+
+`./tools/pre_push_check.sh` is the other standing check: a read-only
 pre-push sanity check covering the nbstrip filter, submit-script namelist churn,
 build-script variant staging, stray images under `analyses/`, and notebook
 scratch paths that no longer resolve. Exits non-zero only on real breakage. Run
 it before concluding a tree is clean — `git status` alone does not distinguish a
 change the user authored from one a build or submit script made.
 
-There is no root build system, no test suite, no linter, and no package manifest. Fortran is built per-setup via `genmake2` + `make`; Python analysis happens in notebooks with no checked-in environment file (`numpy`, `xarray`, `xmitgcm`, `matplotlib`).
+There is no root build system, no linter, and no package manifest, and nothing that tests the Fortran or the notebooks — the two checks above cover tooling only. Fortran is built per-setup via `genmake2` + `make`; Python analysis happens in notebooks with no checked-in environment file (`numpy`, `xarray`, `xmitgcm`, `matplotlib`).
 
 ## Layout
 
@@ -30,7 +39,7 @@ The primary configuration is `MITgcm_c69m/mysetups/DINO_1deg/` (DINO, 51 × 198 
 
 **The vendored `MITgcm/` tree is not read-only upstream code.** `MITgcm/tools/` carries patched `genmake2` copies that the build depends on. Do not replace the tree wholesale.
 
-### How the vendored tree deviates — verified 2026-08-20
+### How the vendored tree deviates — verified 2026-08-26
 
 A reference copy of the c69m tree sits outside the repo at `~/tools_and_software/MITgcm_collections/MITgcm_c69m/MITgcm/`. Diffed against it, **every file present in both trees is byte-identical** — there are no modified upstream sources. The deviation set is exactly two entries:
 
@@ -39,7 +48,7 @@ A reference copy of the c69m tree sits outside the repo at `~/tools_and_software
 | **added** `tools/genmake2_override_forward_step_b` | The patch. One line, `cp ../code_tap/forward_step_b.f_modified forward_step_b.f`, injected into the `adj_tap_all` rule — see "The genmake2 patch" below |
 | **removed** `pkg/tapenade/dummy_tap.F` | Collides with the setups' `code_tap/addummy_*.F`, which define the same symbols with real bodies. Archived at `MITgcm_c69m/00_archive/removed_from_MITgcm/pkg/tapenade/` — read that README before considering putting it back |
 
-So "do not assume a file matches upstream" is narrower than it sounds: the one added file is new alongside upstream, not an edit to it, and one file is missing. Anything else this project supplies is kept *outside* the vendored tree on purpose — the Perlmutter optfile lives in `tools/optfile_templates/` rather than `MITgcm/tools/build_options/`, so it is not mistaken for one of the 95 working upstream optfiles. Re-verify with the commands below rather than trusting this table.
+So "do not assume a file matches upstream" is narrower than it sounds: the one added file is new alongside upstream, not an edit to it, and one file is missing. Anything else this project supplies is kept *outside* the vendored tree on purpose — the Perlmutter optfile lives in `tools/optfile_templates/` rather than `MITgcm/tools/build_options/`, so it is not mistaken for one of the 93 working upstream optfiles. Re-verify with the commands below rather than trusting this table.
 
 ### Building writes into the source tree
 
@@ -330,9 +339,9 @@ outputs.
 `**/build*/` **except `build_options/`**, `**/.ipynb_checkpoints/`, and the `input_binaries/` + `input_adj_binaries/` directories for every DINO and SOMA setup. SOMA inputs regenerate with `input/gendata.py`; DINO's `dino_*.bin` files are produced outside this repository and must be staged into `input_binaries/` before a run.
 
 The `!**/build_options/` negation is load-bearing: `**/build*/` was swallowing
-`MITgcm/tools/build_options/`, so all 95 genmake2 optfiles were untracked and a
-fresh clone could not build on any machine. A negation works only because it
-un-excludes the directory itself — git cannot re-include a file inside a
-directory that stays excluded.
+`MITgcm/tools/build_options/`, so all 216 genmake2 optfiles were untracked — the
+93 supported ones and the 123 under `unsupported/` — and a fresh clone could not
+build on any machine. A negation works only because it un-excludes the directory
+itself — git cannot re-include a file inside a directory that stays excluded.
 
 `input_adj_binaries/` is small but not optional: it holds `ones_64b.bin`, the uniform weight file that *every* `xx_gentim2d_weight`/`xx_genarr3d_weight` entry in `data.ctrl` points at. Since it is untracked and the submit script only symlinks the directory contents, a fresh clone has no adjoint run until it is put back.

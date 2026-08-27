@@ -1,0 +1,53 @@
+% !TEX root = ../main.tex
+%-----------------------------------------------------------------------
+%  Model configuration -- common to both parts.
+%  \input by ../main.tex -- not compiled on its own.
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
+\section{Model configuration}
+\label{sec:modelconfig}
+%-----------------------------------------------------------------------
+
+An idealised single-basin ocean spanning pole to pole, with an adjoint generated
+by Tapenade.
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}Y{0.45}Y{1.55}@{}}
+\toprule
+Grid & $51\times198\times36 = 363{,}528$ cells; 36 levels reaching
+  $4600\,\mathrm{m}$\\
+Timestep & $1800\,\mathrm{s}$; 27 MPI ranks\\
+Spin-up & 200 model-years, complete. All $2{,}400$ restart states retained, one
+  every 30.5 days\\
+Adjoint window & 5 years. The forward sweep stores model states; the reverse
+  sweep propagates sensitivity backwards, writing fields every 5 days for 366
+  records\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\paragraph{Grid detail.}
+Of the $363{,}528$ cells, $332{,}274$ ($91.4\,\%$) are wet, and $9{,}627$ of
+$10{,}098$ surface cells are ocean. The year is 366 days.
+
+\paragraph{Cost function.}
+$J$ is the upper-cell AMOC transport at 26.05\dg N: meridional volume transport
+across a full-width zonal section, integrated over the upper $982\,\mathrm{m}$,
+in Sverdrups, over the upper $k\le25$ levels at $i\in[1,51]$, $j=127$.
+\code{ALLOW\_COST\_ATLANTIC\_HEAT\_DOMASS} is defined, so it is mass transport
+rather than heat transport despite the routine's name. It is evaluated as a
+30-day average at the end of the forward
+sweep, which suppresses high-frequency variability. Every sensitivity discussed
+below is $\partial J/\partial(\text{control})$ for that metric.
+
+\paragraph{Controls.}
+One adjoint run returns sensitivities to all controls at once: initial
+temperature and salinity, vertical diffusivity, wind stress, and the surface
+heat, shortwave and freshwater fluxes. No separate experiment is needed per
+control.
+
+\paragraph{Reference run.}
+One adjoint run is complete and analysed, covering model years 2180 to 2185
+(SLURM job 28486). It serves as the experimental control, for the reason given in
+Section~\ref{sec:leg}.
+

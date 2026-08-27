@@ -1,0 +1,89 @@
+% !TEX root = ../main.tex
+%-----------------------------------------------------------------------
+%  Appendices: checklist, and risks.
+%  \input by ../main.tex -- not compiled on its own.
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
+\section{Checklist}
+%-----------------------------------------------------------------------
+
+\paragraph{Before any production run}
+\begin{itemize}[leftmargin=2em]
+  \ck Machine chosen for this member and recorded --- do not split a member
+      across machines
+  \ck (Port only) both pickups transferred, verified, second copies kept
+  \ck (Port only) \code{input\_binaries/} and
+      \code{input\_adj\_binaries/ones\_64b.bin} transferred
+  \ck (Port only) Java runtime confirmed for Tapenade; \code{NERSC\_ACCOUNT}
+      set; walltime set
+  \ck Build completes; Tapenade adjoint builds
+  \ck Forward build verified: 10-year run from rest reproduces the spin-up
+      bit-identically
+  \ck Adjoint build verified against reference run 28486 output to round-off
+  \ck \textbf{Not} the gradient check --- it cannot pass at its current point
+      (Appendix~\ref{app:grdchk}). Do not wait on it
+  \ck Benchmark done; adjoint/forward ratio confirmed; \textbf{gradient-check
+      saving measured}; figure reported
+  \ck Node packing tested (port only)
+  \ck Seven $\kv$ files generated, each $2{,}908{,}224$ bytes
+  \ck Checkpoint at $\approx$2170 located;
+      \code{nTimeSteps = 3162240 $-$ nIter0} set accordingly
+  \ck \code{useGrdchk = .FALSE.} set for members
+  \ck \code{pChkptFreq} decision made --- members only, leaving the spin-up's
+      restarts alone
+  \ck Forward diagnostic cadence decision made (Appendix~\ref{app:namelists})
+  \ck Namelist variants placed in \code{input*/variants/}, not directly in
+      \code{input*/}
+  \ck \code{nIter0} and the pickup symlink edited together in each submit script
+\end{itemize}
+
+\paragraph{After the pilot}
+\begin{itemize}[leftmargin=2em]
+  \ck Overturning drift at year 10 assessed
+  \ck Convective activity diagnosed
+  \ck Sensitivity patterns compared against the reference
+  \ck Reviewed with collaborators before committing the remainder
+\end{itemize}
+
+\paragraph{Ongoing}
+\begin{itemize}[leftmargin=2em]
+  \ck \code{run\_timing.txt} retained for every run
+  \ck Any per-member deviation in timestep or solver settings recorded
+\end{itemize}
+
+%-----------------------------------------------------------------------
+\section{Risks}
+%-----------------------------------------------------------------------
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}Y{0.7}Y{0.7}Y{1.6}@{}}
+\toprule
+\textbf{Risk} & \textbf{Consequence} & \textbf{Mitigation}\\
+\midrule
+Ten years is not enough re-equilibration & Sensitivities reflect drift
+  & The pilot member answers this before the full spend\\
+Convective suppression confounds high-$\kv$ members & Misattributed signal
+  & Diagnose convection per member\\
+Gradient-check saving does not materialise & Ensemble costs 173 h rather than
+  75 h & Inferred from call counts, not yet measured. Confirm in the first
+  benchmark; the 200 node-hour ceiling covers the failure case\\
+Either pickup lost & Project cost rises by roughly 100$\times$
+  & Both live on scratch in the spin-up run directory, which is \textbf{not
+  backed up and is subject to purge policy}. Copy off before anything else and
+  keep second copies. The same applies to the $2{,}400$ Axis~2 restarts, 47 GB\\
+Benchmark far above estimate & Allocation insufficient
+  & This machine is measured; measure on any new machine before confirming.
+  200 node-h is a ceiling with contingency\\
+Tapenade will not build on a new machine & Blocks that path only
+  & Needs a Java runtime and is not in the repository. Address before any
+  allocation is committed; this machine is unaffected and can carry the pilot\\
+A port changes results & Silently invalid ensemble
+  & Appendix~\ref{app:verify} verification against stored reference output, run
+  on both machines\\
+Results differ between machines & Ambiguous science
+  & Keep one machine authoritative per member; never split a member's forward leg
+  and adjoint across machines\\
+\bottomrule
+\end{tabularx}
+\end{center}
+

@@ -1,0 +1,46 @@
+% !TEX root = ../main.tex
+%-----------------------------------------------------------------------
+%  Motivation.
+%  \input by ../main.tex -- not compiled on its own.
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
+\section{Motivation}
+\label{sec:motivation}
+%-----------------------------------------------------------------------
+
+The adjoint returns the gradient of a scalar cost functional with respect to
+every control in one reverse sweep. That is what makes it the right tool, and
+also what makes it expensive. In the DINO configuration as it stands:
+
+\begin{itemize}[nosep]
+  \item a five-year adjoint sweep on 27 MPI ranks takes $23\,\mathrm{h}$
+        wall-clock, about $622$ core-hours, and writes $8.3\,\mathrm{GB}$;
+  \item the gradient holds for \emph{one} background state, \emph{one}
+        parameter setting and \emph{one} cost functional;
+  \item the cost-functional section indices are compiled in as Fortran
+        \code{parameter} statements in \code{cost\_atlantic\_heat.F}, so moving
+        the section means a rebuild rather than a namelist edit.
+\end{itemize}
+
+So any question about how the sensitivity pattern itself changes with the
+mixing parameters costs one full adjoint run per setting. That is the
+bottleneck I want to remove. If the surrogate works, it buys us four things:
+
+\begin{enumerate}[nosep]
+  \item parametric sensitivity and uncertainty quantification across the
+        mixing-parameter space, at something like $\mathcal{O}(10^{-6})$ of the
+        present cost per additional sample;
+  \item the ability to re-target the cost functional --- a different latitude, a
+        different depth range --- without recompiling and re-running;
+  \item gradients inside a calibration or optimisation loop, where calling the
+        true adjoint at every iteration is out of the question, with the true
+        adjoint kept for periodic correction;
+  \item some interpretability, in that a surrogate which generalises across
+        parameter settings has learned something about which features of the
+        background state control the sensitivity pattern.
+\end{enumerate}
+
+The underlying question is how the sensitivity of the basin's overturning
+transport to the mixing parameterisation depends on the ocean state and on the
+parameters themselves.
+

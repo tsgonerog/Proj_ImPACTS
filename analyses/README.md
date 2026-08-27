@@ -7,7 +7,9 @@ outside git.
 
 Directory and notebook names carry a leading number giving the order the work is
 meant to be read in. `00_archive/` holds superseded, crashed, or replaced
-notebooks; it is kept for provenance and nothing live depends on it.
+notebooks; it is kept for provenance and nothing live depends on it. Each
+archive also carries its own `README.md` giving what every file in it is and
+why it is not live — read that before assuming anything there is revivable.
 
 ## Layout
 
@@ -113,10 +115,10 @@ viscosity is set.
 Settings in this table were read back from each run's own staged `data`
 namelist on scratch, not from the run-directory tag.
 
-`00_archive/` holds five earlier serial exploratory runs at 180 and 360 days,
+`00_archive/` holds four earlier serial exploratory runs at 180 and 360 days,
 named for their starting point and viscosity setting — `viscRef` from rest
 (runs 18232, 18222), `viscD2x_Zref` from the 80 yr pickup (runs 22038, 22039).
-The sixth, `serial_180d_from_50yr_pickup_after_profile.ipynb`, keeps no setting
+A fifth, `serial_180d_from_50yr_pickup_after_profile.ipynb`, keeps no setting
 in its name: run 24020 is gone from scratch, so its namelist cannot be read
 back. Alongside them is
 `poster_scidac_pi_meeting_aug2026/` — the poster prepared for the SciDAC PI

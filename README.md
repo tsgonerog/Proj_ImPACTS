@@ -32,6 +32,7 @@ tracked.
 | understand what git keeps | [What git does and does not keep](#what-git-does-and-does-not-keep) |
 | push my work | [Workflow: before you push](#workflow-before-you-push) |
 | move to another cluster | `PORTING.md` |
+| see what is proposed but not yet built | `notes/` |
 
 ### Where output lives
 
@@ -60,10 +61,11 @@ already define, so nothing has to be kept in sync by hand.
 | --- | --- |
 | `MITgcm_c69m/` | MITgcm **checkpoint69m** (2026-03-30) source tree plus the experiments built against it |
 | `analyses/` | Jupyter notebooks that read run output from scratch and produce diagnostics/figures |
-| `tools/` | `machine_env.sh` (per-machine settings), `submit.sh`, `pre_push_check.sh`, `optfile_templates/` (project optfiles not yet validated on their target machine), `tapenade_profiling/` (profiling and `-nocheckpoint` tuning, not wired into any build script) |
+| `tools/` | `machine_env.sh` (per-machine settings), `submit.sh`, `pre_push_check.sh`, `overleaf_sync.sh` + `overleaf_sync_selftest.sh` (two-way sync between `notes/<direction>/` and its Overleaf project; `push --wip` sends the working tree, for drafting without a commit per round trip), `optfile_templates/` (project optfiles not yet validated on their target machine), `tapenade_profiling/` (profiling and `-nocheckpoint` tuning, not wired into any build script) |
 | `resources/` | Reference notebooks from collaborators (e.g. `dinocean` package usage) |
+| `notes/` | Design notes and proposals for work that does not exist yet — prose only, nothing here builds or runs |
 
-Four documents, each with a different job:
+Each document has a different job:
 
 | Document | Answers |
 | --- | --- |
@@ -71,9 +73,11 @@ Four documents, each with a different job:
 | `PORTING.md` | How to move it to another cluster |
 | `analyses/README.md` | What each notebook does and which run it reads |
 | `MITgcm_c69m/mysetups/<setup>/README.md` | That setup's grid, build/submit pairings and quirks |
+| `notes/README.md` | Which directions are on the table, how a new one is added, the LaTeX/Overleaf conventions they share, and how to sync a direction with Overleaf in both directions |
+| `notes/nn_surrogate/README.md` | What the surrogate proposal is, how its two documents relate, and where their numbers came from |
 | `CLAUDE.md` | Non-obvious mechanics and traps, written for an AI assistant but useful to anyone |
 
-The MITgcm tree is vendored in full (~6,400 tracked files), not a submodule,
+The MITgcm tree is vendored in full (~6,600 tracked files), not a submodule,
 because it carries **locally patched build tooling** — see
 [The Tapenade adjoint toolchain](#the-tapenade-adjoint-toolchain).
 
@@ -538,9 +542,10 @@ Two files at the repo root control this, and both do something non-obvious.
 | `.claude/settings.local.json` | local tool permissions | machine-specific |
 
 **The `!**/build_options/` line matters more than it looks.** `**/build*/` also
-matches `MITgcm/tools/build_options/`, so all 95 `genmake2` optfiles were silently
-untracked — a fresh clone could not build on any machine. The negation works only
-because it un-excludes the *directory*: git cannot re-include a file inside a
+matches `MITgcm/tools/build_options/`, so all 216 `genmake2` optfiles were
+silently untracked — the 93 supported ones and the 123 under `unsupported/` — and
+a fresh clone could not build on any machine. The negation works only because it
+un-excludes the *directory*: git cannot re-include a file inside a
 directory that stays excluded, so narrowing the rule this way is the only fix that
 works.
 
@@ -590,8 +595,8 @@ gone. Re-run the cell, or keep an export outside the repo
 | notebook animation payloads | stripped on commit by a git filter | re-run the cell; see [before you push](#workflow-before-you-push) |
 
 The `!**/build_options/` exception matters: `**/build*/` was silently excluding
-`MITgcm/tools/build_options/`, so all 95 `genmake2` optfiles were untracked and a
-fresh clone could not build on any machine.
+`MITgcm/tools/build_options/`, so all 216 `genmake2` optfiles were untracked and
+a fresh clone could not build on any machine.
 
 **The two binary directories are the ones that will catch you out.** Neither is in
 git, and without them there is no run:

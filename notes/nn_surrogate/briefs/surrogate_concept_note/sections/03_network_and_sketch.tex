@@ -1,0 +1,44 @@
+% !TEX root = ../main.tex
+%-----------------------------------------------------------------------
+%  What type of network, and the pseudocode sketch of it.
+%  \input by ../main.tex -- not compiled on its own.
+%-----------------------------------------------------------------------
+\hd{What type of network.}
+The problem has the shape of an image-to-image task: fields in, fields out. That points
+to an encoder--decoder, the architecture used for image segmentation and now for a good
+deal of weather and climate emulation. The encoder compresses the input fields into a
+summary at each of a sequence of progressively coarser scales, keeping their spatial
+arrangement rather than flattening it; the decoder expands those summaries back onto the
+model grid. The coarse scales are what let a prediction at one point depend on conditions
+across the basin: sensitivity travels thousands of kilometres upstream along advective
+pathways, and a network that only ever sees a few neighbouring cells cannot represent
+that. Lead time and the parameters would enter as settings that modulate each layer
+rather than as extra fields, so that one network covers every lead time. The sketch below
+states the same architecture as pseudocode.
+
+\smallskip
+\begin{center}\begin{minipage}{0.97\textwidth}
+\hrule\vspace{3pt}
+{\footnotesize\begin{verbatim}
+predict(state, parameters, lead_time, what_we_measure):
+    x = stack(state, derived_quantities,
+              geometry, what_we_measure)          # fields on the model grid
+    h = encoder(x)                                # the fields summarised at several
+                                                  #   scales, so the basin fits in view
+    h = apply_settings(h, lead_time, parameters)  # at every layer
+
+    param_map   = decoder_3d(h)    # sensitivity to mixing parameters
+    state_map   = decoder_3d(h)    # sensitivity to the initial state
+    forcing_map = decoder_2d(h)    # sensitivity to surface forcing
+
+    for each map:  map = pattern(map) * strength(map) # predicted separately
+    return param_map, state_map, forcing_map
+
+train:
+    for each example (state, parameters, lead_time, what_we_measure, true_maps):
+        predicted = predict(state, parameters, lead_time, what_we_measure)
+        score     = pattern + strength + direct_check
+        adjust the network's weights to reduce score
+\end{verbatim}}
+\vspace{-8pt}\hrule
+\end{minipage}\end{center}

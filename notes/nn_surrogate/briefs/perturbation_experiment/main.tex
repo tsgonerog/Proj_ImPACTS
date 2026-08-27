@@ -1,0 +1,56 @@
+%=======================================================================
+%  BRIEF: the vertical-mixing perturbation ensemble.
+%
+%  MAIN DOCUMENT -- structure only; every word of prose lives in sections/.
+%  Compile this file. If this brief is its own Overleaf project, Overleaf selects
+%  it automatically as the only file carrying \documentclass; if the whole
+%  notes/nn_surrogate/ folder was uploaded as one project there are three such
+%  files, and you pick between them with the gear icon at the bottom-left corner
+%  of the editor -> Compiler -> main document. Not Menu -> Settings.
+%
+%  SCOPE: Part I of the master plan only -- the ensemble, and the resource
+%  request that goes with it. It says nothing about the surrogate, which is
+%  Part II and has its own brief at ../surrogate_concept_note/.
+%
+%  DERIVED FROM ../../master_plan/, which is authoritative. Every number here
+%  is measured and appears there with its source; this document carries more
+%  of them than a brief normally should, because a resource request is mostly
+%  numbers. That makes it the brief most exposed to drift -- when Part I's
+%  costs, member table or timings change, this is the first thing to re-read.
+%  A correction that arrives on this brief belongs in the master first.
+%
+%  TWO CAPS, both deliberate. THREE PAGES MAXIMUM, and AT MOST THREE FILES
+%  under sections/ -- the title block rides at the top of 01_. A brief that
+%  outgrows either has stopped being a brief: cut it, or let the master
+%  carry the detail.
+%
+%  Deliberately standalone -- own preamble, shares no file with the master or
+%  with the other brief -- so it can be its own Overleaf project and be shared
+%  on its own. Self-contained: pdfLaTeX, no external files.
+%
+%  No reader is named anywhere in this document.
+
+%  INPUT PATH. Overleaf compiles from the PROJECT ROOT, not from the folder the
+%  main file sits in. The \input@path below lists this document's own folder
+%  first and the compilation directory second, so the same source builds whether
+%  the project root is this folder (one Overleaf project per document, and the
+%  local `cd <doc> && latexmk` habit) or notes/nn_surrogate/ (the whole direction
+%  dropped in as one project, three documents switched between with the gear
+%  icon -> Compiler). Do not remove it: without it the whole-folder upload
+%  fails on the very first \input.
+%=======================================================================
+\documentclass[10pt,a4paper]{article}
+
+\makeatletter
+\expandafter\edef\csname input@path\endcsname{{briefs/perturbation_experiment/}{./}}
+\makeatother
+
+\input{preamble}
+
+\begin{document}
+
+\input{sections/01_question_and_design}
+\input{sections/02_cost_and_request}
+\input{sections/03_validation_and_decision}
+
+\end{document}

@@ -1,0 +1,53 @@
+% !TEX root = ../main.tex
+%-----------------------------------------------------------------------
+%  Summary and resource request.
+%  \input by ../main.tex -- not compiled on its own.
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
+\section*{Summary and resource request}
+\addcontentsline{toc}{section}{Summary and resource request}
+%-----------------------------------------------------------------------
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}lL@{}}
+\toprule
+\textbf{Compute} & \textbf{$\sim$75 node-hours} expected;
+  \textbf{200 requested} as a ceiling\\
+\textbf{Node type} & CPU only, MPI, no GPU. 27 ranks per run\\
+\textbf{Peak concurrency} & 2 nodes (4 runs packed per 128-core node), or 7 if
+  run one per node\\
+\textbf{Storage} & $<$ 100 GB working; $\sim$23 GB retained\\
+\textbf{Duration} & 2--3 weeks including setup and analysis\\
+\textbf{Software} & MITgcm with a Tapenade-generated adjoint\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+The request is revised down from an earlier estimate of 150 node-hours with a
+400-hour ceiling. Both the forward and the adjoint cost have since been measured
+directly from completed runs rather than estimated, and a configuration change
+identified in the meantime removes roughly 60\,\% of the adjoint cost.
+Section~\ref{sec:compute} gives the measurements and states what remains
+uncertain.
+
+\paragraph{What is being proposed.}
+Seven adjoint runs of an idealised single-basin ocean, identical to a completed
+reference run in every respect except the vertical diffusivity $\kv$, which is
+varied over a factor of 128. The runs establish how strongly adjoint sensitivity
+patterns depend on the mixing parameterisation, and they provide the first
+designed training data for a neural-network surrogate of those sensitivities.
+
+\paragraph{What is being asked of reviewers.}
+Section~\ref{sec:questions} lists six open questions. Two of them --- whether ten
+years is enough re-equilibration, and whether the perturbation should carry
+spatial structure --- change the experiment if answered differently, and are best
+settled before the pilot member runs. Section~\ref{sec:sequence} places a formal
+review point after the pilot, at roughly 15\,\% of the total cost.
+
+
+\noindent
+Sections~\ref{sec:motivation} and~\ref{sec:modelconfig} are common to both
+parts. Part~I is self-contained from Section~\ref{sec:objective} onwards and
+carries the appendices; a reviewer of the resource request needs Part~I and the
+appendices only.
+

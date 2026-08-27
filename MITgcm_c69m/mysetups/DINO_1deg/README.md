@@ -43,6 +43,13 @@ re-run its build script.
 | `submit_tapAdj.sh` | `build_tapAdj/` |
 | `submit_tapAdj_adjViscBoost.sh` | `build_tapAdj_adjViscBoost/` |
 
+A job leaves `<job-name>.<job-id>.out` and `.err` beside the submit script, in
+the setup directory. They are gitignored, and the scripts run under `set -x`, so
+the `.err` file is a full trace of the staging steps — a staging failure shows up
+there rather than in the model output on scratch. `./clean_slurm_logs.sh` clears
+them: it prompts first, and touches only the current directory, never
+recursively.
+
 `adjViscBoost` runs the adjoint with **larger viscosity and diffusivity than the
 forward** — the standard trick for stopping a long adjoint from blowing up.
 `viscFacInAd = 10.` against `viscFacInFw = 1.`, `inAdviscArNr = 2.E-3` against a

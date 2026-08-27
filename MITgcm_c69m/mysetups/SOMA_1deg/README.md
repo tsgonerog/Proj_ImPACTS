@@ -48,6 +48,13 @@ All use `build_tapAdj/`. Durations are pre-made as separate scripts because
 adjoint cost grows quickly with integration length; the duration is `endTime_days`
 at the top of each. Names are zero-padded so they sort in order.
 
+A job leaves `<job-name>.<job-id>.out` and `.err` beside the submit script, in
+the setup directory. They are gitignored, and the scripts run under `set -x`, so
+the `.err` file is a full trace of the staging steps — a staging failure shows up
+there rather than in the model output on scratch. `./clean_slurm_logs.sh` clears
+them: it prompts first, and touches only the current directory, never
+recursively.
+
 Unlike DINO there is no `adjViscBoost` variant here, and no `test_cases`
 mechanism — SOMA has a single `input_tap/data`.
 

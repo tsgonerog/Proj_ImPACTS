@@ -1,0 +1,58 @@
+%=======================================================================
+%  SCOPING NOTE: moving the adjoint programme from 1 degree DINO to 1/4 degree.
+%
+%  MAIN DOCUMENT -- structure only; every word of prose lives in sections/.
+%  Compile this file. If this note is its own Overleaf project, Overleaf selects
+%  it automatically as the only file carrying \documentclass; if the whole
+%  notes/dino_quarter_degree/ folder was uploaded as one project it is still the
+%  only such file, so nothing has to be chosen. Should this direction grow a
+%  second document, pick between them with the gear icon at the bottom-left
+%  corner of the editor -> Compiler -> main document. Not Menu -> Settings.
+%
+%    preamble.tex               packages, column type, the \hd macro
+%    sections/01_question.tex   title block, status, the question
+%    sections/02_scaling.tex    naive scaling arithmetic and what it rests on
+%    sections/03_open.tex       what has to be decided, and what is not decided
+%
+%  STATUS: PLACEHOLDER. This document exists so the direction has somewhere to
+%  accumulate. Its content is lifted from ../README.md, which stated it first
+%  and is still the quicker read; nothing here has been thought through beyond
+%  what is written there. Treat every number as arithmetic, not measurement --
+%  section 02 says so where it matters.
+%
+%  NAMING follows ../../nn_surrogate/master_plan/: the number is the file's
+%  position in the document, so the Overleaf sidebar -- which sorts
+%  alphabetically and cannot be reordered -- reads in the same order as the PDF.
+%  Decades are blocks and the gaps are deliberate; 01-03 are used, 04-09 free,
+%  and 10+ is free for a part structure if this ever grows one.
+%
+%  preamble.tex is deliberately outside sections/ and outside the numbering: it
+%  is not part of the document sequence, it is what the document is set in.
+%
+%  ../README.md is repo-internal and is NOT part of this document. It goes up to
+%  Overleaf with the folder, as the nn_surrogate READMEs do, which is why the
+%  project cannot be shared with an outside reader as it stands.
+
+%  INPUT PATH. Overleaf compiles from the PROJECT ROOT, not from the folder the
+%  main file sits in. The \input@path below lists this document's own folder
+%  first and the compilation directory second, so the same source builds whether
+%  the project root is this folder (one Overleaf project per document, and the
+%  local `cd <doc> && latexmk` habit) or notes/dino_quarter_degree/ (the whole
+%  direction dropped in as one project). Do not remove it: without it the
+%  whole-folder upload fails on the very first \input.
+%=======================================================================
+\documentclass[11pt,a4paper]{article}
+
+\makeatletter
+\expandafter\edef\csname input@path\endcsname{{scoping_note/}{./}}
+\makeatother
+
+\input{preamble}
+
+\begin{document}
+
+\input{sections/01_question}
+\input{sections/02_scaling}
+\input{sections/03_open}
+
+\end{document}

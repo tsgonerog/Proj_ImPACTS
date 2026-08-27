@@ -1,0 +1,119 @@
+%=======================================================================
+%  Parametric adjoint sensitivities in the DINO configuration of MITgcm.
+%
+%  MAIN DOCUMENT -- structure. The prose lives in sections/, with one exception:
+%  the short paragraph under the appendix heading near the bottom of this file.
+%  Compile this file. If this document is its own Overleaf project, Overleaf
+%  selects it automatically as the only file carrying \documentclass; if the
+%  whole notes/nn_surrogate/ folder was uploaded as one project there are three
+%  such files, and you pick between them with the gear icon at the bottom-left
+%  corner of the editor -> Compiler -> main document. Not Menu -> Settings.
+%
+%    preamble.tex                    packages, colours, macros, callout env
+%    sections/01_frontmatter.tex     title block, abstract
+%    sections/02_summary_request.tex summary and resource request
+%    sections/03_motivation.tex      motivation
+%    sections/04_model_config.tex    model configuration
+%    sections/10_part1_ensemble.tex  PART I  -- the perturbation ensemble
+%    sections/20_part2_surrogate.tex PART II -- the surrogate design
+%    sections/90_app_reference_values.tex  Appendix A -- reference values
+%    sections/91_app_running.tex           Appendix B -- running the experiment
+%    sections/92_app_verification.tex      Appendix C -- verification
+%    sections/93_app_checklist_risks.tex   Appendices D, E -- checklist, risks
+%
+%  NAMING. The number is the file's position in the document, so that the
+%  Overleaf sidebar -- which sorts alphabetically and cannot be reordered --
+%  reads in the same order as the PDF. The name says what the file is; the
+%  number only makes it sort right. Decades are blocks, and the gaps are
+%  deliberate:
+%
+%      0x  front matter   (01-04 used, 00 and 05-09 free)
+%      1x  Part I         (10 used,    11-19 free)
+%      2x  Part II        (20 used,    21-29 free)
+%      9x  appendices     (90-93 used, 94-99 free)
+%      30-89 unused, free for a Part III
+%
+%  preamble.tex is deliberately outside sections/ and outside the numbering:
+%  it is not part of the document sequence, it is what the document is set in.
+%
+%  To ADD a section: give it a free number in its own block, create it under
+%  sections/, add one \input below. Nothing else moves. If it has to go
+%  between two consecutive numbers, renumber only within that decade -- the
+%  other blocks are ten away and never affected.
+%  To REMOVE one: delete the file and its \input. Leave the hole; a gap in
+%  the sequence is not a defect and renumbering to close it is churn.
+%
+%  A reviewer of the resource request needs Part I and the appendices only:
+%  comment out the Part II \input below and the document still compiles,
+%  minus the cross-references into it.
+%
+%  THIS IS THE MASTER DOCUMENT. Everything in ../briefs/ is derived from it
+%  and must stay consistent with it: when a section here changes, re-read
+%  the briefs that ../briefs/README.md lists against it. Nothing flows the
+%  other way -- a correction made in a brief belongs here first.
+%
+%  Two briefs are derived from this document. Each has its own preamble and
+%  shares no file with this one, so each can be its own Overleaf project -- but
+%  all three also build together when notes/nn_surrogate/ is uploaded as a single
+%  project, which is the usual arrangement here:
+%
+%    ../briefs/surrogate_concept_note/    two pages of PART II, for a first reader
+%    ../briefs/perturbation_experiment/   two pages of PART I, plus the request
+%
+%  Both are capped at three pages. See ../briefs/README.md for which one has to
+%  be re-read when which part of this document moves.
+
+%  INPUT PATH. Overleaf compiles from the PROJECT ROOT, not from the folder the
+%  main file sits in. The \input@path below lists this document's own folder
+%  first and the compilation directory second, so the same source builds whether
+%  the project root is this folder (one Overleaf project per document, and the
+%  local `cd <doc> && latexmk` habit) or notes/nn_surrogate/ (the whole direction
+%  dropped in as one project, three documents switched between with the gear
+%  icon -> Compiler). Do not remove it: without it the whole-folder upload
+%  fails on the very first \input.
+%=======================================================================
+\documentclass[11pt,a4paper]{article}
+
+\makeatletter
+\expandafter\edef\csname input@path\endcsname{{master_plan/}{./}}
+\makeatother
+
+\input{preamble}
+
+\begin{document}
+
+\input{sections/01_frontmatter}
+
+\tableofcontents
+\newpage
+
+\input{sections/02_summary_request}
+\input{sections/03_motivation}
+\input{sections/04_model_config}
+
+\newpage
+\input{sections/10_part1_ensemble}
+
+\newpage
+\input{sections/20_part2_surrogate}
+
+%=======================================================================
+%  The appendix heading below heads all of A-E; each appendix is its own
+%  file underneath it.
+%=======================================================================
+\appendix
+\newpage
+\section*{Appendices --- operational detail}
+\addcontentsline{toc}{section}{Appendices}
+
+\noindent
+The material below is what the person running the experiment needs. It is
+separated from Part~I above because it is machine-specific and changes more
+often than the science does.
+
+\input{sections/90_app_reference_values}
+\input{sections/91_app_running}
+\input{sections/92_app_verification}
+\input{sections/93_app_checklist_risks}
+
+\end{document}

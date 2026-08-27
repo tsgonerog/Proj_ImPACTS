@@ -2,7 +2,7 @@
 #
 # Submit a job with the sbatch flags this machine needs.
 #
-#     ./tools/submit.sh MITgcm_c69m/mysetups/DINO_1deg/tapAdj_submit_mpi_patched_on_sverdrup.sh
+#     ./tools/submit.sh MITgcm_c69m/mysetups/DINO_1deg/submit_tapAdj.sh
 #     ./tools/submit.sh <script> --test-only          # extra flags are passed through
 #
 # The submit scripts carry the #SBATCH directives that are the same everywhere

@@ -1,0 +1,420 @@
+% !TEX root = ../main.tex
+%-----------------------------------------------------------------------
+%  PART I -- the vertical-diffusivity perturbation ensemble.
+%  \input by ../main.tex -- not compiled on its own.
+%-----------------------------------------------------------------------
+\part{The vertical-diffusivity perturbation ensemble}
+
+%-----------------------------------------------------------------------
+\section{Objective and context}
+\label{sec:objective}
+%-----------------------------------------------------------------------
+
+\subsection{The question}
+
+Adjoint sensitivity maps are computed at one set of parameter values. Whether
+those maps remain valid when the parameters change is not known for this
+configuration, and it is not a question a single adjoint run can answer.
+
+The experiment asks directly: \textbf{do the adjoint sensitivity patterns depend
+on the model's vertical mixing?} The answer has consequences in two directions.
+
+\begin{itemize}[nosep]
+  \item If the patterns are largely insensitive to $\kv$ across a wide range,
+        then published sensitivity maps are robust to the mixing uncertainty that
+        any ocean model carries. That is a useful result in its own right,
+        independent of any machine learning.
+  \item If the patterns change substantially with $\kv$, then any surrogate
+        trained to predict them must take mixing as an input, and its training
+        set must span the mixing range.
+\end{itemize}
+
+\subsection{A second result: validating the adjoint}
+\label{sec:validating}
+
+The ensemble also validates the adjoint itself. The adjoint returns
+$\partial J/\partial\kv$ at the reference point; the ensemble returns
+$\Delta J/\Delta\kv$ by finite difference across members. Where the two diverge
+marks the perturbation size beyond which the linearisation stops holding.
+
+This matters more than it may appear, because \textbf{the adjoint is not
+currently validated by anything else.} MITgcm's built-in gradient check runs on
+every adjoint job in this configuration, but it perturbs a point near the
+southern boundary while the cost section sits at 26\dg N. Sensitivity there is of
+order $10^{-9}$ against a field maximum of order $10^{-2}$, so the check measures
+run-to-run noise rather than the perturbation, and it fails by roughly eight
+orders of magnitude --- as it always has. Appendix~\ref{app:grdchk} gives the
+detail. The ensemble's finite-difference comparison, taken at points where the
+sensitivity is large, would be the first meaningful check this configuration has
+had.
+
+\subsection{What Part~II depends on}
+\label{sec:bridge}
+
+Part~II of this document sets out a neural-network surrogate that predicts
+adjoint sensitivity fields directly instead of computing them. The two parts are
+sequential rather than parallel:
+
+\begin{itemize}[nosep]
+  \item \textbf{This ensemble is a scoping study.} Its primary output is a design
+        answer --- whether $\kv$ must be an input to the surrogate at all. The
+        training pairs it produces are a by-product.
+  \item \textbf{Its result determines the surrogate's design.} A flat response
+        redirects the surrogate towards ocean state and cost functional as its
+        varying inputs. A strong response makes mixing a required input and
+        justifies the larger parameter ensemble of
+        Section~\ref{sec:trainingdata}.
+\end{itemize}
+
+Eight $\kv$ values, the seven members plus the reference, are ample for the first
+question and thin for the second. Part~II therefore calls for a $200$--$400$
+member ensemble later; Part~I does not propose one now.
+
+Three of the open questions in Section~\ref{sec:questions} --- the spatial
+structure of the perturbation, the surrogate framing, and the scope of the cost
+function --- bear on both parts and should be settled once for both.
+
+%-----------------------------------------------------------------------
+\section{Experiment design}
+%-----------------------------------------------------------------------
+
+Each member follows the same sequence:
+
+\begin{enumerate}[nosep]
+  \item Start from the spin-up state at \textbf{year 2170}.
+  \item Perturb \textbf{vertical diffusivity only}. GM and KPP are already
+        disabled.
+  \item Run \textbf{10 years forward} to re-equilibrate, arriving at
+        \textbf{year 2180}.
+  \item Run a \textbf{5-year adjoint over 2180 $\rightarrow$ 2185}, identical in
+        configuration to the reference run.
+  \item Compare the resulting sensitivity patterns against the reference.
+\end{enumerate}
+
+\subsection{Members}
+
+Seven perturbations, geometric in powers of two, spanning a factor of 128 around
+the reference value of $1.2\times10^{-5}\,\mathrm{m^{2}\,s^{-1}}$:
+
+\begin{center}
+\footnotesize
+\begin{tabular}{l*{8}{r}}
+\toprule
+$\kv$ ($\mathrm{m^{2}\,s^{-1}}$)
+ & 3.0e$-$6 & 6.0e$-$6 & \textbf{1.2e$-$5} & 2.4e$-$5
+ & 4.8e$-$5 & 9.6e$-$5 & 1.9e$-$4 & 3.8e$-$4\\
+$\times$ reference
+ & 0.25 & 0.5 & \textbf{1 (done)} & 2 & 4 & 8 & 16 & 32\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+All values lie inside the admissible range already declared for this control,
+$1\times10^{-6}$ to $5\times10^{-4}\,\mathrm{m^{2}\,s^{-1}}$. The spacing is
+logarithmic because the effect of mixing on stratification scales closer to
+$\log\kv$ than to $\kv$, and the reference sits low in the admissible window,
+leaving most of the range above it.
+
+\subsection{Why the perturbation leg starts at 2170}
+\label{sec:leg}
+
+Placing the perturbation leg \emph{before} the reference window makes the
+completed run a valid control at no additional cost:
+
+\begin{center}
+\footnotesize
+\begin{verbatim}
+member    :  state @ 2170 --10 yr, perturbed k--> state @ 2180 --> adjoint 2180-2185
+reference :  state @ 2170 --10 yr, reference k--> state @ 2180 --> adjoint 2180-2185
+\end{verbatim}
+\end{center}
+
+The spin-up ran through 2170 $\rightarrow$ 2180 continuously, so its own
+trajectory is the unperturbed counterpart of each member's leg. Both branches
+begin from an identical state, run for the same duration, and are evaluated over
+the same window, which leaves diffusivity as the only difference between them.
+
+Re-equilibrating forward from 2180 instead would place member windows at
+2190 $\rightarrow$ 2195, conflating the $\kv$ change with a decade of internal
+variability. The AMOC wanders by several tenths of a Sverdrup over such an
+interval, which is comparable to the signal being sought.
+
+The design therefore requires \textbf{seven new runs, not eight}. One caveat is
+inherent to any finite re-equilibration: ten years may not fully equilibrate a
+member. That is open question 4 in Section~\ref{sec:questions}, and the pilot
+member tests it.
+
+%-----------------------------------------------------------------------
+\section{Compute and storage}
+\label{sec:compute}
+%-----------------------------------------------------------------------
+
+Both halves of a member have been measured on completed runs at this exact
+configuration and rank count, so the figures below are not extrapolations.
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}Y{1.35}Y{1.15}Y{1.0}Y{0.5}@{}}
+\toprule
+\textbf{Measured from} & \textbf{Work done} & \textbf{Wall time, 27 ranks} &
+\textbf{Per step}\\
+\midrule
+200-year spin-up (job 28463) & $3{,}513{,}600$ forward steps & 32 h 21 m
+  & \textbf{0.0332 s}\\
+5-year reference adjoint (job 28486) & $87{,}840$ adjoint steps & 23 h 03 m
+  & \textbf{0.945 s}\\
+30-day adjoint (job 30948) & $1{,}440$ adjoint steps & 23 m 19 s
+  & 0.972 s\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+The two adjoint measurements agree to 3\,\%, which is the useful cross-check:
+cost is linear in window length, so a 5-year adjoint is predictable from a
+20-minute one.
+
+A member therefore costs \textbf{1.6 h forward plus 23.0 h adjoint, about
+24.7 h}, and seven members about 173 h. That is the cost as currently configured,
+and most of it is avoidable.
+
+\subsection{The adjoint is doing four times the work it needs to}
+\label{sec:grdchk-cost}
+
+The ratio of adjoint to forward cost per timestep is \textbf{28.5}, far above the
+3--5 that checkpointing alone would explain. The cause is that
+\code{useGrdchk = .TRUE.} is set, so every adjoint job also runs the built-in
+finite-difference gradient check and pays for the perturbed forward integrations
+it requires. Instrumenting the 30-day run:
+
+\begin{center}
+\footnotesize
+\begin{verbatim}
+forward-step calls executed   18,622
+timesteps actually integrated  1,440      -> 12.9x
+   of which: gradient check   ~11,520      (4 check points, 2 perturbed runs each)
+             adjoint proper    ~7,102      (forward sweep + checkpoint recomputation)
+\end{verbatim}
+\end{center}
+
+The adjoint proper therefore costs about 4.9 forward-step equivalents per
+timestep, which is within the 3--5 range checkpointing would predict. The excess
+is entirely the gradient check.
+
+Disabling that check for ensemble members should cut adjoint work by about
+\textbf{2.6$\times$}, bringing a member to roughly
+\textbf{1.6 h + 9 h $\approx$ 10.5 h} and the ensemble to \textbf{about 75 h}.
+Nothing is lost by doing so: the check cannot pass at its current setting
+(Section~\ref{sec:validating}), and the ensemble's own finite-difference
+comparison is a stronger validation of the same property.
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}Y{1.6}Y{0.6}Y{0.8}@{}}
+\toprule
+\textbf{Configuration} & \textbf{Per member} & \textbf{Seven members}\\
+\midrule
+As the reference run was configured & 24.7 h & \textbf{173 node-h}\\
+With the gradient check disabled & $\sim$10.5 h & \textbf{$\sim$75 node-h}\\
+Gradient check disabled, 4 runs packed per node & --- & \textbf{$\sim$19 node-h}\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsection{Why 200 node-hours is requested}
+
+The measurements come from the machine the reference run used; the target
+architecture has not been benchmarked. Strongly perturbed members may require a
+reduced timestep or additional solver iterations, and some of seven
+never-before-integrated settings will need repeating. The 2.6$\times$ saving is
+inferred from call counts rather than measured on a completed run, so it is not
+yet banked. A short benchmark, well under one node-hour and the first step of the
+sequence in Section~\ref{sec:sequence}, settles all of this.
+
+\paragraph{Node packing.}
+At 27 ranks per run, four runs fit on a 128-core node, an occupancy of 84\,\%.
+One run per node would leave 79\,\% of each billed node idle, so packing can cut
+charged node-hours by up to 4$\times$ subject to memory-bandwidth contention.
+This is worth measuring in the same benchmark.
+
+\paragraph{Storage.}
+About 3.3 GB per run --- 1.7 GB of sensitivity output and 1.6 GB of forward
+diagnostics --- giving roughly \textbf{23 GB} for the ensemble. Storage is not a
+constraint. Output frequency is the lever: 5-day sampling is assumed, and finer
+output scales linearly. One caution from the reference configuration: it retains
+a restart every 30.5 days, and a 10-year member leg would write 120 such files,
+about 2.8 GB, of which only the last is needed. Raising \code{pChkptFreq} for the
+members saves roughly 20 GB across the ensemble at no cost.
+
+%-----------------------------------------------------------------------
+\section{Analysis plan}
+%-----------------------------------------------------------------------
+
+\subsection{Does the sensitivity depend on \texorpdfstring{$\kv$}{kappa}?}
+
+The primary question. Each member is compared against the reference run, and
+because both share the 2180 $\rightarrow$ 2185 window the comparison is direct:
+
+\begin{itemize}[nosep]
+  \item pattern correlation of each \code{ADJ*} field, member against reference;
+  \item amplitude ratio;
+  \item whether the sign structure survives.
+\end{itemize}
+
+These are plotted against $\log\kv$. A flat line means the sensitivities are
+robust to mixing. A strong trend means $\kv$ must be an input to any surrogate.
+
+If a noise floor is later needed to judge weak trends against, the cheapest
+source is a second unperturbed run started from a different checkpoint; that
+difference is pure internal variability at fixed $\kv$. It is not needed to
+interpret a strong signal.
+
+\subsection{Validating the adjoint against finite differences}
+\label{sec:fd}
+
+The adjoint gives $\partial J/\partial\kv$ at the reference point, and the
+ensemble gives $\Delta J/\Delta\kv$ between members. For small perturbations the
+two should agree; as $\Delta\kv$ grows they will diverge. The point of divergence
+gives the range over which adjoint sensitivities can be trusted, and indicates
+whether a surrogate must be nonlinear in $\kv$.
+
+This extends the built-in gradient check from an infinitesimal perturbation to a
+physically meaningful one, and does so at a point where the sensitivity is large
+enough to measure.
+
+\subsection{A caution before comparing across controls}
+
+Every control currently carries unit weight
+(\code{xx\_*\_weight = 'ones\_64b.bin'}), so the raw gradients are expressed in
+each control's own units and \textbf{are not comparable across controls}. In the
+reference run \code{adxx\_empmr} spans about $10^{4}$ and \code{adxx\_qsw} about
+$10^{-6}$, which is an artefact of units rather than physics.
+
+Any cross-control statement, and any attempt to feed several controls to a single
+network, requires normalising each by a prior uncertainty or at least by a
+characteristic scale.
+
+%-----------------------------------------------------------------------
+\section{Ensemble axes beyond vertical diffusivity}
+%-----------------------------------------------------------------------
+
+Diffusivity is the first axis, not the only one.
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}Y{0.3}Y{1.8}Y{0.9}@{}}
+\toprule
+\textbf{Axis} & \textbf{Content} & \textbf{Relative cost}\\
+\midrule
+1 & Vertical diffusivity --- Part~I & as above\\
+2 & \textbf{Ocean state sampled along the existing spin-up}
+  & adjoint only, no forward leg\\
+3 & Surface forcing amplitude, wind stress first & about one member each\\
+--- & Initial-condition perturbations; additional cost functions & deferred\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\paragraph{Axis 2 is nearly free and deserves emphasis.}
+The spin-up wrote a restart state every 30.5 days and \textbf{all $2{,}400$
+remain on disk}; this has been verified rather than assumed. Each is a
+dynamically balanced ocean differing from its neighbours through internal
+variability alone. An adjoint from each needs no forward integration, so it costs
+about 90\,\% of a diffusivity member rather than the two-thirds assumed earlier
+--- the forward leg turned out to be far cheaper than the adjoint. The saving is
+smaller than first thought, but the argument stands: Axis 2 samples states the
+model actually visits rather than states imposed by hand, $2{,}400$ candidates
+are available today, and no new forward integration is required. It could run
+concurrently with Axis 1.
+
+\paragraph{Initial-condition perturbations are not worth a separate ensemble.}
+They probe the same question as state sampling --- how sensitivity depends on
+ocean state under fixed dynamics --- but from an unbalanced state. Surface
+anomalies are damped within days by the roughly 6.5-day restoring while interior
+anomalies persist, so what actually perturbs the run is whatever survives, which
+is difficult to control.
+
+Axis 3 would roughly double the request and would be raised separately after
+Axis 1.
+
+%-----------------------------------------------------------------------
+\section{Open questions}
+\label{sec:questions}
+%-----------------------------------------------------------------------
+
+These are the points on which reviewer input would be most useful.
+
+\begin{enumerate}
+  \item \textbf{Member count and spacing.} Seven members, logarithmically
+        spaced. Is that the right trade against fewer members with longer
+        re-equilibration?
+
+  \item \textbf{Should the perturbation carry spatial structure?} The reference
+        diffusivity is spatially uniform, so as proposed every member is also a
+        constant field. A real ocean has elevated mixing over rough topography.
+        This also bears directly on the surrogate: its stated value lies in
+        handling \emph{field-valued} parameters with hundreds of thousands of
+        components, but if every training field is a constant then $\kv$ has an
+        effective dimension of one across the whole ensemble. Adding structure
+        later means re-running.
+
+  \item \textbf{Convective adjustment as a confound.} A large implicit
+        diffusivity is applied wherever the water column is unstable. At the
+        high-mixing end, explicit mixing may suppress convection, so part of the
+        response would reflect convection triggering less often rather than a
+        smooth dependence on $\kv$. Should convective activity be diagnosed per
+        member?
+
+  \item \textbf{Is ten years enough re-equilibration?} If the overturning has not
+        settled, the sensitivities partly reflect drift rather than a new
+        equilibrium.
+
+  \item \textbf{Surrogate framing.} A global field-to-field map, or a local
+        operator predicting sensitivity from local state variables? This decides
+        whether forward diagnostics must be written at the 5-day adjoint cadence
+        rather than monthly. Cheap to decide now, expensive to correct later.
+
+  \item \textbf{Scope of the cost function.} All sensitivities here are
+        $\partial J/\partial x$ for a single $J$, so a surrogate trained on them
+        predicts that metric only. A general emulator needs $J$ to vary, and each
+        additional cost function requires its own adjoint runs across the whole
+        ensemble.
+\end{enumerate}
+
+Questions 4 and 5 are the ones most worth settling before the full ensemble.
+Question 2 determines whether the ensemble can serve as surrogate training data
+at all. Question 6 determines everything downstream.
+
+%-----------------------------------------------------------------------
+\section{Sequence and decision points}
+\label{sec:sequence}
+%-----------------------------------------------------------------------
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}Y{0.2}Y{2.3}Y{0.5}@{}}
+\toprule
+\textbf{Step} & \textbf{Content} & \textbf{Cost}\\
+\midrule
+1 & Build and verify against the reference result; benchmark to confirm the
+    adjoint/forward ratio and the gradient-check saving & $<$ 1 node-h\\
+2 & Generate the seven diffusivity fields and configurations & ---\\
+3 & Pilot member (8 $\times$ reference): 10-year leg from 2170; check overturning
+    drift and convection at 2180 & $\sim$1.6 h\\
+4 & Pilot adjoint 2180 $\rightarrow$ 2185; compare against the reference
+  & $\sim$9 h\\
+5 & \textbf{Review --- confirm the design before committing the remainder}
+  & ---\\
+6 & Remaining six members, run concurrently & $\sim$64 node-h\\
+7 & Cross-member comparison; finite-difference validation of the adjoint gradient
+  & ---\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Steps 3 and 4 constitute one of seven runs, about 15\,\% of the ensemble, and
+would expose a design problem before the remainder is committed. The strong
+perturbation is chosen for the pilot because it gives the clearest signal on both
+re-equilibration time and convective suppression.
+
+Costs assume the gradient check is disabled for members, per
+Section~\ref{sec:grdchk-cost}. At the reference run's settings the same steps
+would cost about 1.6 h, 23 h and 150 node-h.
+
+%=======================================================================
+

@@ -1,0 +1,73 @@
+% !TEX root = ../main.tex
+%-----------------------------------------------------------------------
+%  Appendix: reference values.
+%  \input by ../main.tex -- not compiled on its own.
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
+\section{Reference values}
+\label{app:ref}
+%-----------------------------------------------------------------------
+
+Read from the configuration rather than remembered.
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}Y{0.55}Y{1.45}@{}}
+\toprule
+\textbf{Quantity} & \textbf{Value}\\
+\midrule
+Grid & $51\times198\times36$; \code{sNx=17, sNy=22, nPx=3, nPy=9}
+  $\rightarrow$ \textbf{27 MPI ranks}. Changing this means changing
+  \code{SIZE.h\_mpi} \emph{and} \code{\#SBATCH -n}\\
+Timestep & \code{deltaT = 1800} s\\
+Spin-up pickups & \code{pickup.0003162240} (2180, reference adjoint start) and
+  \code{pickup.0002986560} ($\approx$2170, member forward-leg start).
+  \textbf{Both verified present} in the 200-year spin-up run directory\\
+Reference adjoint & \code{nIter0 = 3162240}, \code{nTimeSteps = 87840}
+  (1830 d $\approx$ 5 yr), covering 2180 $\rightarrow$ 2185\\
+Restart checkpoints & \code{pChkptFreq = 2635200} s = \textbf{1464 timesteps
+  $\approx$ 30.5 days}. \textbf{All $2{,}400$ retained}, iterations 1464
+  $\rightarrow$ $3{,}513{,}600$, \textbf{47 GB} --- the run directory as a whole
+  is 85 GB, the rest being diagnostics\\
+2180 is a checkpoint & $3{,}162{,}240 = 2160\times1464$ \checkmark\\
+Reference $\kv$ & uniform \textbf{$1.2\times10^{-5}\,\mathrm{m^{2}\,s^{-1}}$}
+  from \code{dino\_diffKr.bin} --- verified, a single unique value across all
+  $363{,}528$ cells\\
+$\kv$ file format & $51\times198\times36$, \textbf{big-endian float64}
+  (\code{readBinaryPrec=64}), $2{,}908{,}224$ bytes\\
+Output precision & \code{writeBinaryPrec=32}\\
+Sensitivity dumps & \code{adjDumpFreq} patched to 5 days by the submit script,
+  giving 366 records\\
+Cost function & volume transport, \textbf{26.05\dg N} (\code{jsec=127}), upper
+  982.4 m (\code{kmaxdepth=25}, \code{DOMASS} defined)\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\paragraph{Derived iteration numbers.}
+Exactly ten years before 2180 is iteration $2{,}987{,}040$, which is not a
+multiple of 1464, so no restart exists there. Use the nearest checkpoint below it
+and lengthen the leg so it still lands exactly on 2180:
+
+\begin{center}
+\footnotesize
+\begin{verbatim}
+2180                     = iteration 3,162,240   (checkpoint OK)
+nearest checkpoint ~2170 = iteration 2,986,560   (= 2040 x 1464)
+
+forward leg :  nIter0 = 2986560,  nTimeSteps = 175680   (10.03 yr)
+                       `-- writes pickup.0003162240
+adjoint     :  nIter0 = 3162240,  nTimeSteps = 87840    (5 yr, 2180 -> 2185)
+\end{verbatim}
+\end{center}
+
+The general rule for a different checkpoint is
+\textbf{\code{nTimeSteps = 3162240 $-$ nIter0}}, so the leg always terminates on
+the reference start.
+
+\begin{callout}
+\textbf{Filename collision.} The member's forward leg writes
+\code{pickup.0003162240}, the same iteration number as the reference pickup,
+because that is the point of the design. Keep each member in its own run
+directory and never stage two into a shared one.
+\end{callout}
+

@@ -1,0 +1,32 @@
+%-----------------------------------------------------------------------
+%  Packages, column type and the \hd heading macro.
+%  \input by main.tex -- not compiled on its own.
+%  Shares no file with ../../master_plan/ or with any other brief, so this
+%  document can be its own Overleaf project and go to one reader alone.
+%-----------------------------------------------------------------------
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[margin=0.85in]{geometry}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{enumitem}
+\usepackage{microtype}
+
+\newcolumntype{Y}[1]{>{\hsize=#1\hsize\raggedright\arraybackslash}X}
+% \par first: \hd is a run-in heading and must open its own paragraph. Without
+% it a heading at the top of an \input file joins the previous file's last
+% paragraph, which is invisible in the source and obvious in the PDF.
+\newcommand{\hd}[1]{\par\smallskip\noindent\textbf{#1}\ \ignorespaces}
+\newcommand{\kv}{\ensuremath{\kappa_{v}}}
+% \dg is \ensuremath, not $^{\circ}$: that form is text-mode only, so \dg
+% inside math closes the surrounding math and reopens it, and the error points at
+% the end of the enclosing table rather than at the offending cell. Renders
+% identically in text mode.
+\newcommand{\dg}{\ensuremath{^{\circ}}}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{1.5pt}
+\renewcommand{\arraystretch}{1.06}
+\pagestyle{empty}
