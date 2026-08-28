@@ -46,7 +46,26 @@ re-run its build script.
 
 All use `build_tapAdj/`. Durations are pre-made as separate scripts because
 adjoint cost grows quickly with integration length; the duration is `endTime_days`
-at the top of each. Names are zero-padded so they sort in order.
+at the top of each. Names are zero-padded so they sort in order. **You pick a
+script rather than editing one**, which is why SOMA has no `IMPACTS_DURATION_DAYS`
+override — DINO's three scripts do, because there you would otherwise edit the
+duration in place.
+
+Each script patches the **staged** `data` in its own run directory, never the
+tracked `input_tap/data`, so submitting leaves the working tree clean. That
+matters most here: all five scripts name the same `input_tap/data`, and the
+script body runs on the compute node when the job *starts*, so under the old
+in-place `sed` two of these started together would each stage whichever
+`endTime` landed last — while each run directory name still claimed its own
+duration. Running `005d` and `030d` at once is exactly the workflow these five
+scripts exist to support, so the window was not hypothetical.
+
+These scripts carry `set -x` but **not `set -e`**, deliberately: a non-zero exit
+from the model must not abort the script, or `run_timing.txt` would lose its
+"Run ended" lines on precisely the failures you want to time. The staging steps
+therefore carry their own guards (`cd "$run_dir" || exit 1`, an existence check
+on the namelist, and an assertion after each `sed` that the value actually
+changed) instead of relying on `set -e`.
 
 A job leaves `<job-name>.<job-id>.out` and `.err` beside the submit script, in
 the setup directory. They are gitignored, and the scripts run under `set -x`, so

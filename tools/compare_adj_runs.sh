@@ -1,0 +1,252 @@
+#!/bin/bash
+#
+# Bit-compare two MITgcm adjoint run directories, optionally waiting for a job
+# to finish first.
+#
+#   tools/compare_adj_runs.sh [options] <reference-run-dir> <new-run-dir>
+#
+# Options:
+#   --wait <jobid>    poll squeue until that job leaves the queue, then compare.
+#                     Requires TWO consecutive empty squeue results 60 s apart,
+#                     so a transient squeue failure cannot be mistaken for
+#                     "the job finished" and compare a half-written run.
+#   --report <file>   where to write the report
+#                     (default: <new-run-dir>/comparison_vs_<ref basename>.txt)
+#   --no-report       print the report but write no file
+#   --work <dir>      keep the intermediate listings here (default: a mktemp dir)
+#   -h, --help        this message
+#
+# Exit status: 0 if the two runs are equivalent, 1 if not, 2 on a usage error.
+#
+# What it compares, in seven sections: job completion; the file inventory;
+# every ADJ*/adxx* sensitivity field; every other common file; the cost
+# function; the %MON monitor stream; then a verdict.
+#
+# Three differences are EXPECTED between a run with useGrdchk=.TRUE. and one
+# with it .FALSE., and are classified rather than reported as failures:
+#
+#   data.pkg              the flag itself
+#   output_tap_adj.txt    grdchk's ph-test / ph-grd chatter
+#   xx_theta.effective.*  grdchk leaves its last probe's perturbation behind --
+#                         exactly one element differing by exactly grdchk_eps
+#
+# The old run's grdchk also emits extra %MON lines after the main run, so the
+# monitor comparison matches the new run's lines against the reference run's
+# LEADING BLOCK of the same length rather than comparing wholesale.
+#
+# Deliberately no `set -e`: every check must run, and the report must be
+# written even when an earlier one fails.
+#
+# Example -- schedule it to run when an adjoint job finishes (see
+# notes/slurm_job_chaining/):
+#
+#   ADJ=$(../../../tools/submit.sh submit_tapAdj.sh --parsable)
+#   sbatch --parsable --dependency=afterany:$ADJ run_comparison.sh
+#
+
+JOB=""; REPORT=""; WORK=""; WRITE_REPORT=yes
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --wait)      JOB="$2"; shift 2 ;;
+        --report)    REPORT="$2"; shift 2 ;;
+        --no-report) WRITE_REPORT=no; shift ;;
+        --work)      WORK="$2"; shift 2 ;;
+        -h|--help)   sed -n '2,/^$/p' "$0" | sed 's/^# \?//'; exit 0 ;;
+        -*)          echo "unknown option: $1" >&2; exit 2 ;;
+        *)           break ;;
+    esac
+done
+
+OLD="${1:-}"; NEW="${2:-}"
+if [ -z "$OLD" ] || [ -z "$NEW" ]; then
+    echo "usage: $(basename "$0") [options] <reference-run-dir> <new-run-dir>" >&2
+    echo "       $(basename "$0") --help" >&2
+    exit 2
+fi
+OLD="${OLD%/}"; NEW="${NEW%/}"
+[ -d "$OLD" ] || { echo "no such reference run directory: $OLD" >&2; exit 2; }
+
+WORK="${WORK:-$(mktemp -d)}"; mkdir -p "$WORK"
+REPORT="${REPORT:-$NEW/comparison_vs_$(basename "$OLD").txt}"
+
+# ---------- wait for the job, if asked ----------
+if [ -n "$JOB" ]; then
+    gone=0
+    while [ "$gone" -lt 2 ]; do
+        if squeue -h -j "$JOB" 2>/dev/null | grep -q .; then gone=0; sleep 120
+        else gone=$((gone+1)); sleep 60; fi
+    done
+fi
+
+rc=0
+
+main() {
+echo "======================================================================"
+echo " Adjoint run comparison"
+echo "   reference: $OLD"
+echo "   new      : $NEW${JOB:+   (job $JOB)}"
+echo " generated: $(date)"
+echo "======================================================================"
+echo
+
+# ---------- 1. job completion ----------
+echo "---------- 1. job completion ----------"
+if [ -n "$JOB" ]; then
+    sacct -j "$JOB" --format=JobID,JobName%24,State,ExitCode,Elapsed -n 2>&1 | head -4
+    echo "  (sverdrup has accounting disabled; run_timing.txt below is the record)"
+fi
+if [ ! -d "$NEW" ]; then
+    echo "FATAL: run directory $NEW does not exist. Nothing to compare."
+    return 1
+fi
+echo "run_timing.txt:"; sed 's/^/  /' "$NEW/run_timing.txt" 2>/dev/null || echo "  (missing)"
+# adjoint runs write output_tap_adj.txt, forward runs output.txt
+out="$NEW/output_tap_adj.txt"; [ -f "$out" ] || out="$NEW/output.txt"
+n_end=$(grep -ac 'NORMAL END' "$out" 2>/dev/null); n_end=${n_end:-0}
+echo "NORMAL END count (one per rank; 27 for the MPI DINO adjoint): $n_end"
+if [ "$n_end" -eq 0 ]; then
+    echo "  *** WARNING: no NORMAL END - the run did not finish cleanly ***"
+    tail -20 "$out" 2>/dev/null | sed 's/^/    /'
+fi
+echo
+
+# ---------- 2. file inventory ----------
+echo "---------- 2. file inventory ----------"
+( cd "$OLD" && find . -maxdepth 1 -type f -printf '%P\n' | sort > "$WORK/old.txt" )
+( cd "$NEW" && find . -maxdepth 1 -type f -printf '%P\n' | sort > "$WORK/new.txt" )
+comm -12 "$WORK/old.txt" "$WORK/new.txt" > "$WORK/common.txt"
+comm -23 "$WORK/old.txt" "$WORK/new.txt" > "$WORK/only_old.txt"
+comm -13 "$WORK/old.txt" "$WORK/new.txt" > "$WORK/only_new.txt"
+printf 'common: %s   only in reference: %s   only in new: %s\n' \
+  "$(wc -l < "$WORK/common.txt")" "$(wc -l < "$WORK/only_old.txt")" "$(wc -l < "$WORK/only_new.txt")"
+echo "only in the REFERENCE run:"; sed 's/^/    /' "$WORK/only_old.txt"
+echo "only in the NEW run:";       sed 's/^/    /' "$WORK/only_new.txt"
+echo
+
+# ---------- 3. the sensitivities ----------
+echo "---------- 3. sensitivity fields (ADJ* / adxx*), bit-comparison ----------"
+grep -E '^(ADJ|adxx)' "$WORK/common.txt" > "$WORK/sens.txt"
+: > "$WORK/sens_diff.txt"
+same=0; diffc=0
+while IFS= read -r f; do
+    if cmp -s "$OLD/$f" "$NEW/$f"; then same=$((same+1))
+    else diffc=$((diffc+1)); printf '%s\n' "$f" >> "$WORK/sens_diff.txt"; fi
+done < "$WORK/sens.txt"
+echo "compared : $(wc -l < "$WORK/sens.txt") files"
+echo "           ADJ*.data  : $(grep -c '^ADJ.*\.data$'  "$WORK/sens.txt")"
+echo "           adxx*.data : $(grep -c '^adxx.*\.data$' "$WORK/sens.txt")"
+echo "identical: $same"
+echo "differing: $diffc"
+[ "$diffc" -gt 0 ] && { echo "differing files (first 60):"; head -60 "$WORK/sens_diff.txt" | sed 's/^/    /'; }
+echo
+
+# ---------- 4. everything else ----------
+echo "---------- 4. all other common files ----------"
+echo "(excluding STDOUT.*/STDERR.* (build date, node, grdchk section, timers),"
+echo " the executable and run_timing.txt (wall clock))"
+grep -vE '^(ADJ|adxx)' "$WORK/common.txt" \
+  | grep -vE '^(STDOUT\.|STDERR\.|mitgcmuv|run_timing\.txt$)' > "$WORK/other.txt"
+: > "$WORK/other_diff.txt"
+osame=0; odiff=0
+while IFS= read -r f; do
+    if cmp -s "$OLD/$f" "$NEW/$f"; then osame=$((osame+1))
+    else odiff=$((odiff+1)); printf '%s\n' "$f" >> "$WORK/other_diff.txt"; fi
+done < "$WORK/other.txt"
+echo "compared : $(wc -l < "$WORK/other.txt")"
+echo "identical: $osame"
+echo "differing: $odiff"
+unexpected=0
+if [ "$odiff" -gt 0 ]; then
+    echo "differing files:"
+    while IFS= read -r f; do
+        case "$f" in
+            data.pkg|output_tap_adj.txt|output.txt|xx_theta.effective.*)
+                tag="[expected: grdchk]" ;;
+            *)  tag="[UNEXPECTED]"; unexpected=$((unexpected+1)) ;;
+        esac
+        echo "  --- $f  $tag"
+        case "$f" in
+          xx_theta.effective.*.data)
+            python3 -c "
+import numpy as np
+a=np.fromfile('$OLD/$f',dtype='>f8'); b=np.fromfile('$NEW/$f',dtype='>f8')
+nz=np.nonzero(a-b)[0]
+print(f'      elements differing: {nz.size} of {a.size}')
+if nz.size: print(f'      magnitudes: {sorted(set(np.round(a[nz]-b[nz],12)))[:5]}  (expect one value == grdchk_eps)')
+" 2>/dev/null || echo "      (numpy check unavailable)" ;;
+          *) diff "$OLD/$f" "$NEW/$f" 2>/dev/null | head -14 | sed 's/^/      /' ;;
+        esac
+    done < "$WORK/other_diff.txt"
+    echo "unexpected differences among them: $unexpected"
+fi
+echo
+
+# ---------- 5. cost function ----------
+echo "---------- 5. cost function ----------"
+fl_old=$(grep -a 'global fc' "$OLD/STDOUT.0000" 2>/dev/null | head -1)
+fl_new=$(grep -a 'global fc' "$NEW/STDOUT.0000" 2>/dev/null | head -1)
+echo "reference: $fl_old"
+echo "new      : $fl_new"
+fc_old=$(printf '%s' "$fl_old" | grep -oE '[-0-9.]+E[+-][0-9]+')
+fc_new=$(printf '%s' "$fl_new" | grep -oE '[-0-9.]+E[+-][0-9]+')
+if [ -n "$fc_old" ] && [ "$fc_old" = "$fc_new" ]; then
+    echo "  -> IDENTICAL to all printed digits ($fc_new)"
+else
+    echo "  -> DIFFER  (reference='$fc_old'  new='$fc_new')"
+fi
+echo "(later 'global fc' lines in a grdchk run are its perturbed forward"
+echo " integrations; only the first is the reference cost)"
+echo
+
+# ---------- 6. monitor stream ----------
+echo "---------- 6. monitor output ----------"
+grep -a '%MON' "$OLD/STDOUT.0000" > "$WORK/mon_old.txt" 2>/dev/null
+grep -a '%MON' "$NEW/STDOUT.0000" > "$WORK/mon_new.txt" 2>/dev/null
+n_mold=$(wc -l < "$WORK/mon_old.txt"); n_mnew=$(wc -l < "$WORK/mon_new.txt")
+echo "%MON lines: reference=$n_mold  new=$n_mnew"
+mon_verdict="n/a"
+if [ "$n_mnew" -gt 0 ] && [ "$n_mold" -ge "$n_mnew" ]; then
+    head -n "$n_mnew" "$WORK/mon_old.txt" > "$WORK/mon_old_head.txt"
+    if cmp -s "$WORK/mon_old_head.txt" "$WORK/mon_new.txt"; then
+        echo "  -> the new run's $n_mnew lines are BYTE-IDENTICAL to the reference's first $n_mnew"
+        mon_verdict="identical"
+    else
+        echo "  -> monitor streams DIFFER; first 40 differing lines:"
+        diff "$WORK/mon_old_head.txt" "$WORK/mon_new.txt" | head -40 | sed 's/^/      /'
+        mon_verdict="differ"
+    fi
+elif [ "$n_mnew" -gt "$n_mold" ]; then
+    echo "  -> the new run has MORE monitor lines than the reference; not comparable this way"
+    mon_verdict="differ"
+fi
+echo
+
+# ---------- 7. verdict ----------
+echo "---------- 7. verdict ----------"
+if [ "$n_end" -gt 0 ] && [ "$diffc" -eq 0 ] && [ "$unexpected" -eq 0 ] \
+   && [ "$mon_verdict" != "differ" ] && [ -n "$fc_old" ] && [ "$fc_old" = "$fc_new" ]; then
+    echo "EQUIVALENT: all $same sensitivity fields are bit-identical to the reference,"
+    echo "the cost function matches to every printed digit, and the monitor stream"
+    echo "matches byte for byte. Any remaining differences are the known"
+    echo "consequences of running without grdchk."
+    return 0
+else
+    echo "NOT CLEAN - review the sections above:"
+    echo "  NORMAL END ranks         : $n_end (expect one per rank)"
+    echo "  differing sensitivities  : $diffc (expect 0)"
+    echo "  unexpected other diffs   : $unexpected (expect 0)"
+    echo "  cost function            : reference=$fc_old new=$fc_new"
+    echo "  monitor stream           : $mon_verdict (expect identical)"
+    return 1
+fi
+}
+
+main > "$WORK/report.txt" 2>&1
+rc=$?
+echo "Full listings kept in $WORK/" >> "$WORK/report.txt"
+if [ "$WRITE_REPORT" = yes ]; then
+    cp "$WORK/report.txt" "$REPORT" 2>/dev/null \
+      && echo "Report written to $REPORT" >> "$WORK/report.txt"
+fi
+cat "$WORK/report.txt"
+exit $rc

@@ -30,7 +30,6 @@ There is no root build system, no linter, and no package manifest, and nothing t
 
 - `MITgcm_c69m/` — checkpoint69m tree (`MITgcm/`) + setups under `mysetups/`
 - `analyses/` — notebooks reading run output from `/scratch2/...`, split `DINO_1deg/` + `SOMA_1deg/` to match the setup names
-- `resources/` — collaborator reference notebooks
 - `00_archive/` — frozen reference copies, at tree level (`MITgcm_c69m/00_archive/`) and setup level (inside each of `DINO_1deg/` and `SOMA_1deg/`). **Every archive mirrors the path its contents came from**, so `00_archive/code_tap/X` means "X, which was or would be `code_tap/X`", and `MITgcm_c69m/00_archive/removed_from_MITgcm/pkg/tapenade/` holds what was pulled out of the vendored `MITgcm/pkg/tapenade/`. Each has its own `README.md` giving what/where-from/why-not-live per file — read that before assuming anything here is revivable; `dummy_tap.F` in particular collides with the setups' `code_tap/addummy_*.F` and would break the link if reinstalled. Nothing here is live configuration; no build or submit script reads from it. Grep hits inside these directories are history, not current behaviour. The `00_` prefix exists to keep them sorted above `build*/` and `code*/` in a plain `ls`.
 
 The primary configuration is `MITgcm_c69m/mysetups/DINO_1deg/` (DINO, 51 × 198 × 36 curvilinear). `MITgcm_c69m/mysetups/SOMA_1deg/` is the secondary.
@@ -98,7 +97,7 @@ Each setup builds itself; scripts resolve `MITGCM_ROOT` relative to their own lo
 
 ```bash
 cd MITgcm_c69m/mysetups/DINO_1deg
-export MPI_OPTFILE=/path/to/mpi/optfile      # required by every MPI build script
+./build_frd.sh                   # -> build_frd/mitgcmuv
 ./build_tapAdj.sh                # -> build_tapAdj/mitgcmuv_tap_adj
 ```
 
@@ -180,7 +179,12 @@ SLURM batch scripts targeting the **`sverdrup`** cluster:
 
 ```bash
 cd MITgcm_c69m/mysetups/DINO_1deg
-../../../tools/submit.sh submit_tapAdj.sh
+../../../tools/submit.sh submit_frd.sh        # forward, committed default
+../../../tools/submit.sh submit_tapAdj.sh     # adjoint, committed default
+
+# per-run overrides; these leave the working tree clean
+IMPACTS_DURATION_DAYS=73200 ../../../tools/submit.sh submit_frd.sh   # 200 yr
+
 ./clean_slurm_logs.sh          # prompts, then deletes *.out/*.err in cwd only
 ```
 
@@ -189,12 +193,13 @@ A submit script: selects a namelist via `test_cases`; rewrites time-stepping par
 Things to know before editing or submitting one:
 
 - **`-n` must match `SIZE.h`.** The MPI DINO adjoint requests 27 ranks because `SIZE.h_mpi` sets `nPx=3, nPy=9` over `sNx=17, sNy=22` tiles. Changing the decomposition means changing both.
-- **Durations are written in days at the top of the script** (`simulation_duration_with_dT1800_days`, `monitorFreq_days`, `adjMonitorFreq_days`, `adjDumpFreq_days`). The script auto-detects every `*_days` variable, converts to seconds (`nTimeSteps` for the duration, assuming `dT=1800`), and `sed -i`-patches the namelist.
-- **That `sed -i` edits the tracked namelist in `$SLURM_SUBMIT_DIR/input_tap/`, not a copy.** Submitting a job modifies the repo. Expect and inspect the resulting diff.
+- **Durations are written in days at the top of the script** (`simulation_duration_with_dT1800_days`, `monitorFreq_days`, `adjMonitorFreq_days`, `adjDumpFreq_days`; SOMA uses `endTime_days`). The names to patch are listed explicitly in a `time_params` array beside them. **Do not restore the old `compgen -v | grep '_days$'` auto-detection** — `compgen -v` also enumerates *exported environment variables*, and since sbatch forwards the environment by default, any `*_days` variable in the submitting shell would silently become a namelist key.
+- **Submitting a job no longer modifies the repo.** The `sed -i` runs *after* the namelist is staged and targets the copy in the run directory, so `git status` stays clean. This is a correctness fix, not just hygiene: the script body executes on the compute node when the job **starts**, not when you submit, so the old in-place `sed` was shared mutable state between every queued job — two jobs starting close together would each stage whichever value landed last while their run-directory names each claimed their own. It bit SOMA hardest, where all five duration scripts patch the same `input_tap/data`. If a namelist diff ever appears after a run, something has regressed; `tools/pre_push_check.sh` watches for it.
+- **Per-run overrides go in the environment, not in an edit.** DINO's three scripts read `IMPACTS_TEST_CASE`, `IMPACTS_DURATION_DAYS`, `IMPACTS_MONITOR_FREQ_DAYS`, `IMPACTS_ADJ_MONITOR_FREQ_DAYS` and `IMPACTS_ADJ_DUMP_FREQ_DAYS`, defaulting to the committed values, so `IMPACTS_DURATION_DAYS=73200 ../../../tools/submit.sh submit_frd.sh` runs 200 years without touching a tracked file. `IMPACTS_TEST_CASE` uses `${VAR-default}` rather than `${VAR:-default}` so that an explicit empty value selects the live `input*/data`. SOMA is deliberately excluded — its five scripts are pre-made per duration, so you pick a script instead of editing one. The committed defaults are the cheap regression configurations, not the production ones.
 - **`nIter0` is *not* one of the auto-patched parameters — the start iteration and the pickup are coupled by hand.** `nIter0` is baked into whichever `data_<tag>` the `test_cases` string selects (`from_rest` → `0`, `from50yrPk` → `878400`, `from70yrPk` → `1229760`, `from180yrPk` → `3162240`), while the pickup itself is a hardcoded `ln -s` line further down the same script. Changing `test_cases` to a different `from*Pk` tag without editing that symlink to the matching `pickup.<nIter0>.{data,meta}` gets you a run that cannot find its pickup. Changing the duration is safe; changing the starting point is not.
-- **`adjViscBoost` is a build *and* a namelist variant, not just a build.** It runs the adjoint with larger viscosity/diffusivity than the forward (`viscFacInAd = 10.` vs `viscFacInFw = 1.`), which is what keeps a long adjoint from blowing up. `submit_tapAdj_adjViscBoost.sh` points `build_dir` at `build_tapAdj_adjViscBoost/` and additionally does `rm data.autodiff` + `mv data.autodiff_adjViscBoost data.autodiff` in the staged run directory. Pairing the plain submit script with the adjViscBoost build (or the reverse) silently runs a mismatched configuration.
+- **`adjViscBoost` is a build *and* a namelist variant, not just a build.** It runs the adjoint with larger viscosity/diffusivity than the forward (`viscFacInAd = 10.` vs `viscFacInFw = 1.`), which is what keeps a long adjoint from blowing up. `submit_tapAdj_adjViscBoost.sh` points `build_dir` at `build_tapAdj_adjViscBoost/` and additionally does `rm data.autodiff` + `cp "$base_dir/input_tap/variants/data.autodiff_adjViscBoost" data.autodiff` in the staged run directory (a copy from `variants/`, not a `mv` of an already-staged file). Pairing the plain submit script with the adjViscBoost build (or the reverse) silently runs a mismatched configuration.
 - **Scratch paths come from `$SCRATCH_ROOT`, not literals.** Every live build and submit script sources `tools/machine_env.sh`, which sets `SCRATCH_ROOT`, `MPI_LAUNCHER`, `MPI_OPTFILE`, `SERIAL_OPTFILE` and `SBATCH_EXTRA` per machine (sverdrup by default, perlmutter when `$NERSC_HOST` is set). Do not reintroduce a literal `/scratch2/...`; add a case block instead. The notification address is still a hardcoded `#SBATCH --mail-user` directive.
-- **Submit with `tools/submit.sh <script>`, not `sbatch`.** Account, QOS, constraint and walltime cannot be `#SBATCH` directives without breaking the other machine, so the wrapper passes them on the command line where sbatch lets them override. On sverdrup `SBATCH_EXTRA` is empty, so it is exactly `sbatch <script>` and plain `sbatch` still works.
+- **Submit with `tools/submit.sh <script>`, not `sbatch`.** Account, QOS, constraint and walltime cannot be `#SBATCH` directives without breaking the other machine, so the wrapper passes them on the command line where sbatch lets them override. On sverdrup `SBATCH_EXTRA` is empty, so it is `sbatch --export=ALL <script>` and plain `sbatch` still works. Extra arguments are placed **before** the script name, because sbatch's usage is `sbatch [OPTIONS] script [args]` and anything after the script name goes to the script instead — which is why `submit.sh <script> --test-only` used to submit a real job rather than dry-run it. `--export=ALL` is sbatch's default, made explicit because the jobs depend on it: `impacts_load_modules` is a no-op on sverdrup, so the Intel/MPI stack *and* the `IMPACTS_*` overrides both reach the compute node only through the inherited environment.
 - **The optfiles are machine-authoritative, deliberately.** `~/.bashrc` on sverdrup exports `MPI_OPTFILE`; honouring it would silently build Perlmutter with the Intel sverdrup optfile, so `machine_env.sh` overwrites it. `IMPACTS_MPI_OPTFILE` is the explicit override.
 - Namelist variants live beside `data` as `data_<tag>` and are chosen by `test_cases` (empty string = plain `input_tap/data`); tags compose. See README for the tag vocabulary.
 - Serial SOMA scripts are pre-made per duration (`submit_tapAdj_{001d_smoketest,005d,030d,180d,360d}.sh`, zero-padded so they sort) because adjoint cost grows fast with integration length.

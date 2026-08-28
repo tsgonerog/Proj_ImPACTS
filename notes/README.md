@@ -1,7 +1,13 @@
 # notes/
 
-Notes and proposals for directions this project might take. Prose only — nothing
-here builds or runs, and nothing here is a commitment to do the work.
+Prose only — nothing here builds or runs. Two kinds of material live here, kept
+apart because they answer to different standards:
+
+- **Directions** — proposals for work this project might take on. Nothing in one
+  is a commitment to do it.
+- **Practical references** — how a workflow that *has* run actually works, so it
+  can be reproduced. These describe fact, so a claim in one is either true of the
+  repository today or marked as superseded.
 
 ## Directions
 
@@ -20,6 +26,20 @@ directory after the question rather than the method, so it survives a change of
 approach. Keep each direction's material inside its own directory; a note that
 bears on two of them lives with whichever direction owns the decision and is
 cited from the other.
+
+## Practical references
+
+Workflow how-tos, written after the fact from a run that happened. Same
+one-subdirectory-plus-`README.md` shape as a direction; the difference is that
+these document what was done rather than what might be.
+
+| Reference | Covers |
+| --- | --- |
+| [`slurm_job_chaining/`](slurm_job_chaining/) | Making one job wait for another with `--dependency`, and running a follow-on step automatically when a job finishes. Worked from the κ_v ensemble submitted 2026-08-28 |
+
+Keep these honest about their own scope: name the machine and the scheduler
+version they were verified on, and say plainly when something documented is the
+weaker of two approaches rather than the recommended one.
 
 ## Master and briefs
 

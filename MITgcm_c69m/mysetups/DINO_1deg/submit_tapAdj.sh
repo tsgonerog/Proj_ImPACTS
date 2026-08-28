@@ -31,19 +31,41 @@ impacts_load_modules
 # ========== TEST CASE FLAG ==========
 
 # Set to "" for default (i.e., use input_tap/data)
-test_cases="from180yrPk_visc2x"
+# IMPACTS_TEST_CASE overrides this per run. The `-` (not `:-`) is deliberate:
+# IMPACTS_TEST_CASE= selects the live input_tap/data, which `:-` would swallow.
+test_cases="${IMPACTS_TEST_CASE-from180yrPk_visc2x}"
 
 # Build optional suffix; set suffix to "_<test_cases>" if non-empty, otherwise empty (avoids extra underscore)
 suffix=${test_cases:+_$test_cases}
 
-# ========== SET SOME TIME STEPPING PARAMETERS (IN DAYS) IN input_tap/data ==========
+# ========== SET SOME TIME STEPPING PARAMETERS (IN DAYS) ==========
 
-simulation_duration_with_dT1800_days=1830
-monitorFreq_days=5
-adjMonitorFreq_days=5
-adjDumpFreq_days=5
+# These are patched into the STAGED namelist in the run directory; the tracked
+# file under input_tap/ is never modified. The values here are the committed
+# defaults; override per run on the command line, which leaves the tree clean:
+#
+#     IMPACTS_DURATION_DAYS=3660 ../../../tools/submit.sh submit_tapAdj.sh
+#
+simulation_duration_with_dT1800_days="${IMPACTS_DURATION_DAYS:-1830}"
+monitorFreq_days="${IMPACTS_MONITOR_FREQ_DAYS:-5}"
+adjMonitorFreq_days="${IMPACTS_ADJ_MONITOR_FREQ_DAYS:-5}"
+adjDumpFreq_days="${IMPACTS_ADJ_DUMP_FREQ_DAYS:-5}"
+
+# Which of the above get patched into the namelist, listed explicitly.
+# Do NOT go back to `compgen -v | grep '_days$'`: that also enumerates exported
+# environment variables, so any *_days variable in the submitting shell would
+# silently become a namelist key (sbatch exports the environment by default).
+time_params=(simulation_duration_with_dT1800 monitorFreq adjMonitorFreq adjDumpFreq)
 
 #----------- do not edit below --------------------------
+
+# The duration feeds integer arithmetic below; reject junk early rather than
+# letting bash evaluate an unset name as 0 and silently run zero timesteps.
+if ! [[ "$simulation_duration_with_dT1800_days" =~ ^[0-9]+$ ]]; then
+  echo "ERROR: duration must be a whole number of days, got '$simulation_duration_with_dT1800_days'"
+  exit 1
+fi
+
 # Empty test_cases uses the live input_tap/data; anything else names a file
 # in input_tap/variants/. Adding a new alternative means putting it there.
 if [[ -z "$test_cases" ]]; then
@@ -57,27 +79,6 @@ if [[ ! -f "$namelist_data" ]]; then
   echo "ERROR: File $namelist_data not found!"
   exit 1
 fi
-
-# Auto-detect all *_days variables and strip suffix
-params=($(compgen -v | grep '_days$' | sed 's/_days$//'))
-
-# Convert each <name>_days → seconds and patch only the RHS value (keep commas/spaces)
-for name in "${params[@]}"; do
-  eval days_val="\$${name}_days"
-
-  # Special handling: simulation_duration_with_dT1800_days → nTimeSteps
-  if [[ "$name" == "simulation_duration_with_dT1800" ]]; then
-    total_seconds=$(awk -v d="$days_val" 'BEGIN{printf "%.0f", d*86400}')
-    nsteps=$(awk -v s="$total_seconds" 'BEGIN{printf "%.0f", s/1800}')
-    sed -i -E "s|^([[:space:]]*nTimeSteps=)[^,]+|\1${nsteps}|g" "$namelist_data"
-    continue
-  fi
-
-  # Default handling: days → seconds, patch <name>=..
-  secs=$(awk -v d="$days_val" 'BEGIN{printf "%.0f", d*86400}')
-  newval="${secs}."
-  sed -i -E "s|^([[:space:]]*${name}=)[^,]+|\1${newval}|g" "$namelist_data"
-done
 
 # ========== PATHS & NAMES ==========
 
@@ -110,6 +111,36 @@ ln -s "$base_dir/input_adj_binaries"/* .
 rm -f data
 cp "$namelist_data" data
 
+# ---------- time stepping: patch the STAGED copy, not the tracked namelist ----------
+# This runs here, after staging, so the repo is never written to. It matters for
+# more than tidiness: this script body executes on the compute node when the job
+# STARTS, so a sed against $namelist_data would race any other job that happens
+# to start around the same time, and each run would stage whichever value landed
+# last while its run-directory name claimed its own.
+# Convert each <name>_days → seconds and patch only the RHS value (keep commas/spaces).
+for name in "${time_params[@]}"; do
+  eval days_val="\$${name}_days"
+
+  # Special handling: simulation_duration_with_dT1800_days → nTimeSteps
+  if [[ "$name" == "simulation_duration_with_dT1800" ]]; then
+    total_seconds=$(awk -v d="$days_val" 'BEGIN{printf "%.0f", d*86400}')
+    nsteps=$(awk -v s="$total_seconds" 'BEGIN{printf "%.0f", s/1800}')
+    sed -i -E "s|^([[:space:]]*nTimeSteps=)[^,]+|\1${nsteps}|g" data
+    # sed exits 0 when it matches nothing, which would leave the namelist's own
+    # value in place and run a different experiment silently. Assert instead.
+    grep -qE "^[[:space:]]*nTimeSteps=${nsteps}," data \
+      || { echo "ERROR: nTimeSteps not patched to ${nsteps} in staged data"; exit 1; }
+    continue
+  fi
+
+  # Default handling: days → seconds, patch <name>=..
+  secs=$(awk -v d="$days_val" 'BEGIN{printf "%.0f", d*86400}')
+  newval="${secs}."
+  sed -i -E "s|^([[:space:]]*${name}=)[^,]+|\1${newval}|g" data
+  grep -qE "^[[:space:]]*${name}=${newval}," data \
+    || { echo "ERROR: ${name} not patched to ${newval} in staged data"; exit 1; }
+done
+
 # >>> disable GMRedi and KPP if needed (comment out if you want to keep the default version) <<<
 #sed -i -E "s|(useKPP[[:space:]]*=[[:space:]]*)\.TRUE\.|\1.FALSE.|" data.pkg
 #sed -i -E "s|(useGMRedi[[:space:]]*=[[:space:]]*)\.TRUE\.|\1.FALSE.|" data.pkg
@@ -119,9 +150,9 @@ cp "$namelist_data" data
 cp -p "$build_dir/mitgcmuv_tap_adj" .
 
 #----- pickups ---------------
-ln -s $SCRATCH_ROOT/DINO_1deg_frd_runs/runs_prod/DINO_1deg_frd_200yr_from_rest_visc2x_run28463/pickup.0003162240.data pickup.0003162240.data
+ln -s $SCRATCH_ROOT/DINO_1deg_frd_runs/DINO_1deg_frd_200yr_from_rest_visc2x_run30983/pickup.0003162240.data pickup.0003162240.data
 
-ln -s $SCRATCH_ROOT/DINO_1deg_frd_runs/runs_prod/DINO_1deg_frd_200yr_from_rest_visc2x_run28463/pickup.0003162240.meta pickup.0003162240.meta
+ln -s $SCRATCH_ROOT/DINO_1deg_frd_runs/DINO_1deg_frd_200yr_from_rest_visc2x_run30983/pickup.0003162240.meta pickup.0003162240.meta
 
 # ========== RUN & TIMING ==========
 

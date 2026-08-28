@@ -5,11 +5,85 @@ Idealised single-basin "DINO" ocean, pole to pole. **51 × 198 × 36**, curvilin
 
 **MPI only.** `SIZE.h_serial` exists in `code_tap/` but no script stages it.
 
-## Build
+## Quick start
+
+Run everything **from this directory** (`MITgcm_c69m/mysetups/DINO_1deg`) — the
+scripts resolve the MITgcm tree relative to their own location but use relative
+paths like `code_tap/` for the setup, so they expect this to be the working
+directory. **Nothing needs exporting:** `tools/machine_env.sh` supplies the
+optfile, scratch root, MPI launcher and per-machine sbatch flags.
+
+### Forward model
 
 ```bash
-./build_tapAdj.sh          # the one you normally want
+./build_frd.sh                                   # -> build_frd/mitgcmuv
+../../../tools/submit.sh submit_frd.sh           # 10 yr from rest, visc2x
 ```
+
+### Adjoint model
+
+```bash
+./build_tapAdj.sh                                # -> build_tapAdj/mitgcmuv_tap_adj
+../../../tools/submit.sh submit_tapAdj.sh        # 5 yr from the 180 yr pickup
+```
+
+Build and submit scripts are **paired by build directory** — `submit_frd.sh`
+runs what `build_frd.sh` produced, `submit_tapAdj.sh` what `build_tapAdj.sh`
+produced. Mixing a submit script with a different build silently runs a
+configuration you did not intend; see the two tables below for the pairing.
+
+Always submit through `tools/submit.sh`, never bare `sbatch`: the wrapper adds
+the account, QOS, constraint and walltime flags that differ per machine and
+cannot be written as `#SBATCH` directives without breaking the other one. On
+sverdrup those are empty, so it reduces to `sbatch --export=ALL <script>`.
+
+### Before the first run
+
+Two untracked directories must exist, or staging fails:
+
+| Directory | Needed by | Notes |
+| --- | --- | --- |
+| `input_binaries/` | both | 179 MB of `dino_*.bin`, produced outside this repo — nothing here regenerates it |
+| `input_adj_binaries/` | adjoint only | `ones_64b.bin`, the uniform weight every `data.ctrl` entry points at |
+
+### Changing the run without editing anything
+
+The committed values are the cheap regression configurations. Override per run
+from the command line — this leaves `git status` clean, so no run produces a
+commit:
+
+```bash
+# 200-year forward spin-up
+IMPACTS_DURATION_DAYS=73200 ../../../tools/submit.sh submit_frd.sh
+
+# 30-day adjoint, denser monitor output
+IMPACTS_DURATION_DAYS=30 IMPACTS_ADJ_MONITOR_FREQ_DAYS=1 \
+    ../../../tools/submit.sh submit_tapAdj.sh
+
+# a different namelist variant
+IMPACTS_TEST_CASE=from_rest_viscRef_adv30 ../../../tools/submit.sh submit_frd.sh
+```
+
+| Variable | Patches | Default (`frd` / `tapAdj`) |
+| --- | --- | --- |
+| `IMPACTS_DURATION_DAYS` | `nTimeSteps` (÷ `dT=1800`) | `3660` (10 yr) / `1830` (5 yr) |
+| `IMPACTS_MONITOR_FREQ_DAYS` | `monitorFreq` | `30.5` / `5` |
+| `IMPACTS_ADJ_MONITOR_FREQ_DAYS` | `adjMonitorFreq` | — / `5` |
+| `IMPACTS_ADJ_DUMP_FREQ_DAYS` | `adjDumpFreq` | — / `5` |
+| `IMPACTS_TEST_CASE` | which `variants/data_<tag>` is staged | `from_rest_visc2x` / `from180yrPk_visc2x` |
+
+Durations are whole days; a non-numeric value is rejected before the job stages
+anything. `IMPACTS_TEST_CASE=` (explicitly empty) selects the live `input*/data`
+rather than a variant. The values reach the compute node because sbatch forwards
+the environment, and the run directory name records the result — a duration that
+failed to arrive shows up as `_10yr_` instead of `_200yr_`.
+
+**`nIter0` is deliberately not in that table.** The start iteration lives in
+whichever `data_<tag>` `test_cases` selects, and the matching pickup is a
+hardcoded `ln -s` further down the submit script. Changing the duration is safe;
+changing the starting point means editing both by hand.
+
+## Build
 
 | Script | Build directory | Executable |
 | --- | --- | --- |
@@ -33,9 +107,7 @@ re-run its build script.
 
 ## Run
 
-```bash
-../../../tools/submit.sh submit_tapAdj.sh
-```
+Commands are in **Quick start** above; this section covers what the scripts do.
 
 | Submit script | Uses build directory |
 | --- | --- |
@@ -66,10 +138,23 @@ plain submit script with this build silently runs the ordinary configuration.
 **27 ranks**, fixed by `SIZE.h_mpi` (`nPx=3, nPy=9` over `sNx=17, sNy=22`).
 Changing the decomposition means changing `SIZE.h_mpi` *and* `#SBATCH -n`.
 
-Durations are set in **days** at the top of the submit script and converted
-automatically. `nIter0` is not — it comes from the `data_<tag>` that `test_cases`
-selects, and the matching pickup is a hardcoded `ln -s` further down. Changing
-the duration is safe; changing the starting point means editing both.
+Durations are set in **days** — either the committed defaults at the top of the
+submit script or the `IMPACTS_*_DAYS` overrides above — and converted to
+`nTimeSteps` / `*Freq` seconds automatically.
+
+**The conversion patches the staged namelist in the run directory, never the
+tracked file**, so submitting a job leaves the working tree clean. That ordering
+is load-bearing rather than cosmetic: the script body executes on the compute
+node when the job *starts*, not when you submit, so patching the repo copy in
+place made it shared mutable state between every queued job. Two jobs starting
+close together would each stage whichever value landed last while their run
+directory names each claimed their own duration. If a namelist diff ever appears
+after a run, something has regressed — `tools/pre_push_check.sh` watches for it.
+
+The names that get patched are listed explicitly in a `time_params` array beside
+the defaults. Do not restore the old `compgen -v | grep '_days$'` auto-detection:
+`compgen -v` also enumerates *exported environment variables*, so any `*_days`
+variable in your shell would silently become a namelist key.
 
 ## Files
 
@@ -99,21 +184,37 @@ input_tap/
     └── data.autodiff_adjViscBoost
 ```
 
-Selecting one is a single edit at the top of a submit script:
+Select one per run, without touching the script:
 
 ```bash
-test_cases="from180yrPk_visc2x"      # -> variants/data_from180yrPk_visc2x
-test_cases=""                        # -> the live input_tap/data
+IMPACTS_TEST_CASE=from180yrPk_visc2x ../../../tools/submit.sh submit_tapAdj.sh
+IMPACTS_TEST_CASE= ../../../tools/submit.sh submit_tapAdj.sh   # the live input_tap/data
 ```
 
-The script copies it in as `data`, and the run directory name records which was
-used. A typo aborts the job immediately rather than silently running the wrong
-configuration.
+or change the committed default, which is the value `IMPACTS_TEST_CASE` falls
+back to:
+
+```bash
+test_cases="${IMPACTS_TEST_CASE-from180yrPk_visc2x}"
+```
+
+The script copies the selected file in as `data`, and the run directory name
+records which was used. A typo aborts the job immediately — before the run
+directory is created — rather than silently running the wrong configuration.
 
 **Adding an alternative means putting it in `variants/`**, named
 `data_<start>_<viscosity>[_extras]` — see the root `README.md` for that
 vocabulary. Files directly in `input_tap/` are staged into every run, so a stray
 one there becomes part of every configuration.
+
+**`M1`–`M7` are the one deliberate exception to that vocabulary:** the
+vertical-mixing perturbation ensemble of `notes/nn_surrogate/` names members by
+their κ_v factor (M1 = 0.25×, M2 = 0.5×, M3–M7 = 2×–32× the reference
+1.2e-5 m²/s). Each tag exists in *both* variant directories — `input/variants/`
+for the 2170→2180 re-equilibration leg, `input_tap/variants/` for the 5-year
+adjoint 2180→2185 — and each file's header comment states its κ value. The
+fields themselves are `input_binaries/dino_diffKr_M<n>.bin` (untracked, constant
+fields regenerated by the snippet in the notes' Appendix B).
 
 Only the selected variant is copied to scratch, so a run directory contains the
 12 namelists MITgcm reads and nothing else.

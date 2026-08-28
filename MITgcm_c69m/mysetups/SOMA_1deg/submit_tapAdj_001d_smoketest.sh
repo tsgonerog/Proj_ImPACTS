@@ -31,26 +31,29 @@ REPO_ROOT="$(cd "$SLURM_SUBMIT_DIR/../../.." && pwd)"
 source "$REPO_ROOT/tools/machine_env.sh"
 impacts_load_modules
 
-# ========== SET SOME TIME STEPPING PARAMETERS (IN DAYS) IN input_tap/data ==========
+# ========== SET SOME TIME STEPPING PARAMETERS (IN DAYS) ==========
+# Patched into the STAGED namelist in the run directory; the tracked
+# input_tap/data is never modified.
 
 endTime_days=1
 monitorFreq_days=1
 adjMonitorFreq_days=1
 adjDumpFreq_days=1
 
+# Which of these get patched into the namelist, listed explicitly.
+# Do NOT go back to `compgen -v | grep '_days$'`: that also enumerates exported
+# environment variables, so any *_days variable in the submitting shell would
+# silently become a namelist key (sbatch exports the environment by default).
+time_params=(endTime monitorFreq adjMonitorFreq adjDumpFreq)
+
 #----------- do not edit below --------------------------
 namelist_data="$SLURM_SUBMIT_DIR/input_tap/data"
 
-# Auto-detect all *_days variables and strip suffix
-params=($(compgen -v | grep '_days$' | sed 's/_days$//'))
-
-# Convert each <name>_days → seconds and patch only the RHS value (keep commas/spaces)
-for name in "${params[@]}"; do
-  eval days_val="\$${name}_days"
-  secs=$(awk -v d="$days_val" 'BEGIN{printf "%.0f", d*86400}')
-  newval="${secs}."
-  sed -i -E "s|^([[:space:]]*${name}=)[^,]+|\1${newval}|g" "$namelist_data"
-done
+# Safety check. These scripts carry no `set -e`, so check explicitly.
+if [[ ! -f "$namelist_data" ]]; then
+  echo "ERROR: File $namelist_data not found!"
+  exit 1
+fi
 
 # ========== PATHS & NAMES ==========
 
@@ -63,12 +66,40 @@ run_dir="$SCRATCH_ROOT/SOMA_1deg_tapAdj_runs/${job_name}_${endTime_days}d_run$SL
 
 # create run directory in scratch and move into it
 mkdir -p "$run_dir"
-cd "$run_dir"
+# No `set -e` in these scripts: without || exit 1 a failed cd would run the
+# whole staging block in the repo directory.
+cd "$run_dir" || exit 1
 
 # copy and link input files into run directory
 cp "$base_dir/input_tap"/* .
 ln -s "$base_dir/input_binaries"/* .
 ln -s "$base_dir/input_adj_binaries"/* .
+
+# Replace data file correctly. The glob above already copied it, but stage it
+# explicitly so the loop below has a named target and $namelist_data does not
+# survive as dead code naming a repo path -- which is how the sed came to be
+# pointed at the tracked file in the first place.
+rm -f data
+cp "$namelist_data" data
+
+# ---------- time stepping: patch the STAGED copy, not the tracked namelist ----------
+# This runs here, after staging, so the repo is never written to. It matters for
+# more than tidiness: this script body executes on the compute node when the job
+# STARTS, and all five SOMA duration scripts patch the SAME input_tap/data. Two
+# of them started together would each stage whichever endTime landed last, while
+# each run directory name still claimed its own duration.
+# Convert each <name>_days -> seconds and patch only the RHS value (keep commas/spaces).
+for name in "${time_params[@]}"; do
+  eval days_val="\$${name}_days"
+  secs=$(awk -v d="$days_val" 'BEGIN{printf "%.0f", d*86400}')
+  newval="${secs}."
+  sed -i -E "s|^([[:space:]]*${name}=)[^,]+|\1${newval}|g" data
+  # sed exits 0 when it matches nothing, which would leave the namelist's own
+  # value in place and run a different experiment silently. No `set -e` here,
+  # so assert explicitly.
+  grep -qE "^[[:space:]]*${name}=${newval}," data \
+    || { echo "ERROR: ${name} not patched to ${newval} in staged data"; exit 1; }
+done
 
 # >>> disable GMRedi and KPP if needed (comment out if you want to keep the default version) <<<
 #sed -i -E "s|(useKPP[[:space:]]*=[[:space:]]*)\.TRUE\.|\1.FALSE.|" data.pkg

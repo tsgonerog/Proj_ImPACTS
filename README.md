@@ -61,9 +61,8 @@ already define, so nothing has to be kept in sync by hand.
 | --- | --- |
 | `MITgcm_c69m/` | MITgcm **checkpoint69m** (2026-03-30) source tree plus the experiments built against it |
 | `analyses/` | Jupyter notebooks that read run output from scratch and produce diagnostics/figures |
-| `tools/` | `machine_env.sh` (per-machine settings), `submit.sh`, `pre_push_check.sh`, `overleaf_sync.sh` + `overleaf_sync_selftest.sh` (two-way sync between `notes/<direction>/` and its Overleaf project; `push --wip` sends the working tree, for drafting without a commit per round trip), `optfile_templates/` (project optfiles not yet validated on their target machine), `tapenade_profiling/` (profiling and `-nocheckpoint` tuning, not wired into any build script) |
-| `resources/` | Reference notebooks from collaborators (e.g. `dinocean` package usage) |
-| `notes/` | Design notes and proposals for work that does not exist yet — prose only, nothing here builds or runs |
+| `tools/` | `machine_env.sh` (per-machine settings), `submit.sh`, `pre_push_check.sh`, `compare_adj_runs.sh` (bit-compare two adjoint run directories, optionally waiting on a job), `overleaf_sync.sh` + `overleaf_sync_selftest.sh` (two-way sync between `notes/<direction>/` and its Overleaf project; `push --wip` sends the working tree, for drafting without a commit per round trip), `optfile_templates/` (project optfiles not yet validated on their target machine), `tapenade_profiling/` (profiling and `-nocheckpoint` tuning, not wired into any build script) |
+| `notes/` | Prose only, nothing here builds or runs: proposals for work that does not exist yet, plus practical references documenting a workflow that has run |
 
 Each document has a different job:
 
@@ -74,6 +73,7 @@ Each document has a different job:
 | `analyses/README.md` | What each notebook does and which run it reads |
 | `MITgcm_c69m/mysetups/<setup>/README.md` | That setup's grid, build/submit pairings and quirks |
 | `notes/README.md` | Which directions are on the table, how a new one is added, the LaTeX/Overleaf conventions they share, and how to sync a direction with Overleaf in both directions |
+| `notes/slurm_job_chaining/README.md` | Chaining jobs with `--dependency`, and running a follow-on step when a job finishes |
 | `notes/nn_surrogate/README.md` | What the surrogate proposal is, how its two documents relate, and where their numbers came from |
 | `CLAUDE.md` | Non-obvious mechanics and traps, written for an AI assistant but useful to anyone |
 
@@ -270,7 +270,8 @@ compiler settings from `tools/machine_env.sh`, so there is nothing to export:
 
 ```bash
 cd MITgcm_c69m/mysetups/DINO_1deg
-./build_tapAdj.sh      # -> build_tapAdj/mitgcmuv_tap_adj
+./build_frd.sh         # forward -> build_frd/mitgcmuv
+./build_tapAdj.sh      # adjoint -> build_tapAdj/mitgcmuv_tap_adj
 ```
 
 Each script does the same five things:
@@ -317,16 +318,19 @@ Both sides are tracked in git, so:
 
 ```bash
 cd MITgcm_c69m/mysetups/DINO_1deg
-../../../tools/submit.sh submit_tapAdj.sh
+../../../tools/submit.sh submit_frd.sh        # forward
+../../../tools/submit.sh submit_tapAdj.sh     # adjoint
 ```
 
 Use `tools/submit.sh` rather than `sbatch` — it adds the account, QOS,
 constraint and walltime flags the current machine needs. On sverdrup it adds
-nothing and is exactly `sbatch <script>`.
+nothing and is exactly `sbatch --export=ALL <script>`. Extra arguments are
+passed as sbatch *options*, so `submit.sh <script> --test-only` dry-runs.
 
 A submit script:
 
-1. selects a namelist variant via the `test_cases` string at the top;
+1. selects a namelist variant via `IMPACTS_TEST_CASE`, falling back to the
+   `test_cases` string at the top;
 2. rewrites time-stepping parameters **in days** — set
    `simulation_duration_with_dT1800_days`, `monitorFreq_days`,
    `adjMonitorFreq_days`, `adjDumpFreq_days` and the script converts to
@@ -337,13 +341,30 @@ A submit script:
 4. symlinks any pickup needed to restart from a spun-up state;
 5. runs the executable and writes `run_timing.txt`.
 
-Three things to know before editing or submitting one:
+Four things to know before editing or submitting one:
 
 - **`-n` must match `SIZE.h`.** DINO requests 27 ranks because `SIZE.h_mpi` sets
   `nPx=3, nPy=9`. Changing the decomposition means changing both.
-- **Submitting a job edits the repo.** Step 2 is a `sed -i` on the *tracked*
-  namelist in `input_tap/`, not on a copy. Expect a diff afterwards and decide
-  whether to keep it.
+- **Submitting a job leaves the repo clean.** Step 2's `sed -i` runs after the
+  namelist is staged and patches the copy in the run directory, so `git status`
+  is unchanged by a submission. It has to work this way: the script body runs on
+  the compute node when the job *starts*, so patching the tracked file in place
+  made it shared mutable state between every queued job — two starting close
+  together would each stage whichever value landed last, while their run
+  directory names each claimed their own duration.
+- **Change the duration from the command line, not by editing the script.**
+  DINO's scripts take `IMPACTS_DURATION_DAYS`, `IMPACTS_TEST_CASE`,
+  `IMPACTS_MONITOR_FREQ_DAYS`, `IMPACTS_ADJ_MONITOR_FREQ_DAYS` and
+  `IMPACTS_ADJ_DUMP_FREQ_DAYS`, defaulting to the committed values:
+
+  ```bash
+  IMPACTS_DURATION_DAYS=73200 ../../../tools/submit.sh submit_frd.sh   # 200 years
+  ```
+
+  What is committed is the cheap regression configuration; production runs are
+  opt-in and leave no diff. The run directory name and its staged `data` are the
+  record of what ran. SOMA is excluded on purpose — its five scripts are
+  pre-made per duration, so you pick one rather than editing it.
 - **`nIter0` is not auto-patched.** The start iteration lives in whichever
   `data_<tag>` the `test_cases` string selects, while the pickup is a hardcoded
   `ln -s` further down the same script. Changing the duration is safe; changing
@@ -625,7 +646,7 @@ something would actually break. It checks the five things that go wrong here:
 | Check | Why it matters |
 | --- | --- |
 | `nbstrip` filter installed | Without it, notebooks commit with every embedded figure and animation. Git filters live in `.git/config`, which is untracked, so a fresh clone has none. |
-| `input_tap/data*` modified | **Submitting a job edits the repo.** The submit scripts `sed -i` the tracked namelist in place to set the duration, so a run leaves a diff you did not author. |
+| Namelist under `mysetups/*/input*/` modified | Submit scripts patch the *staged* namelist in the run directory, so a submission should leave no diff at all. If one appears and you did not edit the file by hand, something regressed — investigate rather than committing it. |
 | Build-staged variant files | Build scripts copy `SIZE.h_mpi` over `SIZE.h`, `the_model_main.F_OG` over `the_model_main.F`, and so on. Running a build dirties the tree even when nothing was authored — and edits to the bare file are lost on the next build. |
 | Images staged under `analyses/` | Figures and animations belong in the scratch run directory, not here. |
 | Notebook scratch paths resolve | These rot silently when a run directory is renamed or deleted. |

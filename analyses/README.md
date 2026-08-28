@@ -31,6 +31,9 @@ analyses/
 │       └── 04_5yr_from_rest_viscGrid1p8e-2_adjViscBoost.ipynb
 ├── SOMA_1deg/                        secondary configuration (62 x 62 x 31)
 ├── reference_notebooks/              collaborator material the above derives from
+│   ├── dinocean_package_usage_from_matt.ipynb
+│   ├── dino_output_walkthrough_from_matt.ipynb
+│   └── moc_amoc_animation_reference.ipynb
 └── tools/
     └── strip_animation_outputs.py    keeps notebooks under GitHub's size limit
 ```

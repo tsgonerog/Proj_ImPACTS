@@ -37,7 +37,18 @@ cd "$(dirname "$script_abs")"
 
 echo "machine : $MACHINE"
 echo "extra   : ${SBATCH_EXTRA:-<none>}"
-echo "submit  : sbatch ${SBATCH_EXTRA} $(basename "$script_abs") $*"
+echo "submit  : sbatch ${SBATCH_EXTRA} --export=ALL $* $(basename "$script_abs")"
 echo
+# Extra arguments go BEFORE the script name. sbatch's usage is
+#     sbatch [OPTIONS...] script [args...]
+# so anything after the script name is handed to the script as an argument
+# rather than consumed as an sbatch option. That is why the --test-only example
+# above used to submit a real job instead of dry-running it.
+#
+# --export=ALL is already sbatch's default; it is stated explicitly because the
+# jobs genuinely depend on it. impacts_load_modules is a no-op on sverdrup, so
+# the compiler/MPI stack and the IMPACTS_* per-run overrides both reach the
+# compute node only through the inherited environment. A user-supplied
+# --export= still wins, coming later on the command line.
 # shellcheck disable=SC2086
-exec sbatch ${SBATCH_EXTRA} "$(basename "$script_abs")" "$@"
+exec sbatch ${SBATCH_EXTRA} --export=ALL "$@" "$(basename "$script_abs")"

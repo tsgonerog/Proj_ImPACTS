@@ -37,13 +37,18 @@ fi
 
 echo
 echo "── side effects you did not author ──────────────────────────────────"
-# Submit scripts sed -i the tracked namelist in input_tap/, so submitting a job
-# edits the repo. 00_archive/ is excluded: it mirrors the live directory names,
-# so it contains 00_archive/input_tap/data* paths that no submit script can ever
-# touch.
-nl=$(git diff --name-only HEAD -- '*/input_tap/data*' ':(exclude)*/00_archive/*' 2>/dev/null)
+# Submit scripts used to sed -i the tracked namelist, so submitting a job edited
+# the repo. They now patch the staged copy in the run directory instead, so a
+# modified namelist here should only ever be one you edited by hand.
+#
+# The pathspec is scoped to */mysetups/*/ deliberately: git pathspec wildcards
+# match '/', so a bare '*/input*/data*' also sweeps in ~900 files from the
+# vendored MITgcm verification tree. 00_archive/ is excluded because it mirrors
+# the live directory names and no submit script can reach it.
+nl=$(git diff --name-only HEAD -- '*/mysetups/*/input*/data*' ':(exclude)*/00_archive/*' 2>/dev/null)
 if [[ -n "$nl" ]]; then
-    warn "namelists rewritten by a submit script — keep or restore deliberately:"
+    warn "namelist modified — if you did not edit this by hand, a submit script did"
+    warn "(which should now be impossible; investigate rather than just committing):"
     printf "        %s\n" $nl
 else
     ok "no namelist churn from a submitted job"

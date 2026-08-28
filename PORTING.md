@@ -117,7 +117,15 @@ Use the wrapper rather than `sbatch` directly. Account, QOS, constraint and
 walltime cannot be written as `#SBATCH` directives without breaking the other
 machine, so the wrapper passes them on the command line, where sbatch lets them
 override the script. On sverdrup `SBATCH_EXTRA` is empty and this is exactly
-`sbatch <script>`; plain `sbatch` still works there.
+`sbatch --export=ALL <script>`; plain `sbatch` still works there.
+
+**`--export=ALL` is not decoration on a new machine.** It is sbatch's default,
+but the jobs genuinely depend on it: `impacts_load_modules` is a no-op on
+sverdrup because the Intel/MPI stack comes from `~/.bashrc`, so the toolchain
+reaches the compute node only through the inherited environment — as do the
+`IMPACTS_DURATION_DAYS` / `IMPACTS_TEST_CASE` per-run overrides. If a new site
+defaults `SBATCH_EXPORT` to something narrower, jobs will fail to find their
+shared libraries before any of this matters. Check that first.
 
 ---
 
