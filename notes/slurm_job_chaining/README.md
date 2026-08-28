@@ -46,15 +46,20 @@ Seven independent jobs, no dependencies:
 ```bash
 cd MITgcm_c69m/mysetups/DINO_1deg
 for n in 1 2 3 4 5 6 7; do
-  out=$(IMPACTS_TEST_CASE=M$n ../../../tools/submit.sh submit_frd.sh 2>&1 | tail -1)
+  out=$(IMPACTS_TEST_CASE=kappa_v_ensemble/M$n ../../../tools/submit.sh submit_frd.sh 2>&1 | tail -1)
   id=$(echo "$out" | grep -oE '[0-9]+$')
   echo "M$n forward: job $id"
 done
 # -> 30996 30997 30998 30999 31000 31001 31002
 ```
 
-`IMPACTS_TEST_CASE=M$n` selects `input/variants/data_M<n>` without editing a
-tracked file — see the setup README.
+`IMPACTS_TEST_CASE=kappa_v_ensemble/M$n` selects
+`input/variants/kappa_v_ensemble/data_M<n>` without editing a tracked file. A
+tag containing `/` names one member of an experiment directory; a bare tag names
+a flat `variants/data_<tag>`. See the setup README.
+
+(These runs were submitted before the variants were grouped, when the tag was a
+bare `M$n`. The job ids and results are unchanged; only the tag spelling moved.)
 
 ### 2.2 The adjoints, each waiting on its own forward leg
 
@@ -72,7 +77,7 @@ for n in 1 2 3 4 5 6 7; do
   grep -c "DINO_1deg_frd_runs/${mdir}/pickup.0003162240" submit_tapAdj.sh | grep -qx 2 \
       || { echo "EDIT FAILED for M$n"; exit 1; }
 
-  out=$(IMPACTS_TEST_CASE=M$n ../../../tools/submit.sh submit_tapAdj.sh \
+  out=$(IMPACTS_TEST_CASE=kappa_v_ensemble/M$n ../../../tools/submit.sh submit_tapAdj.sh \
           --dependency=afterok:${FWD[$n]} 2>&1 | tail -1)
   echo "M$n adjoint: job $(echo "$out" | grep -oE '[0-9]+$')  (afterok:${FWD[$n]})"
   cur="$mdir"
@@ -138,8 +143,8 @@ Fan-out, one pair per member — the ensemble's shape:
 
 ```bash
 for n in 1 2 3 4 5 6 7; do
-  fwd=$(IMPACTS_TEST_CASE=M$n ../../../tools/submit.sh submit_frd.sh --parsable)
-  adj=$(IMPACTS_TEST_CASE=M$n ../../../tools/submit.sh submit_tapAdj.sh \
+  fwd=$(IMPACTS_TEST_CASE=kappa_v_ensemble/M$n ../../../tools/submit.sh submit_frd.sh --parsable)
+  adj=$(IMPACTS_TEST_CASE=kappa_v_ensemble/M$n ../../../tools/submit.sh submit_tapAdj.sh \
           --parsable --dependency=afterok:$fwd)
   echo "M$n: forward $fwd -> adjoint $adj"
 done
@@ -363,7 +368,7 @@ scancel 31009                                          # drop it
   in §2.2 safe, and equally means fixing a bug in the script does *not* fix jobs
   already queued. Cancel and resubmit those.
 - **The environment is captured at submit time too**, via `--export=ALL`. So
-  `IMPACTS_TEST_CASE=M3 ... submit.sh` is fixed into that job; exporting a
+  `IMPACTS_TEST_CASE=kappa_v_ensemble/M3 ... submit.sh` is fixed into that job; exporting a
   different value later changes nothing for it.
 - **Job ids are the durable key.** Run directory names carry the tags, but if a
   name and a namelist ever disagree, the staged namelist in the run directory

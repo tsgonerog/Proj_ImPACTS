@@ -33,10 +33,19 @@ impacts_load_modules
 # Set to "" for default (i.e., use input/data)
 # IMPACTS_TEST_CASE overrides this per run. The `-` (not `:-`) is deliberate:
 # IMPACTS_TEST_CASE= selects the live input/data, which `:-` would swallow.
-test_cases="${IMPACTS_TEST_CASE-from_rest_visc2x}"
+test_cases="${IMPACTS_TEST_CASE-baseline/from_rest_visc2x}"
 
-# Build optional suffix; set suffix to "_<test_cases>" if non-empty, otherwise empty (avoids extra underscore)
-suffix=${test_cases:+_$test_cases}
+# Build optional suffix from the tag: "_<tag>" if non-empty, otherwise empty
+# (avoids a trailing underscore). Only the LAST component of the tag is used:
+# the group says where the namelist lives in this repository, not anything about
+# the run, and run directories follow <start>_<settings> (see CLAUDE.md). So
+# kappa_v_ensemble/M3 gives "_M3" and baseline/from_rest_visc2x gives
+# "_from_rest_visc2x" -- byte for byte the names these runs had before the
+# variants were grouped. Taking the basename also strips the '/', which would
+# otherwise create a nested directory here rather than naming the run. Two groups
+# sharing a member tag give run directories differing only by job id, which is
+# the durable key anyway.
+suffix=${test_cases:+_${test_cases##*/}}
 
 # ========== SET SOME TIME STEPPING PARAMETERS (IN DAYS) ==========
 
@@ -65,10 +74,19 @@ if ! [[ "$simulation_duration_with_dT1800_days" =~ ^[0-9]+$ ]]; then
   exit 1
 fi
 
-# Empty test_cases uses the live input/data; anything else names a file
-# in input/variants/. Adding a new alternative means putting it there.
+# Empty test_cases uses the live input/data. Otherwise the tag names a file
+# under input/variants/, in one of two forms:
+#
+#   <tag>               -> variants/data_<tag>              a standalone config
+#   <experiment>/<tag>  -> variants/<experiment>/data_<tag> one member of an
+#                                                           experiment
+#
+# Every variant now lives in a group; the bare form is kept so that a tag from
+# before the grouping, or a queued job's spooled script, still resolves.
 if [[ -z "$test_cases" ]]; then
     namelist_data="$SLURM_SUBMIT_DIR/input/data"
+elif [[ "$test_cases" == */* ]]; then
+    namelist_data="$SLURM_SUBMIT_DIR/input/variants/${test_cases%/*}/data_${test_cases##*/}"
 else
     namelist_data="$SLURM_SUBMIT_DIR/input/variants/data_${test_cases}"
 fi
@@ -109,6 +127,22 @@ ln -s "$base_dir/input_binaries"/* .
 rm -f data
 cp "$namelist_data" data
 
+# ---------- sibling overrides: a variant may replace more than just `data` ----------
+# Any file beside the chosen namelist named <mitgcm-file>_<tag> is staged over
+# <mitgcm-file>. That is what lets one variant change a package flag as well as
+# the namelist -- kppON needs data.pkg (useKPP=.TRUE.) as well as data, and
+# staging only the data half silently ran the experiment without KPP.
+variant_tag="${test_cases##*/}"
+if [[ -n "$variant_tag" ]]; then
+  for extra in "$(dirname "$namelist_data")"/*_"$variant_tag"; do
+    [[ -f "$extra" ]] || continue
+    target="$(basename "$extra")"; target="${target%_$variant_tag}"
+    [[ "$target" == data ]] && continue          # the namelist itself, already staged
+    cp "$extra" "$target"
+    echo "staged sibling override: $(basename "$extra") -> $target"
+  done
+fi
+
 # ---------- time stepping: patch the STAGED copy, not the tracked namelist ----------
 # This runs here, after staging, so the repo is never written to. It matters for
 # more than tidiness: this script body executes on the compute node when the job
@@ -148,7 +182,8 @@ cp -p "$build_dir/mitgcmuv" .
 
 #----- pickups ---------------
 # Year-2170 state of the 200-yr spin-up: the start of every kappa_v ensemble
-# member's re-equilibration leg (data_M<n> bakes the matching nIter0=2986560).
+# member's re-equilibration leg (variants/kappa_v_ensemble/data_M<n> bakes the
+# matching nIter0=2986560).
 ln -s $SCRATCH_ROOT/DINO_1deg_frd_runs/DINO_1deg_frd_200yr_from_rest_visc2x_run30983/pickup.0002986560.data pickup.0002986560.data
 ln -s $SCRATCH_ROOT/DINO_1deg_frd_runs/DINO_1deg_frd_200yr_from_rest_visc2x_run30983/pickup.0002986560.meta pickup.0002986560.meta
 

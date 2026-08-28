@@ -111,11 +111,15 @@ added for the adjoint. Here is `DINO_1deg/` as it actually stands:
 DINO_1deg/
 ├── code/                     forward-model source overrides (10 files)
 ├── input/                    forward-model namelists MITgcm reads (7 files)
-│   └── variants/             alternative namelists, one selected per run (15)
+│   └── variants/             alternative namelists, grouped by purpose:
+│                             baseline/ viscosity_study/ scheme_tests/
+│                             from70yrPk_sweep/ kappa_v_ensemble/
 ├── code_tap/                 ADJOINT source overrides (33 files)  <- the interesting one
 ├── input_tap/                adjoint namelists MITgcm reads (12: adds data.autodiff,
 │   │                         data.cost, data.ctrl, data.grdchk)
-│   └── variants/             alternative namelists (4)
+│   └── variants/             alternative namelists, grouped by purpose:
+│                             baseline/ viscosity_study/ adjViscBoost/
+│                             kappa_v_ensemble/
 ├── input_binaries/           bathymetry, forcing, initial state — NOT tracked, 179 MB
 ├── input_adj_binaries/       ones_64b.bin, the uniform control weight — NOT tracked
 ├── 00_archive/               superseded config, mirroring the live dirs it came from
@@ -377,10 +381,30 @@ Scratch paths come from `$SCRATCH_ROOT` and are not hardcoded, but the
 ### Namelist variants
 
 Rather than editing `data` in place, alternative configurations live in
-`input*/variants/` as `data_<tag>` and are selected by the `test_cases` variable at the top of a
-submit script. Since 2026-08-18 the tag **is** the configuration, read off the
-namelist itself rather than abbreviated: `<start>_<viscosity>[_extras]`, the same
-vocabulary the scratch run directories and analysis notebooks use.
+`input*/variants/`, **grouped by purpose** — `baseline/`, `viscosity_study/`,
+`scheme_tests/`, `from70yrPk_sweep/`, `kappa_v_ensemble/` — and are selected by
+the `test_cases` variable at the top of a submit script, or per run through
+`IMPACTS_TEST_CASE`:
+
+```bash
+IMPACTS_TEST_CASE=<group>/<tag>   # stages variants/<group>/data_<tag>
+```
+
+Each group carries a `README.md`, and `variants/README.md` on each side indexes
+them; `MITgcm_c69m/mysetups/DINO_1deg/README.md` states the two rules in full.
+In short: **a file is named for the MITgcm file it replaces**
+(`<mitgcm-file>_<tag>`, so `data.pkg_<tag>` overrides `data.pkg`), and
+**everything sharing a tag inside a group is staged together**, which is how one
+variant changes a package flag as well as the namelist.
+
+The run directory is named after the **tag alone**, never the group, so the
+naming below is unchanged by the grouping.
+
+Within a group the tag **is** the configuration, read off the namelist itself
+rather than abbreviated: `<start>_<viscosity>[_extras]`, the same vocabulary the
+scratch run directories and analysis notebooks use. A group whose members have
+their own vocabulary — `kappa_v_ensemble/` names members `M1`–`M7` by κ factor —
+says so in its `README.md`.
 
 | Component | Values | Meaning |
 | --- | --- | --- |

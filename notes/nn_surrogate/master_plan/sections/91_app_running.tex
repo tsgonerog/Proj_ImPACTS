@@ -136,12 +136,15 @@ reference run is the control.
 \label{app:namelists}
 
 Namelist variants live in \code{input*/variants/}, \textbf{not} directly in
-\code{input*/} --- anything placed directly there is staged into every run. The
-submit script resolves \code{test\_cases="M<n>"} to \code{variants/data\_M<n>}
-and stages only that one.
+\code{input*/} --- anything placed directly there is staged into every run.
+This ensemble's members are grouped in their own directory, so the submit
+script resolves \code{test\_cases="kappa\_v\_ensemble/M<n>"} to
+\code{variants/kappa\_v\_ensemble/data\_M<n>} and stages only that one. A tag
+containing \code{/} names one member of an experiment directory; a bare tag
+still names a flat \code{variants/data\_<tag>}.
 
-Forward namelist, \code{input/variants/data\_M<n>}, for the leg from 2170 to
-2180:
+Forward namelist, \code{input/variants/kappa\_v\_ensemble/data\_M<n>}, for the
+leg from 2170 to 2180:
 
 \begin{footnotesize}
 \begin{verbatim}
@@ -151,8 +154,8 @@ diffKrFile  = 'dino_diffKr_M<n>.bin',
 \end{verbatim}
 \end{footnotesize}
 
-Adjoint namelist, \code{input\_tap/variants/data\_M<n>}, identical to the
-reference adjoint apart from the diffusivity file:
+Adjoint namelist, \code{input\_tap/variants/kappa\_v\_ensemble/data\_M<n>},
+identical to the reference adjoint apart from the diffusivity file:
 
 \begin{footnotesize}
 \begin{verbatim}
@@ -192,9 +195,10 @@ later:
 
 No script changes are required. The submit scripts select a namelist via
 \code{test\_cases}, and everything machine-specific comes from
-\code{tools/machine\_env.sh}. Per member, edit \code{test\_cases="M<n>"} at the
-top of the script --- and the pickup \code{ln -s} further down, which is not
-auto-patched --- then:
+\code{tools/machine\_env.sh}. Per member, set
+\code{IMPACTS\_TEST\_CASE=kappa\_v\_ensemble/M<n>} in the environment, which
+leaves the working tree clean --- and edit the pickup \code{ln -s} further
+down, which is not auto-patched --- then:
 
 \begin{footnotesize}
 \begin{verbatim}

@@ -61,7 +61,10 @@ IMPACTS_DURATION_DAYS=30 IMPACTS_ADJ_MONITOR_FREQ_DAYS=1 \
     ../../../tools/submit.sh submit_tapAdj.sh
 
 # a different namelist variant
-IMPACTS_TEST_CASE=from_rest_viscRef_adv30 ../../../tools/submit.sh submit_frd.sh
+IMPACTS_TEST_CASE=scheme_tests/from_rest_viscRef_adv30 ../../../tools/submit.sh submit_frd.sh
+
+# one member of a grouped experiment (variants/kappa_v_ensemble/data_M3)
+IMPACTS_TEST_CASE=kappa_v_ensemble/M3 ../../../tools/submit.sh submit_frd.sh
 ```
 
 | Variable | Patches | Default (`frd` / `tapAdj`) |
@@ -70,7 +73,7 @@ IMPACTS_TEST_CASE=from_rest_viscRef_adv30 ../../../tools/submit.sh submit_frd.sh
 | `IMPACTS_MONITOR_FREQ_DAYS` | `monitorFreq` | `30.5` / `5` |
 | `IMPACTS_ADJ_MONITOR_FREQ_DAYS` | `adjMonitorFreq` | — / `5` |
 | `IMPACTS_ADJ_DUMP_FREQ_DAYS` | `adjDumpFreq` | — / `5` |
-| `IMPACTS_TEST_CASE` | which `variants/data_<tag>` is staged | `from_rest_visc2x` / `from180yrPk_visc2x` |
+| `IMPACTS_TEST_CASE` | which variant is staged: `<group>/<tag>` → `variants/<group>/data_<tag>` (a bare `<tag>` still works) | `baseline/from_rest_visc2x` / `baseline/from180yrPk_visc2x` |
 
 Durations are whole days; a non-numeric value is rejected before the job stages
 anything. `IMPACTS_TEST_CASE=` (explicitly empty) selects the live `input*/data`
@@ -162,7 +165,7 @@ variable in your shell would silently become a namelist key.
 | --- | --- |
 | `code/`, `input/` | forward model |
 | `code_tap/`, `input_tap/` | adjoint model — adds `data.autodiff`, `data.cost`, `data.ctrl`, `data.grdchk` |
-| `input*/variants/` | alternative namelists; the submit script copies **one** in as `data` |
+| `input*/variants/` | alternative namelists, grouped by purpose, each group with its own `README.md`; the submit script stages the selected `data_<tag>` plus any sibling sharing its tag |
 | `input_binaries/` | **untracked, 179 MB.** Produced outside this repo; nothing here regenerates it |
 | `input_adj_binaries/` | **untracked.** `ones_64b.bin`, the uniform control weight every `data.ctrl` entry points at |
 | `00_archive/` | superseded config in `code_tap/`, `input_tap/`, `scripts/`, mirroring the live dirs — nothing live reads it; has its own `README.md` |
@@ -170,7 +173,8 @@ variable in your shell would silently become a namelist key.
 ## Namelists and variants
 
 `input/` and `input_tap/` hold exactly the files MITgcm reads — the same list a
-run directory ends up with. Alternatives live one level down:
+run directory ends up with, and every one of them is copied into every run.
+Alternatives live one level down, **grouped by what they are for**:
 
 ```
 input_tap/
@@ -178,43 +182,68 @@ input_tap/
 ├── data.autodiff     <- ... and the other ten MITgcm reads
 ├── ...
 └── variants/
-    ├── data_from180yrPk_visc2x
-    ├── data_from50yrPk_viscGrid1p8e-2
-    ├── data_from_rest_viscGrid1p8e-2
-    └── data.autodiff_adjViscBoost
+    ├── README.md                 the rule, and an index of the groups
+    ├── baseline/                 the config the committed default points at
+    │   └── data_from180yrPk_visc2x
+    ├── viscosity_study/
+    ├── adjViscBoost/             data.autodiff_adjViscBoost
+    └── kappa_v_ensemble/
+        ├── README.md
+        └── data_M1 ... data_M7
 ```
 
-Select one per run, without touching the script:
+`input/variants/` is organised the same way, with the same group names where a
+study has both a forward and an adjoint half. **Every variant is in a group**;
+there are no loose files. Each group carries a `README.md` saying what it varies,
+and [`variants/README.md`](input_tap/variants/README.md) indexes them.
+
+Two rules make the contents legible:
+
+**1. A file is named after the MITgcm file it replaces** — `<mitgcm-file>_<tag>`.
+So `data_M3` replaces `data`, `data.pkg_M3` replaces `data.pkg`,
+`data.autodiff_M3` replaces `data.autodiff`. Whatever precedes the first
+underscore is the file you are overriding.
+
+**2. Everything sharing a tag inside a group is staged together.** Selecting a
+tag stages its `data` *and* every sibling `<mitgcm-file>_<tag>` beside it, so one
+variant can change a package flag as well as the namelist:
 
 ```bash
-IMPACTS_TEST_CASE=from180yrPk_visc2x ../../../tools/submit.sh submit_tapAdj.sh
-IMPACTS_TEST_CASE= ../../../tools/submit.sh submit_tapAdj.sh   # the live input_tap/data
+IMPACTS_TEST_CASE=scheme_tests/from_rest_viscRef_kppON \
+    ../../../tools/submit.sh submit_frd.sh      # stages data AND data.pkg
 ```
 
-or change the committed default, which is the value `IMPACTS_TEST_CASE` falls
-back to:
+Select a variant without touching any script:
 
 ```bash
-test_cases="${IMPACTS_TEST_CASE-from180yrPk_visc2x}"
+IMPACTS_TEST_CASE=baseline/from180yrPk_visc2x  ../../../tools/submit.sh submit_tapAdj.sh
+IMPACTS_TEST_CASE=kappa_v_ensemble/M3          ../../../tools/submit.sh submit_tapAdj.sh
+IMPACTS_TEST_CASE=                             ../../../tools/submit.sh submit_tapAdj.sh   # live input_tap/data
 ```
 
-The script copies the selected file in as `data`, and the run directory name
-records which was used. A typo aborts the job immediately — before the run
-directory is created — rather than silently running the wrong configuration.
+or change the committed default, the value `IMPACTS_TEST_CASE` falls back to:
 
-**Adding an alternative means putting it in `variants/`**, named
-`data_<start>_<viscosity>[_extras]` — see the root `README.md` for that
-vocabulary. Files directly in `input_tap/` are staged into every run, so a stray
-one there becomes part of every configuration.
+```bash
+test_cases="${IMPACTS_TEST_CASE-baseline/from180yrPk_visc2x}"
+```
 
-**`M1`–`M7` are the one deliberate exception to that vocabulary:** the
-vertical-mixing perturbation ensemble of `notes/nn_surrogate/` names members by
-their κ_v factor (M1 = 0.25×, M2 = 0.5×, M3–M7 = 2×–32× the reference
-1.2e-5 m²/s). Each tag exists in *both* variant directories — `input/variants/`
-for the 2170→2180 re-equilibration leg, `input_tap/variants/` for the 5-year
-adjoint 2180→2185 — and each file's header comment states its κ value. The
-fields themselves are `input_binaries/dino_diffKr_M<n>.bin` (untracked, constant
-fields regenerated by the snippet in the notes' Appendix B).
+A tag containing `/` resolves as `variants/<group>/data_<tag>`; a bare tag still
+resolves as `variants/data_<tag>`, which is kept so a tag from before the
+grouping — or a queued job's spooled script — still works. A typo aborts the job
+before the run directory is created rather than silently running the wrong
+configuration.
+
+**The run directory is named after the tag only, never the group.** A run is
+described by its physics, not by where its namelist sits in this repository, so
+`kappa_v_ensemble/M3` gives `..._M3_run<jobid>` and `baseline/from_rest_visc2x`
+gives `..._from_rest_visc2x_run<jobid>` — the same names these runs had before
+the variants were grouped.
+
+**Adding to this:** a new member goes into its group as `data_<tag>` (plus any
+`<other-file>_<tag>` it needs); a new study gets `variants/<name>/` with a
+`README.md`, and nothing else needs editing. Files placed directly in
+`input_tap/` are staged into *every* run, so a stray one there becomes part of
+every configuration.
 
 Only the selected variant is copied to scratch, so a run directory contains the
 12 namelists MITgcm reads and nothing else.
@@ -268,15 +297,16 @@ Beyond the forward set, the adjoint adds four:
 | `data.autodiff` | checkpointing and adjoint-mode behaviour; `data.autodiff_adjViscBoost` is the inflated-viscosity variant |
 | `data.grdchk` | the finite-difference gradient check: `grdchk_eps`, `grdchkvarname`, and the `iGloPos/jGloPos/kGloPos` point to perturb |
 
-`data_<start>_<viscosity>` variants are selected by `test_cases` in a submit
-script; see the root `README.md` for that vocabulary.
+Variants are selected by `test_cases` in a submit script as `<group>/<tag>`; see
+**Namelists and variants** above for the grouping rules and the root `README.md`
+for the `<start>_<viscosity>` vocabulary.
 
 ### `code/` and `input/` — the forward model
 
 Much smaller: `SIZE.h` (+ `_mpi`/`_serial`), `packages.conf`, `CPP_OPTIONS.h`,
 `DIAGNOSTICS_SIZE.h`, `GMREDI_OPTIONS.h`, `MOM_COMMON_OPTIONS.h`, `ini_procs.F`.
-`input/` holds `data`, its `data_*` variants, and the standard `data.pkg`,
-`data.diagnostics`, `data.exch2`.
+`input/` holds `data` and the standard `data.pkg`, `data.diagnostics`,
+`data.exch2`; its alternatives live in `input/variants/<group>/`.
 
 `code/pc` is a stray five-line fragment of a `packages.conf`, referenced by
 nothing — ignore it.

@@ -42,8 +42,17 @@ impacts_load_modules
 # IMPACTS_TEST_CASE= selects the live input_tap/data, which `:-` would swallow.
 test_cases="${IMPACTS_TEST_CASE-}"
 
-# Build optional suffix; set suffix to "_<test_cases>" if non-empty, otherwise empty (avoids extra underscore)
-suffix=${test_cases:+_$test_cases}
+# Build optional suffix from the tag: "_<tag>" if non-empty, otherwise empty
+# (avoids a trailing underscore). Only the LAST component of the tag is used:
+# the group says where the namelist lives in this repository, not anything about
+# the run, and run directories follow <start>_<settings> (see CLAUDE.md). So
+# kappa_v_ensemble/M3 gives "_M3" and baseline/from_rest_visc2x gives
+# "_from_rest_visc2x" -- byte for byte the names these runs had before the
+# variants were grouped. Taking the basename also strips the '/', which would
+# otherwise create a nested directory here rather than naming the run. Two groups
+# sharing a member tag give run directories differing only by job id, which is
+# the durable key anyway.
+suffix=${test_cases:+_${test_cases##*/}}
 
 # ========== SET SOME TIME STEPPING PARAMETERS (IN DAYS) ==========
 
@@ -73,10 +82,18 @@ if ! [[ "$simulation_duration_with_dT1800_days" =~ ^[0-9]+$ ]]; then
   exit 1
 fi
 
-# Empty test_cases uses the live input_tap/data; anything else names a file
-# in input_tap/variants/. Adding a new alternative means putting it there.
+# Empty test_cases uses the live input_tap/data. Otherwise the tag names a file
+# under input_tap/variants/, in one of two forms:
+#
+#   <tag>               -> variants/data_<tag>              a loose configuration
+#   <experiment>/<tag>  -> variants/<experiment>/data_<tag> one member of a group
+#
+# Every variant now lives in a group; the bare form is kept so that a tag from
+# before the grouping, or a queued job's spooled script, still resolves.
 if [[ -z "$test_cases" ]]; then
     namelist_data="$SLURM_SUBMIT_DIR/input_tap/data"
+elif [[ "$test_cases" == */* ]]; then
+    namelist_data="$SLURM_SUBMIT_DIR/input_tap/variants/${test_cases%/*}/data_${test_cases##*/}"
 else
     namelist_data="$SLURM_SUBMIT_DIR/input_tap/variants/data_${test_cases}"
 fi
@@ -117,8 +134,24 @@ ln -s "$base_dir/input_adj_binaries"/* .
 # Replace data file correctly
 rm -f data
 cp "$namelist_data" data
+
+# ---------- sibling overrides: a variant may replace more than just `data` ----------
+# Any file beside the chosen namelist named <mitgcm-file>_<tag> is staged over
+# <mitgcm-file>. That is what lets one variant change a package flag as well as
+# the namelist -- kppON needs data.pkg (useKPP=.TRUE.) as well as data, and
+# staging only the data half silently ran the experiment without KPP.
+variant_tag="${test_cases##*/}"
+if [[ -n "$variant_tag" ]]; then
+  for extra in "$(dirname "$namelist_data")"/*_"$variant_tag"; do
+    [[ -f "$extra" ]] || continue
+    target="$(basename "$extra")"; target="${target%_$variant_tag}"
+    [[ "$target" == data ]] && continue          # the namelist itself, already staged
+    cp "$extra" "$target"
+    echo "staged sibling override: $(basename "$extra") -> $target"
+  done
+fi
 rm data.autodiff
-cp "$base_dir/input_tap/variants/data.autodiff_adjViscBoost" data.autodiff
+cp "$base_dir/input_tap/variants/adjViscBoost/data.autodiff_adjViscBoost" data.autodiff
 
 # ---------- time stepping: patch the STAGED copy, not the tracked namelist ----------
 # This runs here, after the whole staging block, so the repo is never written to.

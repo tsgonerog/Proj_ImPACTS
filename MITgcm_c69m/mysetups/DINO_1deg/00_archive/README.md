@@ -48,7 +48,7 @@ works only in its `NO` mode.
 | `data.autodiff_aste_90x150x60` | ASTE adjoint-mode viscosity namelist | Superseded by the DINO-tuned copy — see lineage below |
 
 **Lineage worth knowing.** `data.autodiff_aste_90x150x60` is the direct ancestor
-of the live `input_tap/variants/data.autodiff_adjViscBoost`, which
+of the live `input_tap/variants/adjViscBoost/data.autodiff_adjViscBoost`, which
 `submit_tapAdj_adjViscBoost.sh` swaps in. The diff is the whole derivation:
 
 - the entire `SEAICE*` block commented out (DINO has no sea ice)
