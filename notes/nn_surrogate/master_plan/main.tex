@@ -5,7 +5,7 @@
 %  the short paragraph under the appendix heading near the bottom of this file.
 %  Compile this file. If this document is its own Overleaf project, Overleaf
 %  selects it automatically as the only file carrying \documentclass; if the
-%  whole notes/nn_surrogate/ folder was uploaded as one project there are three
+%  whole notes/nn_surrogate/ folder was uploaded as one project there are four
 %  such files, and you pick between them with the gear icon at the bottom-left
 %  corner of the editor -> Compiler -> main document. Not Menu -> Settings.
 %
@@ -15,6 +15,7 @@
 %    sections/03_motivation.tex      motivation
 %    sections/04_model_config.tex    model configuration
 %    sections/10_part1_ensemble.tex  PART I  -- the perturbation ensemble
+%    sections/11_part1_results.tex   PART I  -- results of the executed ensemble
 %    sections/20_part2_surrogate.tex PART II -- the surrogate design
 %    sections/90_app_reference_values.tex  Appendix A -- reference values
 %    sections/91_app_running.tex           Appendix B -- running the experiment
@@ -28,7 +29,7 @@
 %  deliberate:
 %
 %      0x  front matter   (01-04 used, 00 and 05-09 free)
-%      1x  Part I         (10 used,    11-19 free)
+%      1x  Part I         (10-11 used, 12-19 free)
 %      2x  Part II        (20 used,    21-29 free)
 %      9x  appendices     (90-93 used, 94-99 free)
 %      30-89 unused, free for a Part III
@@ -52,23 +53,25 @@
 %  the briefs that ../briefs/README.md lists against it. Nothing flows the
 %  other way -- a correction made in a brief belongs here first.
 %
-%  Two briefs are derived from this document. Each has its own preamble and
+%  Three briefs are derived from this document. Each has its own preamble and
 %  shares no file with this one, so each can be its own Overleaf project -- but
-%  all three also build together when notes/nn_surrogate/ is uploaded as a single
+%  all four also build together when notes/nn_surrogate/ is uploaded as a single
 %  project, which is the usual arrangement here:
 %
 %    ../briefs/surrogate_concept_note/    two pages of PART II, for a first reader
 %    ../briefs/perturbation_experiment/   two pages of PART I, plus the request
+%    ../briefs/kappa_ensemble_results/    results of the executed ensemble
 %
-%  Both are capped at three pages. See ../briefs/README.md for which one has to
-%  be re-read when which part of this document moves.
+%  The first two are capped at three pages; the results brief at four (it
+%  carries figures). See ../briefs/README.md for which one has to be re-read
+%  when which part of this document moves.
 
 %  INPUT PATH. Overleaf compiles from the PROJECT ROOT, not from the folder the
 %  main file sits in. The \input@path below lists this document's own folder
 %  first and the compilation directory second, so the same source builds whether
 %  the project root is this folder (one Overleaf project per document, and the
 %  local `cd <doc> && latexmk` habit) or notes/nn_surrogate/ (the whole direction
-%  dropped in as one project, three documents switched between with the gear
+%  dropped in as one project, four documents switched between with the gear
 %  icon -> Compiler). Do not remove it: without it the whole-folder upload
 %  fails on the very first \input.
 %=======================================================================
@@ -93,6 +96,7 @@
 
 \newpage
 \input{sections/10_part1_ensemble}
+\input{sections/11_part1_results}
 
 \newpage
 \input{sections/20_part2_surrogate}

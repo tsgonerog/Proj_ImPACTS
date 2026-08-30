@@ -44,6 +44,7 @@ by re-reading rather than by `\input`, which is what the table below is for.
 | --- | --- | --- | --- |
 | [`surrogate_concept_note/`](surrogate_concept_note/) | `01_problem_and_idea`, `02_inputs_outputs_and_loss`, `03_network_and_sketch` | Part II in full, plus **Part I §Objective** for the mixing question and its either-way consequences, plus §Motivation and §Model configuration for the rank count, the adjoint cost and how vertical diffusivity is configured | Part II's inputs, outputs, loss or architecture change; the cost functional moves off 26°N; **§Motivation's measured adjoint cost changes**; **Part I's objective, status, or what the ensemble varies changes** |
 | [`perturbation_experiment/`](perturbation_experiment/) | `01_question_and_design`, `02_cost_and_request`, `03_validation_and_decision` | Part I in full, plus §Model configuration | **Anything in Part I moves** — the member table, the cost figures, the sequence, the open questions |
+| [`kappa_ensemble_results/`](kappa_ensemble_results/) | `01_question_and_answer`, `02_findings`, `03_surrogate_recommendation` | **Part I §Results** in full (the executed ensemble), plus Part II §Inputs for the κᵥ-as-input recommendation and §Roadmap for the Phase-2 gate | **Anything in Part I §Results moves** — the member/health table, the metric values, the noise floor, the departure leads, the next-steps list; or Part II's input table drops or reshapes the κᵥ channel |
 
 The two are exposed to drift very differently, and it is worth knowing which is
 which:
@@ -58,6 +59,16 @@ which:
   mostly numbers. It quotes the member table, both cost configurations, the
   storage figure and the request ceiling. It is the brief to re-read first
   whenever Part I is touched.
+- **The results brief is a report, and reports mostly stop moving.** It states
+  what the executed ensemble measured, so it drifts only if the *analysis* is
+  redone (a rerun member, a corrected metric) or if Part II changes what it
+  recommends. It is also the one brief allowed **four pages instead of three**
+  — set when it was commissioned, because it carries two result figures — and
+  the only one with a `figures/` directory: its two PNGs are sources and must
+  be committed for the Overleaf zip (`git archive`) to carry them. The four
+  interactive HTML animations it cites cannot ride in a PDF and are sent
+  alongside it from cluster storage
+  (`kappa_v_ensemble_analysis/animations/`).
 
 ## Building
 

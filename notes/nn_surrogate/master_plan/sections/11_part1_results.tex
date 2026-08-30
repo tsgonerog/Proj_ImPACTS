@@ -1,0 +1,202 @@
+% !TEX root = ../main.tex
+%-----------------------------------------------------------------------
+%  PART I -- results of the executed ensemble (measured 2026-08-30).
+%  \input by ../main.tex -- not compiled on its own.
+%
+%  Every number in this section is computed by the analysis suite at
+%  analyses/DINO_1deg/03_adjoint/05_kappa_v_ensemble/ (seven executed
+%  notebooks; summary tables under kappa_v_ensemble_analysis/stats/ on
+%  scratch). When a number here and a notebook disagree, the notebook wins
+%  and this file is stale.
+%-----------------------------------------------------------------------
+
+%-----------------------------------------------------------------------
+\section{Results of the executed ensemble}
+\label{sec:results}
+%-----------------------------------------------------------------------
+
+The ensemble of Section~\ref{sec:objective} was run in full on
+2026-08-28/29 (forward legs 30996--31002, adjoints 31003--31009, reference
+adjoint 30995) and analysed on 2026-08-30. Three departures from the plan as
+written: the gradient check was disabled for the reference as well as the
+members (verified to leave the adjoint output bit-identical, and worth
+8.2\,h per run --- close to the 2.6$\times$ estimate of
+Section~\ref{sec:grdchk-cost}); the pilot-first gate of
+Section~\ref{sec:sequence} was superseded and all members were submitted
+together; and the reference adjoint reproduced the earlier production run
+bit-identically, so all prior reference analysis carries over unchanged.
+
+\begin{callout}
+\textbf{Where the evidence lives.} Seven executed notebooks under
+\code{analyses/DINO\_1deg/03\_adjoint/}\allowbreak\code{05\_kappa\_v\_ensemble/}
+(its \code{README.md} gives the reading order), with figures, machine-readable
+summary tables and four interactive animations under
+\code{kappa\_v\_ensemble\_analysis/} on scratch. This section states the
+findings; the notebooks carry the full derivations.
+\end{callout}
+
+\subsection{The answer to the primary question}
+\label{sec:results-answer}
+
+\textbf{The sensitivity patterns depend strongly on $\kv$ --- the flat-response
+branch of Section~\ref{sec:objective} is closed.} The dependence appears twice,
+in different guises:
+
+\begin{itemize}[nosep]
+  \item \emph{A physical response.} For the members whose adjoints remain
+        healthy, the accumulated five-year sensitivity keeps the reference's
+        spatial structure while shifting in amplitude: at $0.5\times$ and
+        $2\times$ the pattern correlation of the temperature sensitivity with
+        the reference is 0.82 and 0.85 (volume-weighted over wet cells), with
+        amplitudes $1.37\times$ and $0.77\times$. The $\kv$-sensitivity field
+        itself is far less robust: its correlation is only 0.21 at $2\times$,
+        and the domain-summed $\partial J/\partial\kv$ runs $-251$, $-436$,
+        $-78$, $+673$ across $0.5\times$, $1\times$, $2\times$, $16\times$ ---
+        a sign change within the ensemble.
+  \item \emph{A stability boundary.} Four of the seven adjoints blow up
+        (Section~\ref{sec:results-stability}); their accumulated fields are
+        noise. The boundary is crossed non-monotonically in $\kv$, so it cannot
+        be avoided by simply capping the perturbation size.
+\end{itemize}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}lY{0.7}Y{0.8}Y{1.2}Y{1.1}Y{1.2}Y{1.0}@{}}
+\toprule
+\textbf{Member} & \textbf{$\kv$} & \textbf{Cost $J$} & \textbf{Adjoint class}
+ & \textbf{Corr.\ vs ref.} & \textbf{Departure lead} & \textbf{Usable dumps}\\
+\midrule
+M1 & $0.25\times$ & 0.2141 & blown up        & $-0.01$ & 2.56 yr & 186/366\\
+M2 & $0.5\times$  & 0.2598 & stable          & 0.82    & ---     & 366/366\\
+ref & $1\times$   & 0.3310 & stable          & 1.00    & ---     & 366/366\\
+M3 & $2\times$    & 0.2649 & stable          & 0.85    & ---     & 366/366\\
+M4 & $4\times$    & 0.2731 & blown up (inf)  & 0.03    & 0.72 yr & 52/366\\
+M5 & $8\times$    & 0.3021 & blown up        & $-0.02$ & 1.28 yr & 93/366\\
+M6 & $16\times$   & 0.3654 & degraded        & 0.49    & ---     & 366/366\\
+M7 & $32\times$   & 0.5102 & blown up        & 0.01    & 0.36 yr & 25/366\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\noindent
+Correlation is the volume-weighted pattern correlation of the fully accumulated
+temperature sensitivity with the reference; the departure lead is the first
+lead time at which a member's field amplitude exceeds ten times the
+reference's; usable dumps are the 5-day output records at shorter leads, which
+remain physically meaningful even in members that later blow up (every member,
+blown ones included, correlates at 0.92--1.00 with the reference at the
+shortest lead).
+
+\subsection{The forward response, and the noise floor}
+\label{sec:results-forward}
+
+The cost $J$ rises strictly monotonically across the members, 0.214 at
+$0.25\times$ to 0.510 at $32\times$. Reconstructing the cost index over the
+whole 200-year spin-up from its 2{,}402 saved restart files puts the internal
+variability of $J$ at $\sigma\approx0.007$ (annual means) to $0.012$
+(instantaneous samples): \textbf{every member's departure from the reference
+clears this noise floor by at least $2.4\sigma$}, so the forward $\kv$ signal
+is real at every amplitude tested. This is the noise floor
+Section~\ref{sec:objective} anticipated needing, obtained without the extra
+control run.
+
+One feature required care: the reference sits about $+0.069$ ($\approx6\sigma$)
+\emph{above} the members' own interpolation at $1\times$. The member initial
+states show the same dip on both sides of $1\times$, and the restart itself
+reproduces the spin-up exactly, so this is a $\kv$-symmetric transient: perturbing
+the mixing in either direction weakens the transport during the ten-year
+adjustment. A $1\times$ control member (Section~\ref{sec:results-next}) would
+pin this down definitively.
+
+\subsection{Adjoint stability}
+\label{sec:results-stability}
+
+The blow-ups are an instability of the linearised (reverse-sweep) dynamics
+around each member's own adjusted trajectory; every forward run and every cost
+value is healthy. Growth is episodic, with burst $e$-folding times of 1--3
+days, and all four instabilities seed in the Southern Ocean channel sector
+(38--51\dg S), three of them below 1{,}800\,m --- far from the 26\dg N cost
+section. The departure leads order as $32\times$ (0.36\,yr), $4\times$
+(0.72\,yr, later overflowing to non-finite values), $8\times$ (1.28\,yr),
+$0.25\times$ (2.56\,yr), while $0.5\times$, $2\times$ and $16\times$ never
+depart --- the stability boundary is a property of the member's background
+state, not of $\kv$ itself. All runs used the plain adjoint;
+\code{adjViscBoost} (the configured stabiliser for exactly this failure mode,
+Section~\ref{sec:inputs}) was not applied and is the natural remedy to test.
+
+\subsection{The finite-difference validation}
+\label{sec:results-fd}
+
+The comparison of Section~\ref{sec:fd} was carried out with the measured
+$\Delta J$ decomposed against the adjoint's prediction (the direct $\kv$ term
+plus the initial-state temperature and salinity terms, using the year-2180
+restart differences). \textbf{The linear prediction fails at every tested
+perturbation}: four of seven members get the wrong sign, and only $2\times$ and
+$4\times$ land within a factor of $\sim$1.3. The trust radius of the raw
+gradient for this class of perturbation is therefore below a factor of two in
+$\kv$ --- the smallest step tested. The failure is dominated by the ten-year
+state adjustment (the temperature and salinity terms are individually large and
+nearly cancel), not by the in-window $\kv$ term, which is small throughout.
+
+\subsection{Findings about the configuration itself}
+\label{sec:results-config}
+
+Three facts surfaced that stand independently of the ensemble and are now also
+recorded in the repository's working notes:
+
+\begin{enumerate}[nosep]
+  \item \textbf{$J$ is a terminal-30-day mean.} \code{pkg/cost} averages its
+        state only over the final \code{lastinterval} = 30 days of the run
+        (the package default; \code{data.cost} does not override it). Direct
+        cost forcing therefore enters the adjoint only during the last month
+        of the window; all longer-lead structure is adjoint dynamics.
+  \item \textbf{$J$ depends on the processor decomposition.} The section
+        normalisation in \code{cost\_atlantic\_heat.F} is computed per MPI
+        tile, and the section spans three tiles, so $J$ sums three
+        tile-normalised transports. Comparisons at fixed decomposition (all
+        runs here) are unaffected, but a rebuild with a different tiling
+        changes the value of $J$ itself.
+  \item \textbf{Six control gradients are identically zero.} The
+        initial-velocity controls (\code{xx\_uvel}, \code{xx\_vvel}) and all
+        four wind controls (\code{tauu}, \code{tauv}, \code{uwind},
+        \code{vwind}) return zero gradients; the surface-stress signal arrives
+        through \code{xx\_fu}/\code{xx\_fv} instead. Any use of control
+        gradients as training targets must first wire or drop these.
+\end{enumerate}
+
+\subsection{Consequences for Part II}
+\label{sec:results-part2}
+
+\begin{itemize}[nosep]
+  \item \textbf{$\kv$ is confirmed as a network input} (the
+        Section~\ref{sec:inputs} table anticipated this; it is now settled by
+        measurement, and the roadmap gate on Phase~2 is passed).
+  \item \textbf{The response is nonlinear already at factor-two changes}, so
+        a surrogate linear in $\kv$ --- or trained only at the reference ---
+        cannot span even the stable range.
+  \item \textbf{Training-data generation is stability-limited, not
+        compute-limited.} Full-window sensitivity targets exist only for
+        $0.5\times$--$2\times$ (plus the structurally degraded $16\times$);
+        blown members contribute lead-limited records only (62\,\% of the
+        ensemble's 2{,}928 dumps survive). The options are
+        \code{adjViscBoost}-stabilised reruns, shorter windows, or
+        lead-limited labels --- and this bound, not node-hours, now sets the
+        shape of the Phase-2 training ensemble.
+  \item \textbf{The accuracy target has a floor}: internal variability of the
+        label-generating model is 2--4\,\% of $J$; driving integrated-gradient
+        error below it is fitting noise.
+\end{itemize}
+
+\subsection{Revised next steps}
+\label{sec:results-next}
+
+In priority order: (1) a $1\times$ control member --- the ten-year leg rerun
+unperturbed from the 2170 restart plus its adjoint --- to separate the
+restart-plus-adjustment effect from $\kv$ physics and double the noise-floor
+sample; (2) an \code{adjViscBoost} rerun of the $4\times$ member, paired with
+a boosted rerun of the healthy $2\times$ member so the stabiliser's own bias is
+measured on a case with a valid plain-adjoint answer; (3) two members at
+$0.7\times$ and $1.4\times$, inside the proven-stable range, to resolve the
+curvature the finite-difference test exposed; (4) the gradient-check repair of
+Appendix~\ref{app:grdchk}, unchanged in content but now urgent, since the
+ensemble shows the linear gradient cannot be validated by large perturbations;
+(5) wire or drop the six zero controls.

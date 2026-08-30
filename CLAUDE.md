@@ -251,12 +251,28 @@ The cost function `code_tap/cost_atlantic_heat.F` has its **section indices comp
 
 `kmaxdepth` is likewise compiled in, and per-setup: DINO uses 25, SOMA 21. Both live in the `ALLOW_COST_ATLANTIC_HEAT_DOMASS` branch, which is the active one in every setup that enables this cost function — the `#else` value of 14 inherited from `pkg/cost` is dead code here, so don't read it as a default.
 
+Two more things about this cost that are easy to get wrong (verified 2026-08-30
+while analysing the kappa_v ensemble; details and the validating proxy in
+`analyses/DINO_1deg/03_adjoint/05_kappa_v_ensemble/`):
+
+- **fc is a terminal-30-day mean, not a run mean.** `pkg/cost` accumulates
+  `cMean*` only over the final `lastinterval` seconds of the run, and the
+  default (2,592,000 s = 30 d, `cost_readparms.F`) is not overridden in
+  `data.cost`. Direct cost forcing therefore enters the adjoint only during
+  the last month; everything at longer lead is adjoint dynamics.
+- **fc depends on the domain decomposition.** `countV(k)` is computed per MPI
+  tile (the `bi,bj` loop runs `i=1,sNx`), and DINO's 51-cell section spans 3
+  tiles, so J sums three per-tile-normalised transports — ~3× a globally
+  normalised index. Comparisons at fixed decomposition are fine (everything
+  here is `nPx=3, nPy=9`), but rebuilding with a different decomposition
+  changes the value of J itself, not just performance.
+
 **KPP and GM/Redi are off in every adjoint run.** Both DINO and `SOMA_1deg` set `useKPP`/`useGMRedi` `.FALSE.` statically in `input_tap/data.pkg`, and their submit scripts carry the equivalent `sed -i` lines commented out. The `useKPPinAdMode`/`useGMRediInAdMode` flags in `data.autodiff` are therefore inert as currently configured. Check both the namelist and the submit script before concluding a package is active — the now-archived `sr_soma` setup did it the other way round, leaving the namelist `.TRUE.` and disabling the packages from the submit script instead.
 
 ## Verifying correctness
 
-There are no unit tests. Three things stand in for them, and their status as of
-2026-08-18 is:
+There are no unit tests. Four things stand in for them, and their status as of
+2026-08-30 is:
 
 **1. Forward reproducibility — verified.** A 10-year run from rest with
 `from_rest_visc2x` reproduces the first 10 years of the 200-year production run
@@ -291,12 +307,29 @@ make the check mean something, move the point into the sensitive region —
 response clears the noise floor. Until that is done, do not cite `grdchk` output
 as evidence either way.
 
-**`useGrdchk = .TRUE.` in both setups**, so this is not opt-in: every adjoint job
-pays for the perturbed forward runs. In the 30-day run above, `MAIN_DO_LOOP`
-recorded 18,622 forward-step calls against the 1,440 the adjoint itself needs.
-If a run is doing far more work than expected, check this flag first.
+**4. The kappa_v ensemble's adjoint-vs-finite-difference comparison — executed,
+and it fails as a validation for a physical reason.** The 2026-08-28/29 ensemble
+(reference 30995 + members 31003–31009; analysed in
+`analyses/DINO_1deg/03_adjoint/05_kappa_v_ensemble/`) compared measured ΔJ
+against the linear adjoint prediction: wrong sign for 4 of 7 members, none
+within 30 %. The failure is dominated by nonlinearity of the 10-yr state
+adjustment, so it neither confirms nor refutes the adjoint — the trust radius of
+the raw gradient is simply below the factor-2 steps tested. The same analysis
+did re-verify bit-reproducibility (30995 ≡ 28486 exactly) and found that four
+member adjoints **blow up** (linearisation instability, non-monotonic in κ:
+0.25×, 4×, 8×, 32× blow; 0.5×, 2×, 16× survive) — so a plain-build adjoint on a
+perturbed background state is not guaranteed to stay finite over 5 years, which
+is what `adjViscBoost` exists for. Adjoint correctness therefore still rests on
+repairing the gradient check.
 
-The historical fourth check — the `tutorial_*_with_adj` setups reproducing stock
+**`useGrdchk` differs by setup since 2026-08-28**: DINO's `input_tap/data.pkg`
+now sets it `.FALSE.` (verified bit-identical `ADJ*`/`adxx*`; saves 8.2 h per
+5-yr adjoint), SOMA still `.TRUE.`. Where it is on, it is not opt-in: every
+adjoint job pays for the perturbed forward runs — the 30-day run above recorded
+18,622 forward-step calls against the 1,440 the adjoint itself needs. If a SOMA
+run is doing far more work than expected, check this flag first.
+
+A further, historical check — the `tutorial_*_with_adj` setups reproducing stock
 MITgcm tutorials through the Tapenade path, with `tutorial_global_oce_biogeo/`
 holding `code_ad` / `code_oad` / `code_tap` side by side — lived in the c69f tree
 and is now only in `Proj_ImPACTS_old`. There is no tutorial-level regression

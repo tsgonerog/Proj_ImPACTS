@@ -41,3 +41,10 @@ is a hardcoded `ln -s` in `submit_frd.sh`, not an auto-patched parameter.
 The κ fields themselves are `input_binaries/dino_diffKr_M<n>.bin`, untracked
 like everything else there; Appendix B of the master plan carries the snippet
 that regenerates them, and each must be 2,908,224 bytes of big-endian float64.
+
+**Outcome (runs 30996–31002, 2026-08-28/29).** All seven forward legs completed
+and are healthy; each wrote its year-2180 pickup and its matching adjoint ran
+from it. Results live in `analyses/DINO_1deg/03_adjoint/05_kappa_v_ensemble/`
+and `notes/nn_surrogate/` (master Part I §Results) — including the caveat that
+four of the seven *adjoint* legs blow up (see the adjoint-side
+`input_tap/variants/kappa_v_ensemble/README.md`).

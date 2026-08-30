@@ -193,12 +193,12 @@ worse — silently read a stale pickup left from another run.
 
 ## 5. Running something automatically after a job finishes
 
-### 5.1 What is running tonight, and what it is not
+### 5.1 What ran the night of 2026-08-28, and what it was not
 
 The comparison of the new reference adjoint (job 30995) against the pre-cleanup
-reference (28486) is **not** a SLURM job and uses **no** `--dependency`. It is a
-plain background shell process that polls `squeue` and runs when the job leaves
-the queue:
+reference (28486) was **not** a SLURM job and used **no** `--dependency`. It was
+a plain background shell process that polled `squeue` and ran when the job left
+the queue (it worked: the comparison found the two runs bit-identical):
 
 ```bash
 tools/compare_adj_runs.sh --wait 30995 <reference-run-dir> <new-run-dir> &

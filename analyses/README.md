@@ -28,7 +28,8 @@ analyses/
 │       ├── 01_5yr_from_180yr_pickup_visc2x.ipynb
 │       ├── 02_5yr_from_50yr_pickup_viscD2x_Zref.ipynb
 │       ├── 03_5yr_from_50yr_pickup_viscGrid1p8e-2_adjViscBoost.ipynb
-│       └── 04_5yr_from_rest_viscGrid1p8e-2_adjViscBoost.ipynb
+│       ├── 04_5yr_from_rest_viscGrid1p8e-2_adjViscBoost.ipynb
+│       └── 05_kappa_v_ensemble/            the kappa_v perturbation ensemble (7 notebooks)
 ├── SOMA_1deg/                        secondary configuration (62 x 62 x 31)
 ├── reference_notebooks/              collaborator material the above derives from
 │   ├── dinocean_package_usage_from_matt.ipynb
@@ -118,6 +119,20 @@ viscosity is set.
 Settings in this table were read back from each run's own staged `data`
 namelist on scratch, not from the run-directory tag.
 
+`05_kappa_v_ensemble/` is a seven-notebook suite (2026-08-30) analysing the
+vertical-diffusivity perturbation ensemble of the `notes/nn_surrogate` master
+plan, Part I: the new reference adjoint 30995 (bit-identical to 28486) against
+members M1–M7 (runs 31003–31009, κ_v scaled 0.25×–32×), plus the
+internal-variability noise floor reconstructed from spin-up 30983's 2,402
+pickups. It has its own `README.md` (run table, reading order, conventions);
+shared code lives in `ensemble_common.py`, and `build_cache.py` /
+`build_jproxy.py` must be run once before re-executing the notebooks — they
+write the intermediates the notebooks read. Unlike the single-run notebooks,
+this suite spans nine runs, so everything it generates goes to the sibling
+scratch directory `/scratch2/<user>/DINO_1deg_tapAdj_runs/kappa_v_ensemble_analysis/`
+(`cache/`, `figures/`, `animations/`, `stats/`) rather than into any one run
+directory.
+
 `00_archive/` holds four earlier serial exploratory runs at 180 and 360 days,
 named for their starting point and viscosity setting — `viscRef` from rest
 (runs 18232, 18222), `viscD2x_Zref` from the 80 yr pickup (runs 22038, 22039).
@@ -146,6 +161,14 @@ Notebooks derive those paths from the `run_dir` they already define
 (`FIG_DIR = run_dir / "figures"`, `ANIM_DIR = os.path.join(run_dir, "animations")`),
 so the output follows the run automatically if it is ever moved again. Nothing
 needs editing in two places.
+
+The one deliberate exception is `05_kappa_v_ensemble/`, which reads nine runs
+and therefore writes everything to the sibling directory
+`/scratch2/<user>/DINO_1deg_tapAdj_runs/kappa_v_ensemble_analysis/` instead of
+into any one run (details in that suite's own `README.md`). Its two
+publication figures are additionally committed under
+`notes/nn_surrogate/briefs/kappa_ensemble_results/figures/` — they are LaTeX
+sources for that brief, and the only images tracked in this repository.
 
 Current locations:
 

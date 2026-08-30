@@ -1,0 +1,72 @@
+% !TEX root = ../main.tex
+%-----------------------------------------------------------------------
+%  The recommendation on kappa_v as a network input, its consequences for
+%  training data, and the next steps.
+%  \input by ../main.tex -- not compiled on its own.
+%-----------------------------------------------------------------------
+\hd{Recommendation: include \kv{} as an input to the neural network.}
+The surrogate design already reserved a place for \kv{} among its input
+fields, pending this experiment's verdict. The verdict is in, and the
+recommendation is unambiguous, for four reasons.
+
+\begin{enumerate}[nosep,leftmargin=1.6em]
+  \item \textbf{The sensitivities measurably change within the plausible
+        mixing range.} A factor-of-two change in \kv{} --- well within the
+        uncertainty ocean models carry for this parameter --- shifts
+        sensitivity amplitudes by 20--40\,\% and reshapes the
+        mixing-sensitivity field itself (Finding~2). A network without \kv{}
+        as an input cannot represent this variation at all: it would collapse
+        distinct answers onto one.
+  \item \textbf{The dependence is nonlinear from the smallest step tested.}
+        Because linear extrapolation in \kv{} already fails at a factor of two
+        (Finding~4), the alternative of training at the reference and
+        correcting predictions afterwards with the adjoint's own gradient is
+        not viable. The nonlinearity must be learned, which requires \kv{}
+        in the inputs and training data that spans its range.
+  \item \textbf{The output most worth predicting is the most
+        \kv-dependent.} The gradient $\partial J/\partial\kv$ --- the field a
+        mixing-aware surrogate exists to deliver --- varies fastest and
+        changes sign across the ensemble (Finding~2). Predicting it from
+        state alone, without knowing the mixing, is not a well-posed task.
+  \item \textbf{The cost of inclusion is negligible; the cost of omission is
+        structural.} \kv{} enters as one more input channel (it is a
+        three-dimensional field in general, even though this ensemble varied
+        it uniformly). Adding it later, after an architecture and training
+        corpus were built without it, would mean regenerating both.
+\end{enumerate}
+
+\hd{What the results change about generating training data.}
+The unexpected constraint is numerical, not physical: adjoint stability, not
+computer time, now bounds the training set. Full-length (five-year)
+sensitivity maps exist only for $0.5\times$--$2\times$ (plus the flagged
+$16\times$); the unstable members contribute only their early, still-accurate
+portions --- 62\,\% of the ensemble's 5-day records survive in total. Three
+routes forward, not mutually exclusive: (i)~rerun unstable members with the
+stabilised (\code{adjViscBoost}) adjoint, first measuring the stabiliser's
+own bias on a member where the plain answer is valid; (ii)~use shorter
+adjoint windows, which stay inside every member's stable span;
+(iii)~train on lead-limited records, using each member's measured departure
+time as its label horizon. Two further practical points: the model's internal
+variability (2--4\,\% of $J$) is the natural floor for surrogate accuracy ---
+pushing integrated errors below it is fitting noise --- and six of the
+fourteen control gradients (initial velocities and the four wind controls)
+are currently written as zeros and must be wired or dropped before anything
+trains on them.
+
+\hd{Next steps, in priority order.}
+(1)~A $1\times$ control member, to isolate the adjustment effect of
+Finding~1 and double the noise-floor sample. (2)~The stabilised rerun of the
+worst unstable member ($4\times$), paired with a stabilised rerun of the
+healthy $2\times$ member as the bias control. (3)~Two members at $0.7\times$
+and $1.4\times$, inside the proven-stable range, to resolve the curvature
+that Finding~4 exposed. (4)~The long-planned repair of the model's built-in
+gradient check at a point of large sensitivity --- more urgent now that
+Finding~4 shows large perturbations cannot validate the gradient. (5)~Resolve
+the six zero-valued control gradients.
+
+\hd{Where the full analysis lives.}
+Every number here is computed in a suite of seven documented notebooks at
+\code{analyses/DINO\_1deg/03\_adjoint/05\_kappa\_v\_ensemble/} in the project
+repository (figures, summary tables, and the animations listed above sit
+beside it on cluster storage), and is restated with sources in the master
+plan's Part~I Results section, which remains the authoritative record.

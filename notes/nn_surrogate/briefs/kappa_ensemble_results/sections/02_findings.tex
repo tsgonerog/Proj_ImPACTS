@@ -1,0 +1,116 @@
+% !TEX root = ../main.tex
+%-----------------------------------------------------------------------
+%  The five findings, the two figures, and the companion animations.
+%  \input by ../main.tex -- not compiled on its own.
+%-----------------------------------------------------------------------
+\hd{Finding 1 --- the transport responds strongly, and the signal is real.}
+The cost $J$ rises steadily with mixing, from 0.214 at $0.25\times$ to 0.510
+at $32\times$. To judge whether such differences could be chance, the same
+transport index was reconstructed over the entire 200-year spin-up from its
+2{,}402 saved restart files, giving the natural year-to-year variability of
+$J$: about $\pm0.007$ (annual means) to $\pm0.012$ (individual samples).
+Every member's departure from the reference exceeds this by at least
+$2.4\sigma$, and most by far more. One subtlety: the reference sits about
+$0.07$ \emph{above} the trend through the members. This is not an error ---
+perturbing the mixing in \emph{either} direction weakens the transport
+temporarily while the ocean adjusts, so all seven adjusted members sit below
+the never-perturbed reference. A $1\times$ control member (rerunning the
+ten-year leg with unchanged mixing) is the clean way to confirm this and is
+the first recommended follow-up.
+
+\hd{Finding 2 --- where the adjoint stays healthy, the maps keep their shape
+but not their size.}
+For the stable members, the five-year accumulated temperature-sensitivity
+map correlates with the reference at 0.82 ($0.5\times$) and 0.85 ($2\times$),
+with roughly 80\,\% of grid points keeping their sign --- the geography of
+``where the transport is sensitive'' survives. The amplitude does not: overall
+magnitudes shift to $1.37\times$ and $0.77\times$ the reference. The
+sensitivity to \kv{} itself is markedly more fragile: its pattern correlation
+is only 0.21 already at $2\times$, and the globally summed
+$\partial J/\partial\kv$ runs $-251 \to -436 \to -78 \to +673$ across
+$0.5\times$--$16\times$ --- it changes sign within the ensemble. The one
+field a mixing-aware surrogate most needs to predict is the one that varies
+fastest with mixing.
+
+\hd{Finding 3 --- four of seven adjoint computations go unstable.}
+The forward simulations and cost values are healthy in every member; what
+fails is the backward computation, which amplifies small signals
+explosively once it runs far enough into the past around a sufficiently
+altered ocean state. The instability grows in short bursts
+($e$-folding 1--3 days), always ignites in the Southern Ocean channel
+(38--51\dg S, mostly at depth, far from the 26\dg N section), and its onset is
+\emph{not} ordered by perturbation size: $32\times$ fails first
+(0.36\,yr back), then $4\times$, $8\times$, and even the mild $0.25\times$
+(2.6\,yr back), while $0.5\times$, $2\times$ and $16\times$ never fail.
+Stability is a property of each member's own adjusted ocean state, so it
+cannot be guaranteed by simply capping the perturbation. Figure~\ref{fig:blowup}
+shows the $8\times$ case developing. All runs used the plain adjoint; the
+configuration already carries a stabilised variant (\code{adjViscBoost},
+which smooths the backward computation) that is the natural remedy to test.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{fig_m5_blowup_montage}
+\caption{\small The instability in space: the $8\times$ member's
+temperature-sensitivity magnitude (logarithmic colour scale) at 231\,m depth,
+read left to right and top to bottom as the adjoint works backward from the
+cost period. The map is well behaved one year back (top left panels), a
+localised anomaly ignites in the Southern Ocean near 1.8 years back, and
+within about 50 model days the instability fills the domain (bright panels).
+The green line marks the 26\dg N section that defines the cost. An
+interactive version with a time slider accompanies this brief
+(\code{ADJtheta\_M5\_blowup\_log10.html}).}
+\label{fig:blowup}
+\end{figure}
+
+\hd{Finding 4 --- the straight-line prediction fails at every tested change.}
+The adjoint's gradients predict, to first order, how much $J$ should change
+for a given change in \kv{} and in the adjusted initial state. Comparing that
+prediction against the measured changes: four of seven members get the wrong
+sign, and none is predicted within 30\,\%. The linear approximation is
+therefore trustworthy only for \kv{} changes smaller than a factor of two ---
+the smallest step tested. The failure comes mainly from the ten-year ocean
+adjustment (its temperature and salinity contributions are individually large
+and nearly cancel), not from the direct effect of \kv{} within the five-year
+window.
+
+\hd{Finding 5 --- two incidental discoveries about the cost function.}
+Working through the comparison exposed two properties of the compiled cost
+worth recording. (i)~$J$ averages the transport only over the \emph{final 30
+days} of the five-year window (a package default we had not overridden), so
+direct cost information enters the adjoint only in the last month ---
+everything earlier is dynamics. (ii)~$J$'s normalisation is computed
+per processor tile, so its numerical value depends on how the domain is split
+across processors; all runs here share one decomposition, so comparisons
+stand, but a rebuild on different processor counts would change $J$ itself.
+Both are now documented in the working notes and the master plan.
+
+\begin{figure}[p]
+\centering
+\includegraphics[width=\textwidth]{fig_synthesis_4panel}
+\caption{\small The ensemble on one page. \textbf{(a)}~The cost $J$ rises
+monotonically with \kv{} across the members (dots); grey bands show the
+internal-variability noise floor, and the star shows the reference sitting
+above the members' trend --- the adjustment effect of Finding~1.
+\textbf{(b)}~Spatial-structure survival of the accumulated temperature
+sensitivity: $\approx$0.8 for the stable members, 0.49 for the degraded
+$16\times$, $\approx$0 for the unstable members (open circles).
+\textbf{(c)}~Amplitude of the sensitivity field as the adjoint works backward
+(note the logarithmic axis spanning $\sim$40 decades): stable members hug the
+reference (dashed black); unstable members leave it at the circled departure
+points. \textbf{(d)}~Measured change in $J$ per member (solid) against the
+adjoint's linear prediction (hatched); ``sign~\texttimes'' marks the four
+members where even the sign is wrong.}
+\label{fig:synth}
+\end{figure}
+
+\hd{Companion animations.}
+Four self-contained interactive animations accompany this brief as separate
+HTML files (each opens in any browser, no installation; time slider, play
+control, and --- for the first two --- a depth selector):
+\code{ADJtheta\_REF\_multidepth.html} and \code{ADJdiffkr\_REF\_multidepth.html}
+(the reference sensitivities evolving at three depths),
+\code{ADJtheta\_REF\_vs\_M3\_diff.html} (reference vs.\ the $2\times$ member,
+side by side with their difference), and
+\code{ADJtheta\_M5\_blowup\_log10.html} (the instability of
+Figure~\ref{fig:blowup} frame by frame).

@@ -1,0 +1,66 @@
+# kappa_v ensemble — adjoint-sensitivity analysis
+
+Analysis of the vertical-diffusivity perturbation ensemble (notes/nn_surrogate
+master plan, Part I): seven members perturbing the uniform background
+`kappa_v = 1.2e-5 m²/s` by 0.25×–32×, each with a 10-yr forward leg (years
+2170–2180) and a 5-yr adjoint (2180–2185), against the reference adjoint run
+30995. The runs were submitted 2026-08-28; this analysis was built 2026-08-30.
+
+| run | κ factor | forward job | adjoint job | run directory (under `/scratch2/tshahriar/DINO_1deg_tapAdj_runs/`) |
+| --- | --- | --- | --- | --- |
+| REF | 1× | 30983 (spin-up) | 30995 | `DINO_1deg_tapAdj_5yr_from180yrPk_visc2x_run30995` |
+| M1 | 0.25× | 30996 | 31003 | `DINO_1deg_tapAdj_5yr_M1_run31003` |
+| M2 | 0.5× | 30997 | 31004 | `DINO_1deg_tapAdj_5yr_M2_run31004` |
+| M3 | 2× | 30998 | 31005 | `DINO_1deg_tapAdj_5yr_M3_run31005` |
+| M4 | 4× | 30999 | 31006 | `DINO_1deg_tapAdj_5yr_M4_run31006` |
+| M5 | 8× | 31000 | 31007 | `DINO_1deg_tapAdj_5yr_M5_run31007` |
+| M6 | 16× | 31001 | 31008 | `DINO_1deg_tapAdj_5yr_M6_run31008` |
+| M7 | 32× | 31002 | 31009 | `DINO_1deg_tapAdj_5yr_M7_run31009` |
+
+## Reading order
+
+| notebook | question it answers |
+| --- | --- |
+| `01_run_inventory_and_cost.ipynb` | Are the nine runs complete and consistent? How does the cost J vary with κ, and does the adjoint gradient predict the measured ΔJ (finite-difference check + initial-state decomposition)? |
+| `02_reference_adjoint_run30995.ipynb` | What does the reference adjoint sensitivity look like (maps, vertical structure, time accumulation)? Continuation of `../01_5yr_from_180yr_pickup_visc2x.ipynb`, whose run 28486 this run reproduces bit-identically. |
+| `03_ensemble_sensitivity_maps.ipynb` | What does each member's accumulated sensitivity look like, side by side across κ? Which members are physically usable? |
+| `04_member_vs_reference_metrics.ipynb` | Quantitatively, how far is each member from the reference — in amplitude vs in spatial structure — per variable, per depth, per lead time? |
+| `05_ensemble_statistics.ipynb` | Ensemble mean/spread: where (horizontally, vertically, per variable) does the ensemble disagree most? |
+| `06_time_evolution_and_animations.ipynb` | How do sensitivities evolve/accumulate over the reverse sweep, and when does each blown-up member depart? Produces the interactive HTML animations. |
+| `07_synthesis_and_interpretation.ipynb` | The answer to Part I's question, the stable-vs-blown-up split, and what it implies for the NN surrogate. |
+
+`ensemble_common.py` holds the run registry, variable metadata, metric
+definitions and plotting/animation helpers shared by all notebooks.
+`build_cache.py` (run once, ~15–40 min) produces the intermediate products the
+notebooks read; its docstring is the cache inventory.
+
+## Outputs
+
+Everything generated lands on scratch, **not** in this repository, under
+
+```
+/scratch2/tshahriar/DINO_1deg_tapAdj_runs/kappa_v_ensemble_analysis/
+├── cache/        netCDF/CSV intermediates (build_cache.py docstring = inventory)
+├── figures/      one subdirectory per notebook, publication-ready PNGs
+├── animations/   self-contained interactive HTML animations (safe to e-mail)
+└── stats/        summary tables (CSV)
+```
+
+This deviates deliberately from the one-run-directory convention used by the
+single-run notebooks: this analysis spans nine runs, so its outputs live in a
+sibling directory of the runs rather than inside any one of them.
+
+## Conventions
+
+- Methodology follows `../01_5yr_from_180yr_pickup_visc2x.ipynb`: xmitgcm with
+  `delta_t=1800`, `ref_date=2000-01-01`, hFac>0 masking, robust symmetric
+  percentile colour limits, RdBu_r for signed fields, and reversed time order
+  when animating ADJ* fields (dumps are numbered by forward iteration; the
+  adjoint computes them backwards).
+- "Lead time" = years before the cost-window end (5.0 = window start = the
+  fully accumulated sensitivity, the primary comparison field).
+- ADJ* dumps are float32, every 5 days (366 per run); adxx_* control gradients
+  are float64, one dump per run. Always read via the `.meta` (the helpers do).
+- Raw adxx gradients carry unit control weights and are **not comparable
+  across controls** (master plan, "a caution before comparing across
+  controls").

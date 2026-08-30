@@ -530,14 +530,15 @@ Python dependencies (no environment file is checked in): `numpy`, `xarray`,
 
 ## Verification status
 
-There are no unit tests. What has and has not been checked, as of 2026-08-18:
+There are no unit tests. What has and has not been checked, as of 2026-08-30:
 
 | Check | Status | What it showed |
 | --- | --- | --- |
-| Forward reproducibility | **verified** | A 10-year `from_rest_visc2x` run reproduces the first 10 years of production run 28463 **bit-identically** — 161 field comparisons, four diagnostic streams, 1334 monitor values, AMOC series, all exactly zero |
+| Forward reproducibility | **verified** | A 10-year `from_rest_visc2x` run reproduces the first 10 years of production run 28463 **bit-identically** — 161 field comparisons, four diagnostic streams, 1334 monitor values, AMOC series, all exactly zero. Re-verified 2026-08-28: the new spin-up 30983 reproduces 28463 |
 | Builds | **verified** | All six build directories compile clean; the `patched` builds carry the hand-corrected `forward_step_b.f` byte-for-byte, the `rawTapenade` controls do not |
-| Adjoint runs end to end | **verified** | 30-day adjoint from the 180-year pickup writes `ADJ*` and `adxx*`, peak sensitivity on the cost section at `i=2, j=127, k=26` |
+| Adjoint runs end to end | **verified** | 30-day adjoint from the 180-year pickup writes `ADJ*` and `adxx*`, peak sensitivity on the cost section at `i=2, j=127, k=26`. The 5-yr reference adjoint 30995 reproduces the earlier 28486 bit-identically |
 | Adjoint **correctness** | **not verified** | The gradient check fails by ~8 orders of magnitude — and always has |
+| Adjoint vs finite differences (κ_v ensemble) | **executed 2026-08-29, fails as a validation** | The linear gradient mispredicts every member's ΔJ (wrong sign for 4 of 7) — dominated by physical nonlinearity of the 10-yr state adjustment, so it neither confirms nor refutes the adjoint. Four member adjoints also blow up (linearisation instability). Full analysis: `analyses/DINO_1deg/03_adjoint/05_kappa_v_ensemble/` |
 
 ### The gradient check does not currently work
 
@@ -559,8 +560,10 @@ predates any recent work.
 (`iGloPos=2, jGloPos=127, kGloPos=26`) and raise `grdchk_eps` to ~1e-3 so the
 response clears the noise floor.
 
-`useGrdchk = .TRUE.` in both setups, so **every adjoint job pays for the
-perturbed forward runs** whether or not you want them.
+`useGrdchk` is now `.FALSE.` in DINO's `input_tap/data.pkg` (since 2026-08-28;
+verified bit-identical `ADJ*`/`adxx*` output, and worth 8.2 h per 5-yr adjoint).
+SOMA still has it `.TRUE.`, so every SOMA adjoint job pays for the perturbed
+forward runs whether or not you want them.
 
 ### Cheap regression test
 

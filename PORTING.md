@@ -145,6 +145,13 @@ Rank count is fixed by `SIZE.h`: DINO is `nPx=3, nPy=9` over `sNx=17, sNy=22`, s
 `-n 27`. Perlmutter CPU nodes have 128 cores, so 27 ranks fit on one node.
 Changing the decomposition means changing both `SIZE.h` and `-n`.
 
+**Changing the decomposition also changes the cost function's value.** The
+section normalisation in `code_tap/cost_atlantic_heat.F` is computed per MPI
+tile (verified 2026-08-30; see the root `CLAUDE.md`), so `fc` from a run with a
+different `nPx`/`nPy` is not comparable with the sverdrup runs — and neither
+are the adjoint fields derived from it. Keep `3×9` when results must line up
+with the existing campaigns, or fix the per-tile normalisation first.
+
 ---
 
 ## Things still tied to sverdrup

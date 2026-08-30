@@ -13,9 +13,11 @@ be read, argued with and revised.
 ```
 nn_surrogate/
 ├── master_plan/                     the master -- everything is established here
-└── briefs/                          short documents cut from it, 3 pages at most
+└── briefs/                          short documents cut from it (3 pages; the
+    │                                results brief is allowed 4, for its figures)
     ├── surrogate_concept_note/      Part II, for a first reader
-    └── perturbation_experiment/     Part I, for a reader deciding whether to run it
+    ├── perturbation_experiment/     Part I, for a reader deciding whether to run it
+    └── kappa_ensemble_results/      Part I's results + the kappa_v-as-input recommendation
 ```
 
 **[`master_plan/`](master_plan/) is authoritative.** Every claim, every measured
@@ -28,18 +30,18 @@ for one audience, asserts nothing the master does not support, and never becomes
 the place a number lives. Derivation runs one way, and
 [`briefs/README.md`](briefs/README.md) carries the table saying which brief has
 to be re-read when which part of the master moves. **A brief is three pages at
-most**, and **no reader is named** in anything here.
+most** (the results brief alone is allowed four, for its figures), and **no reader is named** in anything here.
 
 Every document is its own Overleaf project and shares no file with any other —
 not a preamble, not a macro file. That is what lets one brief go to someone
 without the plan going with it, and it is why consistency is maintained by
-re-reading rather than by `\input`. All three are laid out the same way,
+re-reading rather than by `\input`. All four are laid out the same way,
 `main.tex` plus `preamble.tex` plus `sections/`, so moving between them costs
 nothing.
 
 ## The master document
 
-**31 pages, two parts, laid out as an Overleaf project.** It is a directory, not
+**33 pages, two parts plus a results section, laid out as an Overleaf project.** It is a directory, not
 a file: `main.tex` holds structure and the prose sits in child files — bar the
 short paragraph introducing the appendices, which stays in `main.tex` —
 so the Overleaf sidebar doubles as a table of contents and an edit touches one
@@ -54,6 +56,7 @@ small file rather than a 2,000-line one.
 | `sections/03_motivation.tex` | Motivation |
 | `sections/04_model_config.tex` | Model configuration — common to both parts |
 | **`sections/10_part1_ensemble.tex`** | **Part I, the perturbation ensemble.** Objective, experiment design, measured compute and storage, analysis plan, further ensemble axes, open questions, sequence and decision points |
+| `sections/11_part1_results.tex` | **Part I, results of the executed ensemble** (run 2026-08-28/29, analysed 2026-08-30): the member/health table, the noise floor, the adjoint-stability finding, the finite-difference verdict, consequences for Part II, revised next steps |
 | `sections/20_part2_surrogate.tex` | Part II, the surrogate design: inputs and outputs channel by channel, normalisation, loss, architecture, training ensemble, validation, risks, roadmap |
 | `sections/90_app_reference_values.tex` | Appendix A — reference values |
 | **`sections/91_app_running.tex`** | **Appendix B — running the experiment.** Environment, generating the diffusivity files, namelists, submission, the pilot, remaining members, porting. The operational how-to |
@@ -69,7 +72,7 @@ resource request needs Part I and the appendices only — comment out the Part I
 The number is the file's position in the document, so the Overleaf sidebar —
 which sorts alphabetically and cannot be reordered — reads in PDF order. Decades
 are blocks with deliberate gaps: `0x` front matter (00 and 05–09 free), `1x`
-Part I (11–19), `2x` Part II (21–29), `9x` appendices (94–99), and 30–89 unused.
+Part I (12–19 free), `2x` Part II (21–29), `9x` appendices (94–99), and 30–89 unused.
 Adding a file means a free number in its own block plus one `\input`; removing
 one means leaving the hole. Only an insertion between two consecutive numbers
 forces a renumber, and it stays inside that decade.
@@ -102,7 +105,7 @@ Two things to keep true while doing it:
 ## Building and editing
 
 ```bash
-cd notes/nn_surrogate/master_plan          # or either brief
+cd notes/nn_surrogate/master_plan          # or any brief
 latexmk -pdf -auxdir=build main.tex        # PDF here, intermediates in build/
 ```
 
@@ -117,9 +120,9 @@ the whole-folder upload fails on the very first `\input`.
 | | Upload | Then |
 | --- | --- | --- |
 | **One project per document** | `master_plan/`, or one brief's folder | Overleaf picks `main.tex` automatically. The project can be shared with a reader, so comments and track-changes work per document |
-| **One project for the direction** | all of `nn_surrogate/` | Three documents in one project. Switch between them with the **gear icon, bottom-left → Compiler → main document** and compile each; download and rename each PDF |
+| **One project for the direction** | all of `nn_surrogate/` | Four documents in one project. Switch between them with the **gear icon, bottom-left → Compiler → main document** and compile each; download and rename each PDF |
 
-The second is one upload instead of three and is the usual arrangement here. Its
+The second is one upload instead of four and is the usual arrangement here. Its
 cost is that the project itself can never be shared — it carries the master plan
 and the internal `README.md` files — so a review loop that depends on Overleaf
 comments needs the first arrangement, or a separate project for the brief being
@@ -177,6 +180,16 @@ it produces are a by-product. Its result determines what Part II should be:
 - a **strong** response makes mixing a required network input and justifies the
   larger parameter ensemble that Part II describes.
 
+**This question is now answered: the response is strong** (ensemble executed
+2026-08-28/29, analysed 2026-08-30 — the master's Part I Results section,
+`sections/11_part1_results.tex`, and the results brief). Two findings the plan
+did not anticipate came with it: the adjoint computation itself goes unstable
+at four of the seven κ settings, non-monotonically in κ, which bounds how
+training data can be generated at strongly perturbed mixing; and the adjoint's
+linear ΔJ prediction fails already at the factor-2 members, so the response is
+nonlinear from the smallest step tested. The full evidence lives in the
+analysis suite at `analyses/DINO_1deg/03_adjoint/05_kappa_v_ensemble/`.
+
 Eight κ values, the seven members plus the reference, are ample for the first
 question and thin for the second. Part II therefore calls for a 200–400 member
 ensemble later; Part I does not propose one now.
@@ -202,8 +215,8 @@ The merged document separates them, and they should not be conflated:
 
 ## Numbers in these documents, and where they came from
 
-Every quantitative claim was measured from the DINO tree and from cluster scratch
-on 2026-08-21, rather than estimated:
+Every quantitative claim was measured from the DINO tree and from cluster
+scratch rather than estimated. The planning numbers, measured 2026-08-21:
 
 | Claim | Source |
 | --- | --- |
@@ -218,6 +231,23 @@ on 2026-08-21, rather than estimated:
 | All 2,400 spin-up restarts retained, 47 GB (the whole run directory is 85 GB) | run 28463, `du -ch pickup*` |
 | Reference κ uniform at 1.2 × 10⁻⁵ m² s⁻¹ | `input_binaries/dino_diffKr.bin`, single unique value |
 | Cost section at 26.05 °N, upper 982.4 m | `YC.data` row 127 and `DRF.data`, run 28486 |
+
+The results numbers (master Part I §Results, and the results brief) were
+measured on 2026-08-30 by the executed analysis suite at
+`analyses/DINO_1deg/03_adjoint/05_kappa_v_ensemble/` — its notebooks are the
+per-number source, and its `stats/*.csv` tables on scratch are the
+machine-readable copies:
+
+| Claim | Source |
+| --- | --- |
+| Member fc values 0.214–0.510, monotonic; REF 0.3310 | `costfunction.0000` of runs 30995, 31003–31009; `stats/01_*.csv`; notebook 01 |
+| Run 30995 bit-identical to 28486; `useGrdchk` off saves 8.2 h/run | md5 comparison + `run_timing.txt`, notebooks 01/02 |
+| Noise floor σ = 0.007 (annual) / 0.012 (instantaneous) | J-proxy over 2,402 spin-up-30983 pickups (`build_jproxy.py`), notebook 01 |
+| Stable-member metrics (corr 0.82/0.85, amp ×1.37/×0.77; ADJdiffkr corr 0.21 at 2×; ∂J/∂κ sums −251/−436/−78/+673) | `cache/member_metrics_time.nc`, `cache/adxx_fields_3d.nc`; notebooks 04/07 |
+| Blow-up departure leads 0.36/0.72/1.28/2.56 yr; burst e-folds 1–3 d; Southern Ocean seeds; 62 % usable dumps | `stats/06_blowup_departure_table.csv`, `stats/07_training_data_budget.csv`; notebook 06 |
+| Linear ΔJ prediction: wrong sign 4/7, none within 30 % | `cache/dJ_decomposition.csv`; notebook 01 |
+| fc is a terminal-30-day mean; per-MPI-tile normalisation (decomposition-dependent) | `pkg/cost` source + proxy validation (fc reproduced within 3–19 %), notebook 01 |
+| Six control gradients identically zero (`xx_uvel/vvel`, four wind controls) | `cache/adxx_fields_*.nc`, notebook 02 |
 
 ## Prerequisites the plan identifies
 

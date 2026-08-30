@@ -1,0 +1,73 @@
+% !TEX root = ../main.tex
+%-----------------------------------------------------------------------
+%  Title block, the experiment in one paragraph, the headline answer,
+%  and the member table.
+%  \input by ../main.tex -- not compiled on its own.
+%-----------------------------------------------------------------------
+\begin{center}
+{\large\bfseries The Vertical-Mixing Perturbation Ensemble: Results\\[2pt]
+ and the Case for \kv{} as a Surrogate Input}\\[3pt]
+{\small Tanvir Shahriar \quad$\cdot$\quad DINO configuration, MITgcm
+ \quad$\cdot$\quad \today}
+\end{center}
+
+\hd{What was run, in one paragraph.}
+An adjoint run answers, in a single backward computation, how sensitive a
+chosen quantity is to everything the model depends on --- here, how the
+basin's overturning transport at 26\dg N (the cost $J$) responds to changes in
+temperature, salinity, surface forcing, and mixing, everywhere and at every
+earlier time. The proposed ensemble tested whether those sensitivity maps
+survive a change in the model's vertical diffusivity \kv, the parameter that
+controls how quickly heat and salt mix vertically. Seven members scaled the
+reference value ($1.2\times10^{-5}\,\mathrm{m^2\,s^{-1}}$) by factors of
+$0.25$ to $32$; each ran ten years forward so the ocean could adjust to its
+new mixing, then a five-year adjoint over the same window as an unperturbed
+reference run. All nine runs completed. The reference reproduced the earlier
+production adjoint bit-for-bit, so previous analysis of it carries over
+unchanged.
+
+\hd{The headline.}
+\textbf{The sensitivity maps depend strongly on \kv{} --- in two distinct
+ways --- and \kv{} should therefore be an input to the neural-network
+surrogate.} First, the physics: even a modest halving or doubling of \kv{}
+leaves the spatial pattern of the sensitivities recognisable but shifts their
+overall amplitude by tens of percent, and the sensitivity \emph{to \kv{}
+itself} changes shape and even sign across the ensemble. Second, the
+numerics: at four of the seven settings the backward (adjoint) computation
+becomes unstable and its output ends as noise, which limits how training data
+can be generated at strongly perturbed mixing. Both facts argue the same way:
+a surrogate trained at one mixing setting, or one that treats mixing as a
+fixed constant, would not generalise across the range of \kv{} that ocean
+models plausibly occupy.
+
+\hd{The ensemble at a glance.}
+``Pattern correlation'' measures whether a member's accumulated
+temperature-sensitivity map has the same spatial structure as the
+reference's (1 = identical structure, 0 = unrelated); ``departure lead''
+is how far back in time the adjoint computation stays trustworthy before
+instability takes over (out of the full 5 years).
+
+\smallskip
+\begin{tabularx}{\textwidth}{@{}lY{0.75}Y{0.75}Y{1.3}Y{1.2}Y{1.0}Y{1.0}@{}}
+\toprule
+\textbf{Member} & \textbf{\kv{} scale} & \textbf{Cost $J$}
+ & \textbf{Adjoint health} & \textbf{Pattern corr.} & \textbf{Departure lead}
+ & \textbf{Usable output}\\
+\midrule
+M1  & $0.25\times$ & 0.214 & unstable          & $-0.01$ & 2.6 yr & 51\,\%\\
+M2  & $0.5\times$  & 0.260 & stable            & 0.82    & full   & 100\,\%\\
+ref & $1\times$    & 0.331 & stable            & 1.00    & full   & 100\,\%\\
+M3  & $2\times$    & 0.265 & stable            & 0.85    & full   & 100\,\%\\
+M4  & $4\times$    & 0.273 & unstable (worst)  & 0.03    & 0.7 yr & 14\,\%\\
+M5  & $8\times$    & 0.302 & unstable          & $-0.02$ & 1.3 yr & 25\,\%\\
+M6  & $16\times$   & 0.365 & degraded          & 0.49    & full   & 100\,\%*\\
+M7  & $32\times$   & 0.510 & unstable          & 0.01    & 0.4 yr & 7\,\%\\
+\bottomrule
+\end{tabularx}
+\smallskip
+
+{\small *M6's amplitude never runs away, but its spatial structure is
+half-degraded; its output is usable with a flag. ``Usable output'' counts the
+5-day sensitivity records at lead times shorter than the departure lead ---
+every member, unstable ones included, matches the reference almost perfectly
+(correlation 0.92--1.00) at the shortest lead times.}

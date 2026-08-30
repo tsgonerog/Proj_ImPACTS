@@ -42,6 +42,9 @@ analyses/**/*.html
 analyses/**/.~*
 analyses/**/*-checkpoint.ipynb
 
+# Python bytecode (analyses/.../ensemble_common.py is imported by notebooks)
+**/__pycache__/
+
 # ----------------------------------------------------------------------------
 # notes/ LaTeX build artefacts
 #

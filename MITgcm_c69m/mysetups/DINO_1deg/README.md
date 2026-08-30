@@ -319,10 +319,19 @@ compiled in as `parameter` statements (`isecbeg=1, isecend=51, jsec=127`,
 not a namelist setting. Indices are located with
 `analyses/DINO_1deg/00_grid_and_cost_sections.ipynb`.
 
-`useGrdchk = .TRUE.`, so **every adjoint job also runs the finite-difference
-gradient check** and pays for it — a 30-day adjoint recorded 18,622 forward-step
-calls against the 1,440 the adjoint itself needs. Check this first if a run seems
-to be doing more work than expected.
+Two verified subtleties of what `fc` actually measures (2026-08-30; full
+statement in the root `CLAUDE.md` and in
+`analyses/DINO_1deg/03_adjoint/05_kappa_v_ensemble/ensemble_common.py`):
+`pkg/cost` averages only the **final 30 days** of the run (`lastinterval`
+default, not overridden in `data.cost`), and the per-level wet-count
+normalisation is computed **per MPI tile**, so `fc` depends on the domain
+decomposition — comparable across runs only at fixed `nPx`/`nPy`.
+
+`useGrdchk = .FALSE.` in `input_tap/data.pkg` since 2026-08-28 (verified
+bit-identical `ADJ*`/`adxx*` output; saves 8.2 h per 5-yr adjoint). It had been
+`.TRUE.`, and with it on every adjoint job also ran the finite-difference
+gradient check — a 30-day adjoint recorded 18,622 forward-step calls against
+the 1,440 the adjoint itself needs. `SOMA_1deg` still runs with it on.
 
 **The check does not currently verify anything.** It perturbs `xx_theta` at
 `iGloPos=4, jGloPos=8, kGloPos=1`, but the cost section is at `j=127` and
