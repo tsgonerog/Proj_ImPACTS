@@ -279,12 +279,29 @@ bare one** — the bare one is regenerated on every build and your edits vanish.
 | `autodiff_inadmode_set_ad.F` | applies the `inAd*` parameters entering adjoint mode |
 | `AUTODIFF_PARAMS.h` | declares them (`_OG` has no `inAd*`; the ASTE variant adds them — this is what `build_tapAdj_adjViscBoost.sh` selects) |
 | `monitor_ad.F` | adjoint monitor output |
+| `stubs_tap_adj.F` | override of `pkg/tapenade/stubs_tap_adj.F` implementing the five `ADEXCH_*` adjoint halo exchanges (see below) |
 | `ini_procs.F` | tile/process setup |
 | `SIZE.h` | grid and decomposition (`_mpi` staged; `_serial` present but unused) |
 | `CTRL_SIZE.h` | control-vector dimensions |
 | `DIAGNOSTICS_SIZE.h` | diagnostics buffer sizes |
 | `packages.conf` | which packages compile — drops `cd_code`, adds `tapenade` and the `adjoint` group (`autodiff, ctrl, cost, grdchk`) |
 | `*_OPTIONS.h` | CPP flags per package. `COST_OPTIONS.h` is the one to check: it defines `ALLOW_COST_ATLANTIC_HEAT` and `..._DOMASS` |
+
+**`stubs_tap_adj.F` exists because upstream ships the `ADEXCH_*` routines as
+no-ops.** `addummy_in_stepping` calls them to fold tile-halo adjoint
+contributions back into the owning interior cells before each `ADJ*` dump; as
+no-ops they left 1–2-cell stripes of partial sums pinned to every exchange
+seam — the internal tile edges (`i=17|18`, `34|35`; every `j` multiple of 22)
+and the zonal periodic seam of the re-entrant channel (`i∈{1,2,50,51}`,
+`j≈13–44`), worst on U-grid fields. The override implements them with the
+same `EXCH2_*_CUBE_AD` routines the adjoint dynamics already uses, and is
+picked up by `-mods=../code_tap` shadowing, so the vendored tree stays
+pristine. The dynamics never called the stubs, so this changes *only* the
+dumps: validated 2026-08-31 (run 31022 vs 30994), `fc` and all 33 `adxx_*`
+files bitwise identical, `ADJ*` differences confined to the seams.
+**`ADJ*` output written before job 31022 still carries the artifact** — treat
+values within ~2 cells of those seams as unreliable in older runs; their
+`adxx_*` and `fc` are fine.
 
 ### `input_tap/` — adjoint namelists
 

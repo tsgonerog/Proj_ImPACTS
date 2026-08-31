@@ -269,6 +269,26 @@ while analysing the kappa_v ensemble; details and the validating proxy in
 
 **KPP and GM/Redi are off in every adjoint run.** Both DINO and `SOMA_1deg` set `useKPP`/`useGMRedi` `.FALSE.` statically in `input_tap/data.pkg`, and their submit scripts carry the equivalent `sed -i` lines commented out. The `useKPPinAdMode`/`useGMRediInAdMode` flags in `data.autodiff` are therefore inert as currently configured. Check both the namelist and the submit script before concluding a package is active — the now-archived `sr_soma` setup did it the other way round, leaving the namelist `.TRUE.` and disabling the packages from the submit script instead.
 
+**DINO's `code_tap/stubs_tap_adj.F` overrides the pkg/tapenade copy — and `ADJ*`
+dumps written before job 31022 (2026-08-31) carry a tile-edge artifact.**
+Upstream ships the five `ADEXCH_*` adjoint halo exchanges as no-op stubs
+(printing "Called not yet defined"); the `ADJ*` dump path calls them to fold
+tile-halo adjoint contributions into the owning interior cells before writing,
+so every pre-fix dump keeps partial sums in the 1–2 cells straddling each
+exchange seam: `i=17|18`, `34|35`, every `j` multiple of 22, and the channel's
+zonal periodic seam (`i∈{1,2,50,51}`, `j≈13–44`), worst on U-grid fields
+(shared C-grid face column). This was **dump-only**: the adjoint dynamics uses
+its own correct path (`EXCH2_*_CUBE_AD` via the Tapenade-generated
+`EXCH2_*_CUBE_B`), so `fc` and `adxx_*` were never affected — the fix
+(implementing the stubs with those same `_AD` routines, via `-mods` same-name
+shadowing, keeping the vendored tree pristine) was validated with run 31022 vs
+30994: `fc` and all 33 `adxx_*` files bitwise identical, `ADJ*` differences
+confined to the seams. When reading `ADJ*` from older runs (including 28486,
+30995 and the kappa_v ensemble), mask ~2 cells around those seams. Do not
+"clean up" the override into `MITgcm/pkg/tapenade/` — that would create a
+modified-upstream deviation the verification procedure above flags. SOMA is
+single-tile serial (no seams) and does not need the override.
+
 ## Verifying correctness
 
 There are no unit tests. Four things stand in for them, and their status as of
