@@ -2,7 +2,8 @@
 # Adjoint built for ADJOINT-MODE VISCOSITY INFLATION.
 #   sources : code_tap/ + input_tap/  ->  build_tapAdj_adjViscBoost/mitgcmuv_tap_adj
 #
-# Same patched genmake2 as build_tapAdj.sh, but stages the ASTE-derived
+# Same stock genmake2 + flow_tap_local hook wiring as build_tapAdj.sh (see
+# there for how the ADJ* dump call is generated), but stages the ASTE-derived
 # AUTODIFF_PARAMS.h / autodiff_readparms.F / autodiff_inadmode_set_ad.F, which
 # add the inAd*/outAd* parameters. Those let the model run with larger viscosity
 # and diffusivity during the adjoint sweep than in the forward - the standard
@@ -39,7 +40,7 @@ cp code_tap/SIZE.h_mpi code_tap/SIZE.h
 cp code_tap/AUTODIFF_PARAMS.h_aste_90x150x60 code_tap/AUTODIFF_PARAMS.h
 cp code_tap/autodiff_readparms.F_aste_90x150x60 code_tap/autodiff_readparms.F
 cp code_tap/autodiff_inadmode_set_ad.F_adapted_frm_aste_90x150x60 code_tap/autodiff_inadmode_set_ad.F
-cp code_tap/forward_step_b.f_modified_mpi code_tap/forward_step_b.f_modified
+cp code_tap/autodiff_inadmode_unset_ad.F_adapted_frm_aste_90x150x60 code_tap/autodiff_inadmode_unset_ad.F
 
 # MPI_OPTFILE is defaulted by machine_env.sh; this catches a machine with none.
 if [ -z "$MPI_OPTFILE" ] || [ ! -f "$MPI_OPTFILE" ]; then
@@ -66,7 +67,7 @@ case "$use_TapProfile" in
     "NO")
         echo "Not Using Tapenade Profiling Tool"
         cp code_tap/the_model_main.F_OG code_tap/the_model_main.F
-        GENMAKE_SCRIPT="genmake2_override_forward_step_b"
+        GENMAKE_SCRIPT="genmake2"
         ;;
 
     "YES")
@@ -99,15 +100,40 @@ cd build_tapAdj_adjViscBoost || { echo "Failed to enter build_tapAdj_adjViscBoos
 # Clean any previous build (ignore if Makefile not created yet)
 make CLEAN || true
 
-# Configure the build (this creates the Makefile here)
+# Configure the build (this creates the Makefile here); -tap_extra injects
+# the setup-local external library that makes Tapenade generate the ADJ*
+# dump-hook call (see build_tapAdj.sh).
 "$MITGCM_ROOT/tools/$GENMAKE_SCRIPT" -mpi -tap \
     -rd="$MITGCM_ROOT" \
     -of="$MPI_OPTFILE" \
     -mods=../code_tap \
-    -adof="$MITGCM_ROOT/tools/adjoint_options/adjoint_tap"
+    -adof="$MITGCM_ROOT/tools/adjoint_options/adjoint_tap" \
+    -tap_extra "-ext ../code_tap/flow_tap_local"
 
 # Generate dependency list
 make depend
 
 # Build the adjoint model using 8 threads
 make -j 8 tap_adj
+
+# Same generated-call checks as build_tapAdj.sh: each hook's _B argument
+# list must match its hand-written routine; F77 would silently misalign a
+# mismatch, so fail loudly instead.
+check_gen_call() {
+    local name=$1 expect=$2 n
+    n=$(awk -v pat="CALL ${name}\\\\(" '$0 ~ pat {f=1}
+         f{buf=buf $0; if (index($0,")")) exit}
+         END{if (buf=="") {print 0} else {print gsub(/,/,",",buf)+1}}' \
+        forward_step_b.f)
+    if [ "${n:-0}" -ne "$expect" ]; then
+        echo "ERROR: generated CALL ${name} in forward_step_b.f has ${n:-0}"
+        echo "       arguments, expected ${expect}. Align the hand-written"
+        echo "       routine with the generated call before using this"
+        echo "       executable."
+        exit 1
+    fi
+    echo "OK: generated ${name} call has ${expect} arguments."
+}
+check_gen_call TAP_DUMMY_IN_STEPPING_B 25
+check_gen_call TAP_INADMODE_SET_B 5
+check_gen_call TAP_INADMODE_UNSET_B 5

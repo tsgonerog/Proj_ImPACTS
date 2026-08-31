@@ -141,3 +141,49 @@ C--   end printing switch status (if debugLevel >= debLevC).
 
       RETURN
       END
+
+#ifdef ALLOW_TAPENADE
+CBOP
+C     !ROUTINE: TAP_INADMODE_SET_B
+C     !INTERFACE:
+      SUBROUTINE TAP_INADMODE_SET_B( uVel, uVelb,
+     I                               myTime, myIter, myThid )
+C     !DESCRIPTION:
+C     Reverse-sweep body of the Tapenade mode-switch hook
+C     TAP_INADMODE_SET (called at the END of FORWARD_STEP, so this
+C     runs at the START of each backward step): enter adjoint mode.
+C     uVel is only the activity vehicle that makes Tapenade generate
+C     this call (declared read-then-written in flow_tap_local); uVelb
+C     must be left untouched (identity adjoint). The argument list
+C     must match the generated call in forward_step_b.f; the build
+C     script asserts it.
+C     !USES:
+      IMPLICIT NONE
+#include "SIZE.h"
+#include "EEPARAMS.h"
+C     !INPUT/OUTPUT PARAMETERS:
+      _RL uVel  (1-OLx:sNx+OLx,1-OLy:sNy+OLy,Nr,nSx,nSy)
+      _RL uVelb (1-OLx:sNx+OLx,1-OLy:sNy+OLy,Nr,nSx,nSy)
+      _RL     myTime
+      INTEGER myIter
+      INTEGER myThid
+CEOP
+      CALL ADAUTODIFF_INADMODE_SET( myTime, myIter, myThid )
+      RETURN
+      END
+
+C     No-op tangent-linear counterpart so `make tap_tlm` links; verify
+C     the argument list against the generated call before first TLM use.
+      SUBROUTINE TAP_INADMODE_SET_D( uVel, uVeld,
+     I                               myTime, myIter, myThid )
+      IMPLICIT NONE
+#include "SIZE.h"
+#include "EEPARAMS.h"
+      _RL uVel  (1-OLx:sNx+OLx,1-OLy:sNy+OLy,Nr,nSx,nSy)
+      _RL uVeld (1-OLx:sNx+OLx,1-OLy:sNy+OLy,Nr,nSx,nSy)
+      _RL     myTime
+      INTEGER myIter
+      INTEGER myThid
+      RETURN
+      END
+#endif /* ALLOW_TAPENADE */

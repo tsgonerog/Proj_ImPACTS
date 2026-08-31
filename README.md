@@ -126,8 +126,7 @@ DINO_1deg/
 │
 ├── build_frd.sh                   ─┐
 ├── build_tapAdj.sh                 │  build drivers,
-├── build_tapAdj_adjViscBoost.sh    │  one per build directory
-├── build_tapAdj_rawTapenade.sh    ─┘
+├── build_tapAdj_adjViscBoost.sh   ─┘  one per build directory
 │
 ├── submit_frd.sh                  ─┐
 ├── submit_tapAdj.sh                │  SLURM job scripts
@@ -156,7 +155,6 @@ mismatched configuration, so this is the table to check first:
 | `build_frd.sh` | `build_frd/` | `mitgcmuv` | `submit_frd.sh` |
 | `build_tapAdj.sh` | `build_tapAdj/` | `mitgcmuv_tap_adj` | `submit_tapAdj.sh` |
 | `build_tapAdj_adjViscBoost.sh` | `build_tapAdj_adjViscBoost/` | `mitgcmuv_tap_adj` | `submit_tapAdj_adjViscBoost.sh` |
-| `build_tapAdj_rawTapenade.sh` | `build_tapAdj_rawTapenade/` | `mitgcmuv_tap_adj` | *(none — control build)* |
 
 **`SOMA_1deg` — serial only**
 
@@ -181,7 +179,7 @@ itself:
 | --- | --- | --- |
 | `frd` / `tapAdj` | scripts, build dirs, run dirs | forward model / Tapenade adjoint |
 | *(unmarked)* | scripts and build dirs, both setups | the working configuration. Only deviations carry a token |
-| `rawTapenade` | control build, both setups | stock `genmake2`, so Tapenade's generated `forward_step_b.f` is compiled uncorrected. Nothing submits it |
+| `rawTapenade` | control build, SOMA only | stock `genmake2`, so Tapenade's generated `forward_step_b.f` is compiled uncorrected. Nothing submits it. DINO retired its control in the 2026-08-31 dump-hook redesign: there, raw Tapenade output *is* the working configuration |
 | `adjViscBoost` | DINO build *and* submit script (SOMA has none) | larger viscosity/diffusivity during the adjoint sweep than in the forward (`viscFacInAd = 10` vs `viscFacInFw = 1`), which keeps a long adjoint from blowing up. Build supplies the machinery, namelist supplies the values — the two scripts are a pair |
 | `adjViscBoost` | DINO only | SOMA has no such variant |
 | `visc2x`, `viscD2x_Zref`, `viscRef`, `viscGrid<v>` | notebooks, scratch run dirs | the viscosity setting the run used — see `analyses/README.md` |
@@ -193,9 +191,48 @@ itself:
 This is the part of the repository that differs most from stock MITgcm, and the
 reason the model source is vendored rather than referenced.
 
-**Patched `genmake2`.** `MITgcm/tools/` contains `genmake2_override_forward_step_b`
-alongside the original `genmake2` — named for what it does, and sorting beside
-the file it is a copy of. It is the only such variant, and the only one needed.
+**The ADJ* dump hook.** TAF produces the `ADJ*` sensitivity dumps through a
+directive (`ADNAME`/`REQUIRED` in `pkg/autodiff/dummy_in_stepping.flow`) that
+forces a hand-written adjoint routine into the reverse sweep even though the
+hook `DUMMY_IN_STEPPING(myTime,myIter,myThid)` carries no active data. Tapenade
+has no such directive — its `-ext` library is purely data-flow driven, and a
+passive external is dropped from the backward sweep. The two setups bridge that
+gap differently.
+
+**DINO — Tapenade-native (since 2026-08-31).** The hook's activity is made
+visible through its interface, which is the one mechanism Tapenade honours:
+`code_tap/forward_step.F` (a `-mods` shadow) passes the state and forcing
+fields to `TAP_DUMMY_IN_STEPPING(...)`, and `code_tap/flow_tap_local` — a
+setup-local Tapenade external library injected with
+`-tap_extra "-ext ../code_tap/flow_tap_local"` — declares those arguments
+active. Tapenade then generates `CALL TAP_DUMMY_IN_STEPPING_B(theta, thetab, …)`
+in the reverse sweep itself; the hand-written `_B` body in
+`code_tap/addummy_in_stepping.F` halo-folds and dumps its adjoint arguments.
+The same pattern drives the adjoint-mode switch hooks (`TAP_INADMODE_SET/UNSET`),
+which apply and revert the `inAd*` adjViscBoost parameters around every backward
+step — TAF did this via `ADAUTODIFF_INADMODE_*`, which nothing in a Tapenade
+build ever called, so adjViscBoost was silently inert before these hooks.
+DINO's adjoint builds therefore use **stock** `genmake2`, post-edit no
+generated file, and assert after every `make` that each generated `_B` call
+carries exactly the argument count the hand-written routines declare (F77
+would silently misalign a mismatch).
+
+**SOMA — patched `genmake2` (still).** `MITgcm/tools/` contains
+`genmake2_override_forward_step_b` alongside the original `genmake2` — named
+for what it does, and sorting beside the file it is a copy of. The patch is a
+single line, injected into the `adj_tap_all` make rule immediately after
+Tapenade runs, so a hand-edited frozen copy overwrites the generated
+`forward_step_b.f` before the AD sources are concatenated:
+
+```diff
++ cp ../code_tap/forward_step_b.f_modified forward_step_b.f
+```
+
+That frozen copy differs from raw Tapenade output by exactly one inserted
+`CALL DUMMY_IN_STEPPING_B(...)`; SOMA's `code_tap/` keeps the
+`adcommon.h`-based dump routine it reaches. Converting SOMA the DINO way is the
+natural follow-up, and until then the override script and SOMA's
+`forward_step_b.f_modified` must stay.
 
 checkpoint69f additionally carried `patched_ForTapProfile_genmake2` (Tapenade
 profiling) and `patched_AfterTapProfile_genmake2` (acting on the profiler's
@@ -205,19 +242,6 @@ passes flags straight to Tapenade, so both are options rather than files. See
 64-routine `-nocheckpoint` list that work produced, and keeps the two c69f
 originals as reference. They are full copies of the c69f `genmake2` and do not
 work here.
-
-The patch itself is a single line, injected into the `adj_tap_all` make rule
-immediately after Tapenade runs, so the hand-corrected copy overwrites the
-generated `forward_step_b.f` before the AD sources are concatenated:
-
-```diff
-+ cp ../code_tap/forward_step_b.f_modified forward_step_b.f
-```
-
-Tapenade differentiates `forward_step.F` automatically, but the generated
-reverse-mode routine needs manual correction; `code_tap/forward_step_b.f_modified`
-(with separate `_serial` and `_mpi` versions) is that correction, and the
-patched `genmake2` is how it survives a rebuild.
 
 **Which profiling mode to use** is selected at the top of the build script:
 
@@ -307,13 +331,12 @@ Build scripts **overwrite tracked files by copying variant siblings over them**:
 code_tap/SIZE.h_mpi                    -> code_tap/SIZE.h
 code_tap/AUTODIFF_PARAMS.h_OG          -> code_tap/AUTODIFF_PARAMS.h
 code_tap/autodiff_readparms.F_OG       -> code_tap/autodiff_readparms.F
-code_tap/forward_step_b.f_modified_mpi -> code_tap/forward_step_b.f_modified
 ```
 
 Both sides are tracked in git, so:
 
 - **Edit the suffixed variant, never the bare destination.** Edits to `SIZE.h`,
-  `AUTODIFF_PARAMS.h`, `autodiff_readparms.F` or `forward_step_b.f_modified`
+  `AUTODIFF_PARAMS.h` or `autodiff_readparms.F`
   vanish on the next build.
 - Running a build can dirty the working tree even when you authored nothing.
   `./tools/pre_push_check.sh` tells you when that has happened.
@@ -535,7 +558,7 @@ There are no unit tests. What has and has not been checked, as of 2026-08-30:
 | Check | Status | What it showed |
 | --- | --- | --- |
 | Forward reproducibility | **verified** | A 10-year `from_rest_visc2x` run reproduces the first 10 years of production run 28463 **bit-identically** — 161 field comparisons, four diagnostic streams, 1334 monitor values, AMOC series, all exactly zero. Re-verified 2026-08-28: the new spin-up 30983 reproduces 28463 |
-| Builds | **verified** | All six build directories compile clean; the `patched` builds carry the hand-corrected `forward_step_b.f` byte-for-byte, the `rawTapenade` controls do not |
+| Builds | **verified** | All build directories compile clean. DINO's adjoint builds generate the `TAP_DUMMY_IN_STEPPING_B` dump call natively (asserted by the build scripts); SOMA's `patched` build carries the hand-corrected `forward_step_b.f` byte-for-byte, its `rawTapenade` control does not |
 | Adjoint runs end to end | **verified** | 30-day adjoint from the 180-year pickup writes `ADJ*` and `adxx*`, peak sensitivity on the cost section at `i=2, j=127, k=26`. The 5-yr reference adjoint 30995 reproduces the earlier 28486 bit-identically |
 | Adjoint **correctness** | **not verified** | The gradient check fails by ~8 orders of magnitude — and always has |
 | Adjoint vs finite differences (κ_v ensemble) | **executed 2026-08-29, fails as a validation** | The linear gradient mispredicts every member's ΔJ (wrong sign for 4 of 7) — dominated by physical nonlinearity of the 10-yr state adjustment, so it neither confirms nor refutes the adjoint. Four member adjoints also blow up (linearisation instability). Full analysis: `analyses/DINO_1deg/03_adjoint/05_kappa_v_ensemble/` |

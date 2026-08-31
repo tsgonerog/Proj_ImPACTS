@@ -20,11 +20,16 @@ plain `ls`.
 | --- | --- | --- |
 | `autodiff_inadmode_set_ad.F_aste_90x150x60` | The **ASTE original**, before porting to checkpoint69m | Superseded by the ported copy — see lineage below |
 | `the_model_main.F_ForTapProfile` | `the_model_main.F` instrumented for the Tapenade profiling tool | Profiling cannot be run here — see below |
+| `adcommon.h` | Hand-mirror of Tapenade's generated adjoint common blocks (`/DYNVARS_R_b/`, `Thetab`, …) | Obsoleted by the 2026-08-31 dump-hook redesign — see below |
+| `addummy_for_etan.F` | `DUMMY_FOR_ETAN_b` reading `EtaNb` from `adcommon.h`; would dump `ADJetan` | Was never called: raw Tapenade emits no `DUMMY_FOR_ETAN_B` call, so no run ever produced `ADJetan`. Cannot compile without the archived `adcommon.h` |
+| `monitor_ad.F` | `MONITOR_b`, an adjoint-state monitor over the `adcommon.h` commons | Same: nothing generated ever called it, and it needs the archived `adcommon.h` |
 
 **Lineage worth knowing.** `autodiff_inadmode_set_ad.F_aste_90x150x60` is the
 direct ancestor of the live `code_tap/autodiff_inadmode_set_ad.F_adapted_frm_aste_90x150x60`,
-which `build_tapAdj_adjViscBoost.sh` stages. Diffing the two shows exactly the
-c69f→c69m API port and nothing else:
+which `build_tapAdj_adjViscBoost.sh` stages. Diffing the two shows the
+c69f→c69m API port plus, since 2026-08-31, the appended `ALLOW_TAPENADE`
+wrapper block (`TAP_INADMODE_SET_B/_D`) that the mode-switch hooks added to
+every live variant. The port itself was:
 
 - `DIAGNOSTICS.h` + `DIAGNOSTICS_SIZE.h` → `DIAGNOSTICS_P2SHARE.h`
 - `CTRL_SIZE.h` added
@@ -39,6 +44,22 @@ this one survives. `the_model_main.F_ForTapProfile` would have to be copied into
 in this repository at all; they exist only in `Proj_ImPACTS_old` at
 `MITgcm_c69f/MITgcm/tools/`. This is why `use_TapProfile` in the build scripts
 works only in its `NO` mode.
+
+**On the 2026-08-31 dump-hook redesign files.** `adcommon.h`,
+`addummy_for_etan.F` and `monitor_ad.F` date from the era when the `ADJ*` dump
+call had to be hand-inserted into the generated `forward_step_b.f` and the
+adjoint state reached the dump routine through hand-mirrored common blocks.
+Since the redesign, the hook (`TAP_DUMMY_IN_STEPPING` in
+`code_tap/forward_step.F`, declared active in `code_tap/flow_tap_local`)
+receives the adjoint fields as explicit arguments, so `adcommon.h` — whose
+member ordering had to silently track Tapenade's generated commons — has no
+live consumer. The two `.F` files were *already dead before the redesign*
+(nothing in the generated adjoint ever called their `_b` routines; `ADJetan`
+was never produced by any Tapenade run). They are kept here as the starting
+point for a future `ADJetan` hook: that would be a second
+`TAP_DUMMY_FOR_ETAN`-style hook at the `DUMMY_FOR_ETAN` call site in
+`integr_continuity.F`, wired the same way as the main hook — not a revival of
+these files as they stand.
 
 ## `input_tap/`
 

@@ -3,15 +3,12 @@
 # include "CTRL_OPTIONS.h"
 #endif
 
-CBOP
-C !ROUTINE: ADAUTODIFF_INADMODE_SET
+C     Body identical to pkg/autodiff/autodiff_inadmode_unset_ad.F (c69m);
+C     the ALLOW_TAPENADE wrapper at the end is what this shadow adds.
 
-C !INTERFACE:
-      SUBROUTINE ADAUTODIFF_INADMODE_SET( myTime, myIter, myThid )
-
-C     !DESCRIPTION:
+      SUBROUTINE ADAUTODIFF_INADMODE_UNSET( myTime, myIter, myThid )
 C     *==========================================================*
-C     | SUBROUTINE ADAUTODIFF_INADMODE_SET
+C     | SUBROUTINE ADAUTODIFF_INADMODE_UNSET
 C     *==========================================================*
 
 C     !USES:
@@ -22,16 +19,18 @@ C     == Global variables ===
 #include "PARAMS.h"
 #include "AUTODIFF_PARAMS.h"
 #ifdef ALLOW_SEAICE
-# include "SEAICE_SIZE.h"
-# include "SEAICE_PARAMS.h"
+#include "SEAICE_SIZE.h"
+#include "SEAICE_PARAMS.h"
 #endif
 #ifdef ALLOW_CTRL
 # include "CTRL_SIZE.h"
 # include "CTRL.h"
 #endif
-#ifdef ALLOW_DIAGNOSTICS
-# include "DIAGNOSTICS_P2SHARE.h"
-#endif /* ALLOW_DIAGNOSTICS */
+#ifdef ALLOW_AUTODIFF_MONITOR
+# ifdef ALLOW_DIAGNOSTICS
+#  include "DIAGNOSTICS_P2SHARE.h"
+# endif
+#endif /* ALLOW_AUTODIFF_MONITOR */
 
 C     !INPUT/OUTPUT PARAMETERS:
 C     myTime    :: Current time in simulation
@@ -43,100 +42,95 @@ C     myThid    :: my Thread Id number
 
 C     !LOCAL VARIABLES:
       CHARACTER*(MAX_LEN_MBUF) msgBuf
-#ifdef ALLOW_DIAGNOSTICS
-      _RL wrTime
-      INTEGER wrIter
-#endif /* ALLOW_DIAGNOSTICS */
-CEOP
 
-C--   Set backward-sweep switch:
-      inAdMode  = .TRUE.
-
-#ifdef ALLOW_DIAGNOSTICS
+#ifdef ALLOW_AUTODIFF_MONITOR
+# ifdef ALLOW_DIAGNOSTICS
+      LOGICAL modelEnd
+C --- Write the fields out here
       IF ( useDiag4AdjOutp ) THEN
-C-    Consistent with S/R DIAGNOSTICS_WRITE_ADJ and where both S/R are called:
-        wrIter = myIter - 1
-        wrTime = myTime - deltaTClock
-        CALL DIAGNOSTICS_SWITCH_ONOFF( -1, wrTime, wrIter, myThid )
+C --- Grab modelEnd, necessary input for diagnostics routines
+       modelEnd = myTime.EQ.startTime .OR. myIter.EQ.nIter0
+       CALL TIMER_START('I/O (WRITE)        [ADJOINT LOOP]', myThid )
+       CALL DIAGNOSTICS_WRITE_ADJ( modelEnd, myTime, myIter, myThid )
+       CALL TIMER_STOP( 'I/O (WRITE)        [ADJOINT LOOP]', myThid )
       ENDIF
-#endif /* ALLOW_DIAGNOSTICS */
+# endif /* ALLOW_DIAGNOSTICS */
+#endif /* ALLOW_AUTODIFF_MONITOR */
 
-C--   Update some pkg and scheme switches:
-      useKPP    = useKPPinAdMode
-      useGMRedi = useGMRediInAdMode
-      useSEAICE = useSEAICEinAdMode
-      useGGL90  = useGGL90inAdMode
-      useSALT_PLUME = useSALT_PLUMEinAdMode
+      inAdMode  = .FALSE.
+
+      useKPP    = useKPPinFwdMode
+      useGMRedi = useGMRediInFwdMode
+      useSEAICE = useSEAICEinFwdMode
+      useGGL90    = useGGL90inFwdMode
+      useSALT_PLUME    = useSALT_PLUMEinFwdMode
 #ifdef ALLOW_SEAICE
       IF ( SEAICEuseFREEDRIFTswitchInAd ) THEN
-        SEAICEuseFREEDRIFT = .NOT.SEAICEuseFREEDRIFTinFwdMode
+        SEAICEuseFREEDRIFT = SEAICEuseFREEDRIFTinFwdMode
         SEAICEuseLSR       = .NOT.SEAICEuseFREEDRIFT
       ENDIF
       IF ( SEAICEuseDYNAMICSswitchInAd ) THEN
-        SEAICEuseDYNAMICS  = .NOT.SEAICEuseDYNAMICSinFwdMode
+        SEAICEuseDYNAMICS  = SEAICEuseDYNAMICSinFwdMode
       ENDIF
-      SEAICEadjMODE=SEAICEapproxLevInAd
-C     SIregFacInAd = UNSET_RL by default, so we need to check this here
-      IF ( SIregFacInAd .NE. UNSET_RL ) SINegFac = SIregFacInAd
+      SEAICEadjMODE=0
+C     SIregFacInFw = UNSET_RL by default, so we need to check this here
+      IF ( SIregFacInFw .NE. UNSET_RL ) SINegFac = SIregFacInFw
 #endif /* ALLOW_SEAICE */
-      viscFacAdj=viscFacInAd
+      viscFacAdj=viscFacInFw
 
       IF ( debugLevel.GE.debLevC ) THEN
-C--   Print status of some switches:
-
        WRITE(msgBuf,'(A,L5)')
-     &      'S/R ADAUTODIFF_INADMODE_SET: useKPP    =', useKPP
+     &      'S/R ADAUTODIFF_INADMODE_UNSET: useKPP    =', useKPP
        CALL PRINT_MESSAGE( msgBuf, standardMessageUnit,
      &                     SQUEEZE_RIGHT, myThid )
        WRITE(msgBuf,'(A,L5)')
-     &      'S/R ADAUTODIFF_INADMODE_SET: useGMRedi =', useGMRedi
+     &      'S/R ADAUTODIFF_INADMODE_UNSET: useGMRedi =', useGMRedi
        CALL PRINT_MESSAGE( msgBuf, standardMessageUnit,
      &                     SQUEEZE_RIGHT, myThid )
        WRITE(msgBuf,'(A,L5)')
-     &      'S/R ADAUTODIFF_INADMODE_SET: useSEAICE =', useSEAICE
+     &      'S/R ADAUTODIFF_INADMODE_UNSET: useSEAICE =', useSEAICE
        CALL PRINT_MESSAGE( msgBuf, standardMessageUnit,
      &                     SQUEEZE_RIGHT, myThid )
        WRITE(msgBuf,'(A,L5)')
-     &      'S/R ADAUTODIFF_INADMODE_SET: useGGL90    =', useGGL90
+     &      'S/R ADAUTODIFF_INADMODE_UNSET: useGGL90    =', useGGL90
        CALL PRINT_MESSAGE( msgBuf, standardMessageUnit,
      &                     SQUEEZE_RIGHT, myThid )
        WRITE(msgBuf,'(A,L5)')
-     &      'S/R ADAUTODIFF_INADMODE_SET: useSALT_PLUME    =',
+     &      'S/R ADAUTODIFF_INADMODE_UNSET: useSALT_PLUME    =',
      &      useSALT_PLUME
        CALL PRINT_MESSAGE( msgBuf, standardMessageUnit,
      &                     SQUEEZE_RIGHT, myThid )
 
        WRITE(msgBuf,'(A,1PE21.14)')
-     &      'S/R ADAUTODIFF_INADMODE_SET: viscFacAdj =',viscFacAdj
+     &      'S/R ADAUTODIFF_INADMODE_UNSET: viscFacAdj =',viscFacAdj
        CALL PRINT_MESSAGE( msgBuf, standardMessageUnit,
      &                     SQUEEZE_RIGHT, myThid )
 
 #ifdef ALLOW_SEAICE
        IF ( SEAICEuseFREEDRIFTswitchInAd ) THEN
-         WRITE(msgBuf,'(2A,L5)') 'S/R ADAUTODIFF_INADMODE_SET: ',
+         WRITE(msgBuf,'(2A,L5)') 'S/R ADAUTODIFF_INADMODE_UNSET: ',
      &        'SEAICEuseFREEDRIFT =', SEAICEuseFREEDRIFT
          CALL PRINT_MESSAGE( msgBuf, standardMessageUnit,
      &                       SQUEEZE_RIGHT, myThid )
-         WRITE(msgBuf,'(2A,L5)') 'S/R ADAUTODIFF_INADMODE_SET: ',
+         WRITE(msgBuf,'(2A,L5)') 'S/R ADAUTODIFF_INADMODE_UNSET: ',
      &        'SEAICEuseLSR       =', SEAICEuseLSR
          CALL PRINT_MESSAGE( msgBuf, standardMessageUnit,
      &                       SQUEEZE_RIGHT, myThid )
        ENDIF
        IF ( SEAICEuseDYNAMICSswitchInAd ) THEN
-         WRITE(msgBuf,'(2A,L5)') 'S/R ADAUTODIFF_INADMODE_SET: ',
+         WRITE(msgBuf,'(2A,L5)') 'S/R ADAUTODIFF_INADMODE_UNSET: ',
      &        'SEAICEuseDYNAMICS =', SEAICEuseDYNAMICS
          CALL PRINT_MESSAGE( msgBuf, standardMessageUnit,
      &                       SQUEEZE_RIGHT, myThid )
        ENDIF
        IF ( SEAICEapproxLevInAd.NE.0 ) THEN
-         WRITE(msgBuf,'(2A,I2)') 'S/R ADAUTODIFF_INADMODE_SET: ',
+         WRITE(msgBuf,'(2A,I2)') 'S/R ADAUTODIFF_INADMODE_UNSET: ',
      &        'SEAICEadjMODE =', SEAICEadjMODE
          CALL PRINT_MESSAGE( msgBuf, standardMessageUnit,
      &                       SQUEEZE_RIGHT, myThid )
        ENDIF
 #endif /* ALLOW_SEAICE */
 
-C--   end printing switch status (if debugLevel >= debLevC).
       ENDIF
 
       RETURN
@@ -144,19 +138,20 @@ C--   end printing switch status (if debugLevel >= debLevC).
 
 #ifdef ALLOW_TAPENADE
 CBOP
-C     !ROUTINE: TAP_INADMODE_SET_B
+C     !ROUTINE: TAP_INADMODE_UNSET_B
 C     !INTERFACE:
-      SUBROUTINE TAP_INADMODE_SET_B( uVel, uVelb,
-     I                               myTime, myIter, myThid )
+      SUBROUTINE TAP_INADMODE_UNSET_B( uVel, uVelb,
+     I                                 myTime, myIter, myThid )
 C     !DESCRIPTION:
 C     Reverse-sweep body of the Tapenade mode-switch hook
-C     TAP_INADMODE_SET (called at the END of FORWARD_STEP, so this
-C     runs at the START of each backward step): enter adjoint mode.
-C     uVel is only the activity vehicle that makes Tapenade generate
-C     this call (declared read-then-written in flow_tap_local); uVelb
-C     must be left untouched (identity adjoint). The argument list
-C     must match the generated call in forward_step_b.f; the build
-C     script asserts it.
+C     TAP_INADMODE_UNSET (called at the START of FORWARD_STEP, so
+C     this runs at the END of each backward step): leave adjoint
+C     mode, restoring forward-mode parameters for the next
+C     checkpoint re-forward. uVel is only the activity vehicle that
+C     makes Tapenade generate this call (declared read-then-written
+C     in flow_tap_local); uVelb must be left untouched (identity
+C     adjoint). The argument list must match the generated call in
+C     forward_step_b.f; the build script asserts it.
 C     !USES:
       IMPLICIT NONE
 #include "SIZE.h"
@@ -168,14 +163,14 @@ C     !INPUT/OUTPUT PARAMETERS:
       INTEGER myIter
       INTEGER myThid
 CEOP
-      CALL ADAUTODIFF_INADMODE_SET( myTime, myIter, myThid )
+      CALL ADAUTODIFF_INADMODE_UNSET( myTime, myIter, myThid )
       RETURN
       END
 
 C     No-op tangent-linear counterpart so `make tap_tlm` links; verify
 C     the argument list against the generated call before first TLM use.
-      SUBROUTINE TAP_INADMODE_SET_D( uVel, uVeld,
-     I                               myTime, myIter, myThid )
+      SUBROUTINE TAP_INADMODE_UNSET_D( uVel, uVeld,
+     I                                 myTime, myIter, myThid )
       IMPLICIT NONE
 #include "SIZE.h"
 #include "EEPARAMS.h"

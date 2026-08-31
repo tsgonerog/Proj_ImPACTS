@@ -39,23 +39,34 @@ The toolchains name the differentiated result differently:
 | TAF | `ADDUMMY_IN_STEPPING` | `G_DUMMY_IN_STEPPING` |
 | Tapenade | `DUMMY_IN_STEPPING_B` | `DUMMY_IN_STEPPING_D` |
 
-`dummy_tap.F` supplies empty bodies for all four Tapenade-named variants. Its
-only job is to satisfy the linker: Tapenade's generated adjoint emits
-`CALL DUMMY_IN_STEPPING_B`, and without a definition the link fails. This is the
-same idiom as its former neighbour `pkg/tapenade/stubs_tap_adj.F`, whose header
-reads *"Subroutines with 'manual' derivatives to be called by the tapenade
-adjoint and tangent linear code — `*_B`: adjoint, `*_D`: tlm."* It would
-arguably have been better appended to that file than added as a new one.
+`dummy_tap.F` supplies empty bodies for all four Tapenade-named variants, in
+the idiom of its former neighbour `pkg/tapenade/stubs_tap_adj.F`: link stubs
+for hand-supplied derivatives. **A caveat established on 2026-08-31: raw
+Tapenade output does not actually call any of these.** The hooks are declared
+passive in `tools/TAP_support/flow_tap`, so Tapenade drops them from the
+backward sweep entirely — the calls only exist where something inserts them
+(SOMA's hand-patched `forward_step_b.f_modified` inserts the
+`DUMMY_IN_STEPPING_B` one). The stubs therefore satisfy a link demand that
+arises from patching, not from Tapenade itself; the `DUMMY_FOR_ETAN_B/_D`
+signatures (with `myTimeb/d`) suggest they were built against an earlier
+configuration where the hooks were undeclared and Tapenade conservatively
+activated `myTime`.
 
 ### Why it was removed, and why it must stay removed
 
-It is the **opposite choice** from what DINO and SOMA make. Both live setups
-carry `code_tap/addummy_in_stepping.F` and `code_tap/addummy_for_etan.F`, which
-define the same symbols — `DUMMY_IN_STEPPING_b`, `DUMMY_FOR_ETAN_b` — with real
-bodies that emit the `ADJtheta` / `ADJsalt` / `ADJetan` fields the analysis
-notebooks read. Neither file guards its `SUBROUTINE` statement behind an
-`#ifdef`, so putting `dummy_tap.F` back into `pkg/tapenade/` breaks both builds
-at the link step.
+It is the **opposite choice** from what the live setups make — though the two
+setups have since diverged (2026-08-31 dump-hook redesign):
+
+- **SOMA** still carries `code_tap/addummy_in_stepping.F` and
+  `code_tap/addummy_for_etan.F` defining the same symbols —
+  `DUMMY_IN_STEPPING_b`, `DUMMY_FOR_ETAN_b` — with real bodies. Putting
+  `dummy_tap.F` back breaks SOMA's build at the link step.
+- **DINO** no longer defines those symbols at all: its hooks are the renamed
+  `TAP_DUMMY_IN_STEPPING_B` etc., generated-call-driven, and its old
+  `addummy_for_etan.F` is archived in `DINO_1deg/00_archive/code_tap/`.
+  Reinstalling `dummy_tap.F` would not break DINO's link — but it would
+  reintroduce dead code that the redesign exists to remove, and it still
+  breaks SOMA.
 
 It is not a drop-in swap in any case: its `DUMMY_FOR_ETAN_D/_B` take four
 arguments (`myTime, myTimed/b, myIter, myThid` — Tapenade treating `myTime` as

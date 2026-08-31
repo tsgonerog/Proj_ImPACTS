@@ -90,7 +90,16 @@ mechanism — SOMA has a single `input_tap/data`.
 
 For what the individual `code_tap/` sources and `input_tap/` namelists do, see
 the **Reading the code** section of `../DINO_1deg/README.md` — the two setups
-share the same structure, and SOMA's `code_tap/` is a subset of DINO's.
+share the same structure. **Since the 2026-08-31 dump-hook redesign the two
+`code_tap/` directories implement the `ADJ*` dump differently**: SOMA still
+uses the old mechanism (`adcommon.h` + `addummy_in_stepping.F` reading
+Tapenade's adjoint commons, one call hand-inserted via
+`forward_step_b.f_modified` and the patched
+`genmake2_override_forward_step_b`), while DINO moved to Tapenade-native
+`TAP_*` hooks with stock `genmake2`. DINO's README section *"How the Tapenade
+hooks work"* describes the target state; converting SOMA the same way is the
+natural follow-up, and until then the override script and SOMA's
+`forward_step_b.f_modified` must not be deleted.
 
 The cost function is `code_tap/cost_atlantic_heat.F` with indices compiled in
 (`isecbeg=1, isecend=62, jsec=27` — a zonal section at ~40°N — and

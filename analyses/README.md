@@ -105,9 +105,9 @@ and both `README.md` and `CLAUDE.md` cite it by name.
 
 ### 03_adjoint
 
-All read `/scratch2/<user>/DINO_1deg_tapAdj_runs/`. Every one of these
-is a 5-year (1830-day) MPI adjoint; they differ in where they start and how
-viscosity is set.
+All read `/scratch2/<user>/DINO_1deg_tapAdj_runs/`. Notebooks 01–04 each
+read one 5-year (1830-day) MPI adjoint; they differ in where they start and how
+viscosity is set. 06 compares a half-year adjoint against the 5-yr reference.
 
 | Notebook | Run | Start (`nIter0`) | Viscosity / mods |
 | --- | --- | --- | --- |
@@ -115,6 +115,7 @@ viscosity is set.
 | `02_5yr_from_50yr_pickup_viscD2x_Zref.ipynb` | 24493 | 50-year pickup (878400) | `viscAhD` 2×, `viscAhZ` at reference |
 | `03_5yr_from_50yr_pickup_viscGrid1p8e-2_adjViscBoost.ipynb` | 28461 | 50-year pickup (878400) | `viscAhGrid=1.8E-2`, adjoint-mode visc boost |
 | `04_5yr_from_rest_viscGrid1p8e-2_adjViscBoost.ipynb` | 28453 | rest (0) | `viscAhGrid=1.8E-2`, adjoint-mode visc boost |
+| `06_0p5yr_from_180yr_pickup_visc2x_vs_5yr_ref.ipynb` | 31028 vs 30995 | 180-year pickup (3162240) | `visc2x`, Tapenade-native-hook build (31028); matched-lead comparison against the 5-yr reference 30995, seam-masked because 30995 predates the ADEXCH stubs fix. Figures/animations go to 31028's run directory |
 
 Settings in this table were read back from each run's own staged `data`
 namelist on scratch, not from the run-directory tag.

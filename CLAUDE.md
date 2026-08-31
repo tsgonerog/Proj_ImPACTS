@@ -44,7 +44,7 @@ A reference copy of the c69m tree sits outside the repo at `~/tools_and_software
 
 | Deviation | What |
 | --- | --- |
-| **added** `tools/genmake2_override_forward_step_b` | The patch. One line, `cp ../code_tap/forward_step_b.f_modified forward_step_b.f`, injected into the `adj_tap_all` rule — see "The genmake2 patch" below |
+| **added** `tools/genmake2_override_forward_step_b` | The patch. One line, `cp ../code_tap/forward_step_b.f_modified forward_step_b.f`, injected into the `adj_tap_all` rule — **SOMA-only since the DINO dump-hook redesign**; see "The ADJ* dump hook" below |
 | **removed** `pkg/tapenade/dummy_tap.F` | Collides with the setups' `code_tap/addummy_*.F`, which define the same symbols with real bodies. Archived at `MITgcm_c69m/00_archive/removed_from_MITgcm/pkg/tapenade/` — read that README before considering putting it back |
 
 So "do not assume a file matches upstream" is narrower than it sounds: the one added file is new alongside upstream, not an edit to it, and one file is missing. Anything else this project supplies is kept *outside* the vendored tree on purpose — the Perlmutter optfile lives in `tools/optfile_templates/` rather than `MITgcm/tools/build_options/`, so it is not mistaken for one of the 93 working upstream optfiles. Re-verify with the commands below rather than trusting this table.
@@ -101,9 +101,9 @@ cd MITgcm_c69m/mysetups/DINO_1deg
 ./build_tapAdj.sh                # -> build_tapAdj/mitgcmuv_tap_adj
 ```
 
-Both setups now name scripts action-first: `build_frd.sh`, `build_tapAdj.sh`, `build_tapAdj_rawTapenade.sh`, `build_tapAdj_adjViscBoost.sh` (DINO only), and `submit_*` counterparts. Optfiles come from `tools/machine_env.sh`, so nothing needs exporting. Every build script does the same five steps: stage variant files, `make CLEAN`, run a patched `genmake2` with `-tap -adof=<root>/tools/adjoint_options/adjoint_tap -mods=../code_tap`, `make depend`, `make -j 8 tap_adj`.
+Both setups now name scripts action-first: `build_frd.sh`, `build_tapAdj.sh`, `build_tapAdj_adjViscBoost.sh` (DINO only), `build_tapAdj_rawTapenade.sh` (SOMA only — DINO retired its control build in the dump-hook redesign), and `submit_*` counterparts. Optfiles come from `tools/machine_env.sh`, so nothing needs exporting. Every build script does the same five steps: stage variant files, `make CLEAN`, run `genmake2` (stock in DINO, plus `-tap_extra "-ext ../code_tap/flow_tap_local"`; the patched override in SOMA) with `-tap -adof=<root>/tools/adjoint_options/adjoint_tap -mods=../code_tap`, `make depend`, `make -j 8 tap_adj` (DINO's adjoint scripts then assert every generated hook call's argument count).
 
-**Parallelism is a property of the setup, not a flag you pass.** Only the adjoint build scripts that exist are usable: DINO is MPI-only, `SOMA_1deg` is serial-only. Both `SIZE.h` variants (and both `forward_step_b.f_modified_*` variants) are nonetheless present in most `code_tap/` directories, so finding `SIZE.h_serial` in the c69m DINO setup does not mean a serial adjoint build is wired up there — no script stages it and no submit script expects it.
+**Parallelism is a property of the setup, not a flag you pass.** Only the adjoint build scripts that exist are usable: DINO is MPI-only, `SOMA_1deg` is serial-only. Both `SIZE.h` variants are nonetheless present in most `code_tap/` directories, so finding `SIZE.h_serial` in the c69m DINO setup does not mean a serial adjoint build is wired up there — no script stages it and no submit script expects it.
 
 Build directories (`build*/`) are gitignored and fully reproducible. They are **not relocatable**: `genmake2` bakes the setup's absolute path into the generated `Makefile` (~23 references), so renaming or moving a setup directory invalidates any build inside it. Re-run the build script rather than trying to patch the `Makefile`.
 
@@ -116,12 +116,11 @@ code_tap/SIZE.h_mpi                  -> code_tap/SIZE.h
 code_tap/the_model_main.F_OG         -> code_tap/the_model_main.F
 code_tap/AUTODIFF_PARAMS.h_OG        -> code_tap/AUTODIFF_PARAMS.h
 code_tap/autodiff_readparms.F_OG     -> code_tap/autodiff_readparms.F
-code_tap/forward_step_b.f_modified_mpi -> code_tap/forward_step_b.f_modified
 ```
 
 Both sides are tracked in git. So:
 
-- **Edit the suffixed variant, never the bare destination file** — `SIZE.h`, `the_model_main.F`, `AUTODIFF_PARAMS.h`, `autodiff_readparms.F`, `autodiff_inadmode_set_ad.F`, `forward_step_b.f_modified` are all regenerated and your edits will vanish on the next build.
+- **Edit the suffixed variant, never the bare destination file** — `SIZE.h`, `the_model_main.F`, `AUTODIFF_PARAMS.h`, `autodiff_readparms.F`, `autodiff_inadmode_set_ad.F` are all regenerated and your edits will vanish on the next build.
 - Running any build script dirties the working tree even when nothing was authored. Check `git diff` before assuming a change is yours.
 
 Suffix meanings: `_mpi` / `_serial` (parallelism), `_OG` (original) vs `_aste_90x150x60` / `_adapted_frm_aste_90x150x60` (adapted from the ASTE regional setup — this is what the `adjViscBoost` variant selects), `_ForTapProfile` (Tapenade profiling build).
@@ -130,11 +129,12 @@ Suffix meanings: `_mpi` / `_serial` (parallelism), `_OG` (original) vs `_aste_90
 
 `genmake2` symlinks most staged sources into the build directory
 (`build_x/AUTODIFF_PARAMS.h -> ../code_tap/AUTODIFF_PARAMS.h`) rather than copying
-them. Only files the patch writes explicitly, such as `forward_step_b.f`, are real
-copies. **Building a second variant re-stages `code_tap/` and silently repoints
-every earlier build's symlinks.** After building `adjViscBoost` and then `rawTapenade`,
-the adjViscBoost build directory's headers resolve to the `_OG` variants; running
-`make` there would recompile it as a plain build.
+them. Only files written into the build directory itself — Tapenade's generated
+`*_b.f`, and in SOMA the patch-copied `forward_step_b.f` — are real files.
+**Building a second variant re-stages `code_tap/` and silently repoints
+every earlier build's symlinks.** After building `adjViscBoost` and then the plain
+`build_tapAdj.sh`, the adjViscBoost build directory's headers resolve to the `_OG`
+variants; running `make` there would recompile it as a plain build.
 
 The already-compiled `.o` and generated `.f` files are unaffected — those are real
 files frozen at compile time, and they are the reliable evidence of what a build
@@ -145,24 +145,23 @@ Practical consequence: **build variants in the order you want `code_tap/` left i
 and never `make` in an older build directory after building a different variant —
 re-run its build script instead.
 
-### The genmake2 patch
+### The ADJ* dump hook — Tapenade-native in DINO, patched genmake2 in SOMA
 
-The patch is one injected line that overrides Tapenade's generated reverse-mode routine with a hand-corrected one:
+The `ADJ*` sensitivity dumps exist because TAF's `.flow` directives (`ADNAME`/`REQUIRED`) can force a hand-written adjoint routine into the reverse sweep even though the hook `DUMMY_IN_STEPPING(myTime,myIter,myThid)` carries no active data. Tapenade has no such directive — its `-ext` library is purely data-flow driven, so a passive external is simply dropped from the backward sweep. The two setups bridge that gap differently:
 
-```
-cp ../code_tap/forward_step_b.f_modified forward_step_b.f
-```
+**DINO (since the 2026-08-31 redesign): Tapenade generates the hook calls itself.** The pattern covers **three** TAF hooks — the `ADJ*` dump (`DUMMY_IN_STEPPING`) and the two adjoint-mode switches (`AUTODIFF_INADMODE_SET`/`UNSET`, whose TAF-named adjoints apply/revert the `inAd*` adjViscBoost parameters at the start/end of every backward step; they were dead code under Tapenade before this, so adjViscBoost never actually boosted). The pieces in `code_tap/`, wired by `build_tapAdj.sh`/`build_tapAdj_adjViscBoost.sh` with **stock** `genmake2`:
 
-Tapenade differentiates `forward_step.F` automatically but the result needs manual correction; `forward_step_b.f_modified` is that correction and the patched `genmake2` is how it survives a rebuild.
+- `forward_step.F` — a `-mods` shadow that, under `#ifdef ALLOW_TAPENADE`, calls `TAP_DUMMY_IN_STEPPING(theta, salt, uVel, vVel, wVel, fu, fv, Qnet, Qsw, EmPmR, diffKr, myTime, myIter, myThid)` in the `ALLOW_AUTODIFF_MONITOR` block, `TAP_INADMODE_UNSET(uVel, …)` at step start and `TAP_INADMODE_SET(uVel, …)` at step end (the stock TAF hooks otherwise). `uVel` in the mode-switch hooks is only the activity vehicle that forces `_B` generation.
+- `tap_dummy_in_stepping.F`, `tap_inadmode.F` — the forward no-op bodies. Must never appear in an `*_ad_diff.list`.
+- `flow_tap_local` — Tapenade external library declaring the 11 field args active (read-then-written), passed via `-tap_extra "-ext ../code_tap/flow_tap_local"`. Because of it, Tapenade emits `CALL TAP_DUMMY_IN_STEPPING_B(theta, thetab, …)` in `forward_step_b.f` at the reverse-sweep mirror of the forward call.
+- `addummy_in_stepping.F` — hand-written `TAP_DUMMY_IN_STEPPING_B`: ADEXCH-folds the adjoint arguments (the `stubs_tap_adj.F` implementations) and dumps them as `ADJ*`. The adjoint state arrives as arguments, so there is no `adcommon.h` mirror to keep in sync (the old one is archived in `00_archive/code_tap/`). The file also carries the TAF `ADDUMMY_IN_STEPPING` body in its `#else` branch, so the tool choice selects the right code by CPP alone.
+- `autodiff_inadmode_set_ad.F` and `autodiff_inadmode_unset_ad.F` (staged variants, `_OG` vs `_adapted_frm_aste_90x150x60`) — the TAF-named mode-switch bodies plus thin `TAP_INADMODE_SET_B`/`UNSET_B` wrappers that call them (and `_D` no-ops for TLM link safety). The `unset` pair is new with the hooks: ASTE's restore side (`outAd*`) was never ported because the whole mechanism was unreachable.
 
-**The working build is unmarked; `rawTapenade` is the control** — this is the naming axis that runs through every script and build directory, and it means exactly this patch:
+Each `_B` signature is fixed (dump hook: 25 arguments = 11 value/adjoint pairs + 3 passives; mode-switch hooks: 5 each) and **must match what Tapenade generates** — F77 would silently misalign a mismatch, so both build scripts count each generated call's arguments after `make` (`check_gen_call`) and fail loudly on a mismatch. Changing a hook's field set therefore means touching the shadow call, `flow_tap_local`, both `_B`/`_D` bodies *and* the assertion. The `rawTapenade` control build is retired in DINO — raw Tapenade output *is* the working configuration now, and no generated file is post-edited.
 
-- `*_patched.sh` → calls `$MITGCM_ROOT/tools/$GENMAKE_SCRIPT`, which resolves to `genmake2_override_forward_step_b`, so the hand-corrected `forward_step_b.f` wins. This is the working configuration; use it unless you specifically want otherwise.
-- `*_rawTapenade.sh` → calls stock `$MITGCM_ROOT/tools/genmake2` with otherwise identical flags, leaving Tapenade's own `forward_step_b.f` in place. It is the control build, kept to demonstrate what raw Tapenade output does.
+**SOMA (still on the old mechanism): the patched genmake2.** `tools/genmake2_override_forward_step_b` injects one line into the `adj_tap_all` rule — `cp ../code_tap/forward_step_b.f_modified forward_step_b.f` — replacing the generated file with a frozen copy whose only difference is one inserted `CALL DUMMY_IN_STEPPING_B(...)`; SOMA's `code_tap/` keeps the `adcommon.h`-based dump routine that call reaches. The old naming axis survives only there: `*_patched`-style scripts use the override, `*_rawTapenade` the stock `genmake2`. **Do not delete the override or SOMA's `forward_step_b.f_modified` until SOMA is converted the same way.**
 
-The two write to sibling build directories (`build_tapAdj/` vs `build_tapAdj_rawTapenade/`), so both can exist at once — check which executable a submit script's `build_dir` actually points at.
-
-`use_TapProfile` at the top of each build script selects the mode (`NO` / `YES` / `AFTER`) and picks both the `genmake2` variant and the matching `the_model_main.F`. **Only the `NO` mode works:** `MITgcm_c69m/MITgcm/tools/` has just `genmake2_override_forward_step_b`, and DINO's `code_tap/` has no `the_model_main.F_ForTapProfile`. Setting `use_TapProfile` to `YES` or `AFTER` fails.
+`use_TapProfile` at the top of each build script selects the mode (`NO` / `YES` / `AFTER`) and picks both the `genmake2` variant and the matching `the_model_main.F`. **Only the `NO` mode works** (in DINO it now resolves to stock `genmake2`, in SOMA to the override): `MITgcm_c69m/MITgcm/tools/` has no `patched_*TapProfile_genmake2`, and DINO's `code_tap/` has no `the_model_main.F_ForTapProfile`. Setting `use_TapProfile` to `YES` or `AFTER` fails.
 
 **That switch is the wrong shape for c69m and should not be repaired as-is.** It selects among three patched `genmake2` copies, which is how c69f had to do it. c69m's `genmake2` takes `-tap_extra`, passed straight through to the Tapenade command line (`genmake2:1568`, expanded by the rule at `:3751`), so both profiling modes are now flags rather than files:
 
@@ -197,7 +196,7 @@ Things to know before editing or submitting one:
 - **Submitting a job no longer modifies the repo.** The `sed -i` runs *after* the namelist is staged and targets the copy in the run directory, so `git status` stays clean. This is a correctness fix, not just hygiene: the script body executes on the compute node when the job **starts**, not when you submit, so the old in-place `sed` was shared mutable state between every queued job — two jobs starting close together would each stage whichever value landed last while their run-directory names each claimed their own. It bit SOMA hardest, where all five duration scripts patch the same `input_tap/data`. If a namelist diff ever appears after a run, something has regressed; `tools/pre_push_check.sh` watches for it.
 - **Per-run overrides go in the environment, not in an edit.** DINO's three scripts read `IMPACTS_TEST_CASE`, `IMPACTS_DURATION_DAYS`, `IMPACTS_MONITOR_FREQ_DAYS`, `IMPACTS_ADJ_MONITOR_FREQ_DAYS` and `IMPACTS_ADJ_DUMP_FREQ_DAYS`, defaulting to the committed values, so `IMPACTS_DURATION_DAYS=73200 ../../../tools/submit.sh submit_frd.sh` runs 200 years without touching a tracked file. `IMPACTS_TEST_CASE` uses `${VAR-default}` rather than `${VAR:-default}` so that an explicit empty value selects the live `input*/data`. SOMA is deliberately excluded — its five scripts are pre-made per duration, so you pick a script instead of editing one. The committed defaults are the cheap regression configurations, not the production ones.
 - **`nIter0` is *not* one of the auto-patched parameters — the start iteration and the pickup are coupled by hand.** `nIter0` is baked into whichever `data_<tag>` the `test_cases` string selects (`from_rest` → `0`, `from50yrPk` → `878400`, `from70yrPk` → `1229760`, `from180yrPk` → `3162240`), while the pickup itself is a hardcoded `ln -s` line further down the same script. Changing `test_cases` to a different `from*Pk` tag without editing that symlink to the matching `pickup.<nIter0>.{data,meta}` gets you a run that cannot find its pickup. Changing the duration is safe; changing the starting point is not.
-- **`adjViscBoost` is a build *and* a namelist variant, not just a build.** It runs the adjoint with larger viscosity/diffusivity than the forward (`viscFacInAd = 10.` vs `viscFacInFw = 1.`), which is what keeps a long adjoint from blowing up. `submit_tapAdj_adjViscBoost.sh` points `build_dir` at `build_tapAdj_adjViscBoost/` and additionally does `rm data.autodiff` + `cp "$base_dir/input_tap/variants/adjViscBoost/data.autodiff_adjViscBoost" data.autodiff` in the staged run directory (a copy from `variants/`, not a `mv` of an already-staged file). Pairing the plain submit script with the adjViscBoost build (or the reverse) silently runs a mismatched configuration.
+- **`adjViscBoost` is a build *and* a namelist variant, not just a build.** It runs the adjoint with larger viscosity/diffusivity than the forward (`viscFacInAd = 10.` vs `viscFacInFw = 1.`), intended to keep a long adjoint from blowing up. **Before the 2026-08-31 mode-switch hooks it was inert under Tapenade**: the only routine applying those parameters (`ADAUTODIFF_INADMODE_SET`) is TAF-named and was never called, so every earlier "adjViscBoost" configuration silently ran plain physics. The boost engages only in builds carrying the `TAP_INADMODE_*` hooks (see "The ADJ* dump hook" above). Validated 2026-08-31: with hooks + default parameters, run 31024 reproduces 31023 bitwise; with hooks + the adjViscBoost pairing, run 31025 vs plain 31026 (same from-rest config) keeps `fc` bit-identical (the boost never touches the forward trajectory) while every nonzero `adxx_*`/`ADJ*` differs and peak sensitivities are damped — the first functioning adjViscBoost run in this project. `submit_tapAdj_adjViscBoost.sh` points `build_dir` at `build_tapAdj_adjViscBoost/` and additionally does `rm data.autodiff` + `cp "$base_dir/input_tap/variants/adjViscBoost/data.autodiff_adjViscBoost" data.autodiff` in the staged run directory (a copy from `variants/`, not a `mv` of an already-staged file). Pairing the plain submit script with the adjViscBoost build (or the reverse) silently runs a mismatched configuration.
 - **Scratch paths come from `$SCRATCH_ROOT`, not literals.** Every live build and submit script sources `tools/machine_env.sh`, which sets `SCRATCH_ROOT`, `MPI_LAUNCHER`, `MPI_OPTFILE`, `SERIAL_OPTFILE` and `SBATCH_EXTRA` per machine (sverdrup by default, perlmutter when `$NERSC_HOST` is set). Do not reintroduce a literal `/scratch2/...`; add a case block instead. The notification address is still a hardcoded `#SBATCH --mail-user` directive.
 - **Submit with `tools/submit.sh <script>`, not `sbatch`.** Account, QOS, constraint and walltime cannot be `#SBATCH` directives without breaking the other machine, so the wrapper passes them on the command line where sbatch lets them override. On sverdrup `SBATCH_EXTRA` is empty, so it is `sbatch --export=ALL <script>` and plain `sbatch` still works. Extra arguments are placed **before** the script name, because sbatch's usage is `sbatch [OPTIONS] script [args]` and anything after the script name goes to the script instead — which is why `submit.sh <script> --test-only` used to submit a real job rather than dry-run it. `--export=ALL` is sbatch's default, made explicit because the jobs depend on it: `impacts_load_modules` is a no-op on sverdrup, so the Intel/MPI stack *and* the `IMPACTS_*` overrides both reach the compute node only through the inherited environment.
 - **The optfiles are machine-authoritative, deliberately.** `~/.bashrc` on sverdrup exports `MPI_OPTFILE`; honouring it would silently build Perlmutter with the Intel sverdrup optfile, so `machine_env.sh` overwrites it. `IMPACTS_MPI_OPTFILE` is the explicit override.
@@ -339,7 +338,8 @@ did re-verify bit-reproducibility (30995 ≡ 28486 exactly) and found that four
 member adjoints **blow up** (linearisation instability, non-monotonic in κ:
 0.25×, 4×, 8×, 32× blow; 0.5×, 2×, 16× survive) — so a plain-build adjoint on a
 perturbed background state is not guaranteed to stay finite over 5 years, which
-is what `adjViscBoost` exists for. Adjoint correctness therefore still rests on
+is what `adjViscBoost` exists for (note the ensemble predates the mode-switch
+hooks, when adjViscBoost was silently inert — no working boost had ever run). Adjoint correctness therefore still rests on
 repairing the gradient check.
 
 **`useGrdchk` differs by setup since 2026-08-28**: DINO's `input_tap/data.pkg`

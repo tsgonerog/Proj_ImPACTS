@@ -40,13 +40,20 @@ step 2.
 Adapt the build script's `genmake2` line by hand:
 
 ```bash
-"$MITGCM_ROOT/tools/genmake2_override_forward_step_b" -mpi -tap \
-    -tap_extra "-profile" \
+"$MITGCM_ROOT/tools/genmake2" -mpi -tap \
+    -tap_extra "-profile -ext ../code_tap/flow_tap_local" \
     -rd="$MITGCM_ROOT" \
     -of="$MPI_OPTFILE" \
     -mods=../code_tap \
     -adof="$MITGCM_ROOT/tools/adjoint_options/adjoint_tap"
 ```
+
+Two things about these command lines since the 2026-08-31 dump-hook redesign:
+DINO uses **stock** `genmake2` (the `genmake2_override_forward_step_b` copy is
+now SOMA-only), and genmake2's `-tap_extra` **overwrites** rather than appends
+on repeat, so the profiling flag and DINO's `-ext ../code_tap/flow_tap_local`
+(which generates the `ADJ*` dump call) must share a single `-tap_extra` as
+shown. For SOMA, keep the override script and drop the `-ext` part.
 
 ### The one real gap: `adProfile.c`
 
@@ -89,8 +96,8 @@ work settled on, one per line. To use it:
 
 ```bash
 NOCP=$(tr '\n' ' ' < ../../tools/tapenade_profiling/nocheckpoint_routines.txt)
-"$MITGCM_ROOT/tools/genmake2_override_forward_step_b" -mpi -tap \
-    -tap_extra "-nocheckpoint \"$NOCP\"" \
+"$MITGCM_ROOT/tools/genmake2" -mpi -tap \
+    -tap_extra "-nocheckpoint \"$NOCP\" -ext ../code_tap/flow_tap_local" \
     -rd="$MITGCM_ROOT" -of="$MPI_OPTFILE" -mods=../code_tap \
     -adof="$MITGCM_ROOT/tools/adjoint_options/adjoint_tap"
 ```
