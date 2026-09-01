@@ -121,7 +121,7 @@ Settings in this table were read back from each run's own staged `data`
 namelist on scratch, not from the run-directory tag.
 
 `05_kappa_v_ensemble/` is a seven-notebook suite (2026-08-30) analysing the
-vertical-diffusivity perturbation ensemble of the `notes/nn_surrogate` master
+vertical-diffusivity perturbation ensemble of the `notes/directions/nn_surrogate` master
 plan, Part I: the new reference adjoint 30995 (bit-identical to 28486) against
 members M1–M7 (runs 31003–31009, κ_v scaled 0.25×–32×), plus the
 internal-variability noise floor reconstructed from spin-up 30983's 2,402
@@ -168,7 +168,7 @@ and therefore writes everything to the sibling directory
 `/scratch2/<user>/DINO_1deg_tapAdj_runs/kappa_v_ensemble_analysis/` instead of
 into any one run (details in that suite's own `README.md`). Its two
 publication figures are additionally committed under
-`notes/nn_surrogate/briefs/kappa_ensemble_results/figures/` — they are LaTeX
+`notes/directions/nn_surrogate/briefs/kappa_ensemble_results/figures/` — they are LaTeX
 sources for that brief, and the only images tracked in this repository.
 
 Current locations:

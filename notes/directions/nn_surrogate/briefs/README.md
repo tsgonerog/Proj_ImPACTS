@@ -73,13 +73,13 @@ which:
 ## Building
 
 ```bash
-cd notes/nn_surrogate/briefs/<topic>
+cd notes/directions/nn_surrogate/briefs/<topic>
 latexmk -pdf -auxdir=build main.tex          # PDF here, intermediates in build/
 ```
 
 Each brief has its own `build/`, since they all compile a file called
 `main.tex`. Build each in its own folder like this even when the whole direction
-is one Overleaf project — compiling from `notes/nn_surrogate/` would write three
+is one Overleaf project — compiling from `notes/directions/nn_surrogate/` would write three
 different `main.pdf` files over each other at that one level.
 
 A brief goes to Overleaf either on its own or inside the whole-direction upload;
@@ -101,7 +101,7 @@ Nothing forces the set to stay at two.
    top of `01_`.
 2. `main.tex` holds structure only — `\documentclass`, the `\input@path` block,
    `\input{preamble}`, the `\input` list. **Copy the `\input@path` block**; it is
-   what lets the brief build when the project root is `notes/nn_surrogate/`
+   what lets the brief build when the project root is `notes/directions/nn_surrogate/`
    rather than the brief's own folder, and a brief without it fails on its first
    `\input` after upload and nowhere before.
 3. Open `main.tex` with a header comment giving the scope, the master sections

@@ -38,9 +38,9 @@
 # written even when an earlier one fails.
 #
 # Example -- schedule it to run when an adjoint job finishes (see
-# notes/slurm_job_chaining/):
+# notes/references/slurm_job_chaining/):
 #
-#   ADJ=$(../../../tools/submit.sh submit_tapAdj.sh --parsable)
+#   ADJ=$(../../../tools/submit.sh submit_tapAdj.sh --parsable | tail -1)
 #   sbatch --parsable --dependency=afterany:$ADJ run_comparison.sh
 #
 

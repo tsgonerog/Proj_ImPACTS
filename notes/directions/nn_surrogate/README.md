@@ -105,7 +105,7 @@ Two things to keep true while doing it:
 ## Building and editing
 
 ```bash
-cd notes/nn_surrogate/master_plan          # or any brief
+cd notes/directions/nn_surrogate/master_plan          # or any brief
 latexmk -pdf -auxdir=build main.tex        # PDF here, intermediates in build/
 ```
 

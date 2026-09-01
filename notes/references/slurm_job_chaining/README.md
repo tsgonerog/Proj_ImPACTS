@@ -129,7 +129,10 @@ M7 adj=31009  pickup<-DINO_1deg_frd_10yr_M7_run31002 [resolves]  dino_diffKr_M7.
 
 Strip away this setup's specifics and job chaining is three lines. Use
 `--parsable`, which makes `sbatch` print **only** the job id instead of
-`Submitted batch job 12345` — verified to pass through `tools/submit.sh`:
+`Submitted batch job 12345`. The flag reaches `sbatch` unchanged through
+`tools/submit.sh` — but **a capture through the wrapper needs `| tail -1`**,
+because `submit.sh` prints a three-line banner of its own before handing over.
+Bare `sbatch` needs nothing:
 
 ```bash
 # A then B then C
@@ -143,9 +146,9 @@ Fan-out, one pair per member — the ensemble's shape:
 
 ```bash
 for n in 1 2 3 4 5 6 7; do
-  fwd=$(IMPACTS_TEST_CASE=kappa_v_ensemble/M$n ../../../tools/submit.sh submit_frd.sh --parsable)
+  fwd=$(IMPACTS_TEST_CASE=kappa_v_ensemble/M$n ../../../tools/submit.sh submit_frd.sh --parsable | tail -1)
   adj=$(IMPACTS_TEST_CASE=kappa_v_ensemble/M$n ../../../tools/submit.sh submit_tapAdj.sh \
-          --parsable --dependency=afterok:$fwd)
+          --parsable --dependency=afterok:$fwd | tail -1)
   echo "M$n: forward $fwd -> adjoint $adj"
 done
 ```
@@ -166,6 +169,21 @@ after the script name would be passed to the script instead. Confirmed:
 ```
 submit  : sbatch  --export=ALL --test-only --parsable submit_frd.sh
 ```
+
+That banner is also what `| tail -1` is stripping. Captured through the wrapper,
+`--parsable` yields four lines, only the last of which is the job id:
+
+```
+machine : sverdrup
+extra   : <none>
+submit  : sbatch  --export=ALL --parsable submit_tapAdj.sh
+
+12345
+```
+
+So `jid=$(../../../tools/submit.sh submit_tapAdj.sh --parsable)` puts all of
+that into `$jid`, and `--dependency=afterok:$jid` then fails. Always pipe
+through `tail -1` when submitting via the wrapper.
 
 ---
 
@@ -253,7 +271,7 @@ already running by the time the comparison was wanted.
 and submit it against the run it should follow:
 
 ```bash
-ADJ=$(../../../tools/submit.sh submit_tapAdj.sh --parsable)
+ADJ=$(../../../tools/submit.sh submit_tapAdj.sh --parsable | tail -1)
 CMP=$(sbatch --parsable --dependency=afterany:$ADJ run_comparison.sh)
 echo "adjoint $ADJ -> comparison $CMP"
 ```
@@ -375,7 +393,8 @@ scancel 31009                                          # drop it
   wins.
 - **`--parsable` is worth the habit.** Parsing `Submitted batch job N` with
   `grep -oE '[0-9]+$'` works but breaks the moment a warning is printed after
-  the id.
+  the id. Through `tools/submit.sh`, pair it with `| tail -1` — the wrapper's
+  banner precedes the id on stdout.
 
 ---
 
@@ -387,5 +406,5 @@ scancel 31009                                          # drop it
   variant vocabulary
 - `CLAUDE.md` — why `nIter0` and the pickup symlink are coupled by hand, and why
   the duration `sed` targets the staged namelist
-- `notes/nn_surrogate/master_plan/sections/91_app_running.tex` — the ensemble's
+- `notes/directions/nn_surrogate/master_plan/sections/91_app_running.tex` — the ensemble's
   own operational appendix

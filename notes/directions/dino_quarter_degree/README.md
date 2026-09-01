@@ -122,7 +122,7 @@ declaring an `\input@path` of `{scoping_note/}{./}` so it builds whether the
 project root is its own folder or this one.
 
 ```bash
-cd notes/dino_quarter_degree/scoping_note
+cd notes/directions/dino_quarter_degree/scoping_note
 latexmk -pdf -auxdir=build main.tex          # PDF here, intermediates in build/
 ```
 

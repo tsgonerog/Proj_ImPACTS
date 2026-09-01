@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Sync a notes/<direction>/ folder with its Overleaf project, both ways.
+# Sync a notes/directions/<direction>/ folder with its Overleaf project, both ways.
 #
 #     ./tools/overleaf_sync.sh status <direction>
 #     ./tools/overleaf_sync.sh push   <direction>     # repo HEAD -> Overleaf
@@ -11,7 +11,7 @@
 # <direction> is the folder name under notes/. The forms tab-completion produces
 # are all accepted and equivalent:
 #
-#     nn_surrogate   nn_surrogate/   notes/nn_surrogate/   ./notes/nn_surrogate
+#     nn_surrogate   nn_surrogate/   directions/nn_surrogate   notes/directions/nn_surrogate/
 #
 # tools/overleaf_sync_selftest.sh exercises all of this against a throwaway repo
 # standing in for Overleaf -- no credential, no network.
@@ -108,7 +108,7 @@ project_url() {
 # silently dropped `pull` from the output the first time a line was added above.
 usage() {
     cat <<'EOF'
-Sync a notes/<direction>/ folder with its Overleaf project, both ways.
+Sync a notes/directions/<direction>/ folder with its Overleaf project, both ways.
 
     overleaf_sync.sh status <direction>            what differs, in both directions
     overleaf_sync.sh pull   <direction>            Overleaf     -> working tree
@@ -116,9 +116,9 @@ Sync a notes/<direction>/ folder with its Overleaf project, both ways.
     overleaf_sync.sh push   <direction> --wip      working tree -> Overleaf, no commit
     overleaf_sync.sh push   <direction> --force    overwrite un-pulled Overleaf edits
 
-<direction> is the folder name under notes/. These are all equivalent:
+<direction> is the folder name under notes/directions/. These are all equivalent:
 
-    nn_surrogate   nn_surrogate/   notes/nn_surrogate/   ./notes/nn_surrogate
+    nn_surrogate   nn_surrogate/   directions/nn_surrogate   notes/directions/nn_surrogate/
 EOF
     exit 1
 }
@@ -137,13 +137,24 @@ for flag in "$@"; do
     esac
 done
 
-# Accept the direction as a bare name or as the path tab-completion produces:
-# nn_surrogate, nn_surrogate/, notes/nn_surrogate/, ./notes/nn_surrogate all
-# mean the same thing. Without this, tab-completing from the repository root
-# gives "notes/notes/<direction>" and a confusing failure.
+# Accept the direction as a bare name or as any path tab-completion produces
+# (nn_surrogate, directions/nn_surrogate/, notes/directions/nn_surrogate, ...).
+# Without this, tab-completing from the repository root gives a doubled path
+# and a confusing failure.
 dir=${dir#./}; dir=${dir%/}; dir=${dir#notes/}; dir=${dir%/}
+dir=${dir#directions/}; dir=${dir%/}
 
-[[ -d "notes/$dir" ]] || die "no such direction: notes/$dir"
+# Directions live under notes/directions/ since 2026-09-01. The bare name is
+# still what you type, what keys project_url(), and what names the mirror
+# clone, so existing mirrors survive the move. A folder directly under notes/
+# (the pre-move layout, or a sandbox a test builds) still resolves.
+if [[ -d "notes/directions/$dir" ]]; then
+    ndir="notes/directions/$dir"
+elif [[ -d "notes/$dir" ]]; then
+    ndir="notes/$dir"
+else
+    die "no such direction: notes/directions/$dir"
+fi
 
 url=$(project_url "$dir") || die "no Overleaf project mapped for '$dir' — add it to project_url() in this script"
 mirror="$MIRROR_ROOT/$dir"
@@ -184,10 +195,10 @@ copy_worktree() {
     local dest=$1 f rel
     while IFS= read -r -d '' f; do
         [[ -f "$f" ]] || continue
-        rel=${f#notes/$dir/}
+        rel=${f#$ndir/}
         mkdir -p "$dest/$(dirname "$rel")"
         cp -p "$f" "$dest/$rel"
-    done < <(git ls-files -z "notes/$dir")
+    done < <(git ls-files -z "$ndir")
 }
 
 # ------------------------------------------------------------------ operations
@@ -207,7 +218,7 @@ do_status() {
     # Compare repo HEAD against what Overleaf has, file by file.
     local tmp wtd; tmp=$(mktemp -d); wtd=$(mktemp -d)
     trap 'rm -rf "$tmp" "$wtd"' RETURN
-    git archive "HEAD:notes/$dir" | tar -x -C "$tmp"
+    git archive "HEAD:$ndir" | tar -x -C "$tmp"
     local ohead="$tmp/.overleaf"; mkdir -p "$ohead"
     git -C "$mirror" archive "origin/$br" | tar -x -C "$ohead"
 
@@ -223,7 +234,7 @@ do_status() {
     # would send. An uncommitted edit is therefore invisible to it -- and without
     # this, "identical content" reads as "nothing to do" while your own change
     # sits unsent in the working tree.
-    local wt; wt=$(git status --porcelain -- "notes/$dir")
+    local wt; wt=$(git status --porcelain -- "$ndir")
     if [[ -n "$wt" ]]; then
         warn "uncommitted here, and NOT part of the comparison above:"
         printf '%s\n' "$wt" | sed 's/^/        /'
@@ -278,15 +289,15 @@ do_push() {
     # HEAD, not the working tree -- so refuse when they disagree, rather than
     # silently shipping something other than what the user is looking at.
     # --wip is the deliberate opt-out; see the header.
-    if [[ "$wip" != yes ]] && ! git diff --quiet HEAD -- "notes/$dir"; then
+    if [[ "$wip" != yes ]] && ! git diff --quiet HEAD -- "$ndir"; then
         echo
-        die "notes/$dir has uncommitted changes. push sends HEAD, so commit
+        die "$ndir has uncommitted changes. push sends HEAD, so commit
         first or your reader gets the previous text:
-            git status --short notes/$dir
+            git status --short $ndir
         Or send the tree as it stands and commit once the writing is settled:
             ./tools/overleaf_sync.sh push $dir --wip"
     fi
-    local untracked; untracked=$(git ls-files --others --exclude-standard "notes/$dir")
+    local untracked; untracked=$(git ls-files --others --exclude-standard "$ndir")
     [[ -n "$untracked" ]] && warn "untracked, will NOT be sent: $(echo "$untracked" | tr '\n' ' ')"
 
     ensure_mirror
@@ -317,7 +328,7 @@ do_push() {
         # cannot be reproduced from. The sha is where the tree was standing.
         msg="WIP from $(git rev-parse --short HEAD)+ — uncommitted working tree"
     else
-        git archive "HEAD:notes/$dir" | tar -x -C "$mirror"
+        git archive "HEAD:$ndir" | tar -x -C "$mirror"
         source="repo HEAD"
         msg="Sync from $(git rev-parse --short HEAD) — $(git log -1 --format=%s)"
     fi
@@ -349,18 +360,18 @@ do_pull() {
     # from. `stash create` writes a commit object and touches neither the index
     # nor the working tree; the ref is what keeps it out of reach of gc.
     local snap=""
-    if ! git diff --quiet HEAD -- "notes/$dir"; then
-        snap=$(git stash create "overleaf pull: notes/$dir as it stood before" 2>/dev/null)
+    if ! git diff --quiet HEAD -- "$ndir"; then
+        snap=$(git stash create "overleaf pull: $ndir as it stood before" 2>/dev/null)
         [[ -n "$snap" ]] && git update-ref "refs/overleaf-prepull/$dir" "$snap"
     fi
 
     # Property 2: clear first, so a file deleted in Overleaf reports as ' D'.
-    git ls-files -z "notes/$dir" | xargs -0 -r rm -f
-    git -C "$mirror" archive "$br" | tar -x -C "notes/$dir"
-    find "notes/$dir" -type d -empty -delete
+    git ls-files -z "$ndir" | xargs -0 -r rm -f
+    git -C "$mirror" archive "$br" | tar -x -C "$ndir"
+    find "$ndir" -type d -empty -delete
 
     echo
-    local st; st=$(git status --short "notes/$dir")
+    local st; st=$(git status --short "$ndir")
     if [[ -z "$st" ]]; then
         ok "no changes — the working tree already matches Overleaf"
         return 0
@@ -370,14 +381,14 @@ do_pull() {
     if [[ -n "$snap" ]]; then
         echo
         warn "your tree was dirty; it is saved as refs/overleaf-prepull/$dir"
-        printf "        ${dim}%s${off}\n" "git diff refs/overleaf-prepull/$dir -- notes/$dir      # what this pull changed"
-        printf "        ${dim}%s${off}\n" "git checkout refs/overleaf-prepull/$dir -- notes/$dir  # to put it back"
+        printf "        ${dim}%s${off}\n" "git diff refs/overleaf-prepull/$dir -- $ndir      # what this pull changed"
+        printf "        ${dim}%s${off}\n" "git checkout refs/overleaf-prepull/$dir -- $ndir  # to put it back"
     fi
     echo
-    printf "  ${dim}%s${off}\n" "git diff notes/$dir                      # read every change"
-    printf "  ${dim}%s${off}\n" "cd notes/$dir/<doc> && latexmk -pdf -auxdir=build main.tex"
+    printf "  ${dim}%s${off}\n" "git diff $ndir                      # read every change"
+    printf "  ${dim}%s${off}\n" "cd $ndir/<doc> && latexmk -pdf -auxdir=build main.tex"
     printf "  ${dim}%s${off}\n" "                                          # REBUILD before committing"
-    printf "  ${dim}%s${off}\n" "git checkout -- notes/$dir && git clean -fd notes/$dir   # to abort (never -x)"
+    printf "  ${dim}%s${off}\n" "git checkout -- $ndir && git clean -fd $ndir   # to abort (never -x)"
 }
 
 case "$cmd" in

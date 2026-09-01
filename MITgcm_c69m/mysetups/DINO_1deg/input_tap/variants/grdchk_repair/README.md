@@ -14,5 +14,5 @@ Run it as
 
 Each of the 4 checked points costs two extra 30-day forward integrations.
 First meaningful result (2026-08-31, run pair on the hook build and a
-control build of `main`): see `notes/tapenade_hooks/` §7 and the run
+control build of `main`): see `notes/references/tapenade_hooks/` §7 and the run
 directories' `output_tap_adj.txt` (`grad-res` tables).

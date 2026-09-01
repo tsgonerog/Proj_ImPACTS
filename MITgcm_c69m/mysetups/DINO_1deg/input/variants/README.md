@@ -38,7 +38,7 @@ without KPP.
 | [`viscosity_study/`](viscosity_study/) | The lateral-viscosity formulation: `PARM05` files against the `PARM01` `viscAhGrid` scalar, Leith, biharmonic |
 | [`scheme_tests/`](scheme_tests/) | One scheme or package at a time, viscosity held at reference: advection scheme 30, the C-D scheme, KPP |
 | [`from70yrPk_sweep/`](from70yrPk_sweep/) | `viscAr` × `diffKr` × advection sweep restarted from the 70-year pickup |
-| [`kappa_v_ensemble/`](kappa_v_ensemble/) | The vertical-mixing perturbation ensemble of `notes/nn_surrogate/` — forward legs |
+| [`kappa_v_ensemble/`](kappa_v_ensemble/) | The vertical-mixing perturbation ensemble of `notes/directions/nn_surrogate/` — forward legs |
 
 ## Adding to this
 

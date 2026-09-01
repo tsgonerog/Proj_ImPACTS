@@ -32,7 +32,8 @@ tracked.
 | understand what git keeps | [What git does and does not keep](#what-git-does-and-does-not-keep) |
 | push my work | [Workflow: before you push](#workflow-before-you-push) |
 | move to another cluster | `PORTING.md` |
-| see what is proposed but not yet built | `notes/` |
+| see where the project is heading — work underway, and work proposed but not yet built | `notes/directions/` |
+| look up how a past workflow actually ran | `notes/references/` |
 
 ### Where output lives
 
@@ -61,8 +62,8 @@ already define, so nothing has to be kept in sync by hand.
 | --- | --- |
 | `MITgcm_c69m/` | MITgcm **checkpoint69m** (2026-03-30) source tree plus the experiments built against it |
 | `analyses/` | Jupyter notebooks that read run output from scratch and produce diagnostics/figures |
-| `tools/` | `machine_env.sh` (per-machine settings), `submit.sh`, `pre_push_check.sh`, `compare_adj_runs.sh` (bit-compare two adjoint run directories, optionally waiting on a job), `overleaf_sync.sh` + `overleaf_sync_selftest.sh` (two-way sync between `notes/<direction>/` and its Overleaf project; `push --wip` sends the working tree, for drafting without a commit per round trip), `optfile_templates/` (project optfiles not yet validated on their target machine), `tapenade_profiling/` (profiling and `-nocheckpoint` tuning, not wired into any build script) |
-| `notes/` | Prose only, nothing here builds or runs: proposals for work that does not exist yet, plus practical references documenting a workflow that has run |
+| `tools/` | Repository-level tooling — see [`tools/README.md`](tools/README.md) for what each one does, its options and worked DINO examples. `machine_env.sh` (per-machine settings), `submit.sh`, `pre_push_check.sh`, `compare_adj_runs.sh` (bit-compare two adjoint run directories, optionally waiting on a job), `overleaf_sync.sh` + `overleaf_sync_selftest.sh` (two-way sync between `notes/directions/<direction>/` and its Overleaf project; `push --wip` sends the working tree, for drafting without a commit per round trip), `optfile_templates/` (project optfiles not yet validated on their target machine), `tapenade_profiling/` (profiling and `-nocheckpoint` tuning, not wired into any build script) |
+| `notes/` | **The project's direction record** — where the work this project is pursuing now, and the work it intends to pursue next, is written down. For that planned and in-progress work this is the only place it exists: none of it is derivable from the code, the run output or the git history. `directions/` (a question the project is working towards or might take on, one subdirectory each, with its planning documents and status) and `references/` (practical how-tos from workflows that have already run). Nothing here is read by a build or submit script, though the LaTeX documents compile to PDFs |
 
 Each document has a different job:
 
@@ -72,9 +73,11 @@ Each document has a different job:
 | `PORTING.md` | How to move it to another cluster |
 | `analyses/README.md` | What each notebook does and which run it reads |
 | `MITgcm_c69m/mysetups/<setup>/README.md` | That setup's grid, build/submit pairings and quirks |
-| `notes/README.md` | Which directions are on the table, how a new one is added, the LaTeX/Overleaf conventions they share, and how to sync a direction with Overleaf in both directions |
-| `notes/slurm_job_chaining/README.md` | Chaining jobs with `--dependency`, and running a follow-on step when a job finishes |
-| `notes/nn_surrogate/README.md` | What the surrogate proposal is, how its two documents relate, and where their numbers came from |
+| `notes/README.md` | Which directions and practical references exist, how a new one is added, the LaTeX/Overleaf conventions the directions share, and how to sync a direction with Overleaf in both directions |
+| `notes/references/slurm_job_chaining/README.md` | Chaining jobs with `--dependency`, and running a follow-on step when a job finishes |
+| `notes/directions/nn_surrogate/README.md` | What the surrogate proposal is, how its two documents relate, and where their numbers came from |
+| `notes/references/tapenade_hooks/README.md` | How the `ADJ*`/`ADJetan` dump hooks and the adjViscBoost mode switches were rebuilt Tapenade-native, and what an upstream version would look like |
+| `notes/references/adxx_vs_adj/README.md` | What the `adxx_*` control gradients and `ADJ*` adjoint-state dumps each mean, and which to use for what |
 | `CLAUDE.md` | Non-obvious mechanics and traps, written for an AI assistant but useful to anyone |
 
 The MITgcm tree is vendored in full (~6,600 tracked files), not a submodule,
@@ -87,20 +90,6 @@ because it carries **locally patched build tooling** — see
 | --- | --- | --- |
 | `MITgcm_c69m/mysetups/DINO_1deg/` | 51 × 198 × 36, curvilinear | Primary configuration. Idealised single-basin "DINO" ocean spanning pole to pole |
 | `MITgcm_c69m/mysetups/SOMA_1deg/` | 62 × 62 × 31, 1° spherical polar | SOMA — wind-driven bowl-shaped basin, 14°N–76°N, ~3500 m deep |
-
-### The checkpoint69f tree
-
-An earlier **checkpoint69f** (2025-07-10) tree used to sit alongside this one at
-`MITgcm_c69f/`, carrying earlier ports of both setups plus three tutorial
-configurations (`tutorial_barotropic_gyre_with_adj`,
-`tutorial_baroclinic_gyre_with_adj`, `tutorial_global_oce_biogeo`) that served
-as the graduated test bed — verifying that the Tapenade build path reproduced
-known-good results before the machinery was pointed at DINO and SOMA.
-
-It was removed on 2026-08-17, since work has moved entirely to c69m and the tree
-accounted for roughly half the repository. It is preserved in full, working tree
-and history alike, at `Proj_ImPACTS_old`
-(<https://github.com/tsgonerog/Proj_ImPACTS_old>).
 
 ### What is inside a setup
 
@@ -250,14 +239,15 @@ workflow was aligned with DINO's at the same time: one submit script per
 mode, `IMPACTS_*` overrides, DINO-convention job and run-directory names, and
 a restored forward build/submit pair.
 
-checkpoint69f additionally carried `patched_ForTapProfile_genmake2` (Tapenade
-profiling) and `patched_AfterTapProfile_genmake2` (acting on the profiler's
-advice). Neither is needed on c69m: `genmake2` now takes `-tap_extra`, which
-passes flags straight to Tapenade, so both are options rather than files. See
-`tools/tapenade_profiling/` — it documents the c69m recipe, carries the
-64-routine `-nocheckpoint` list that work produced, and keeps the two c69f
-originals as reference. They are full copies of the c69f `genmake2` and do not
-work here.
+**Profiling is a flag here, not a patched `genmake2`.** Earlier profiling work
+drove two patched copies of `genmake2` — `patched_ForTapProfile_genmake2`
+(profile the adjoint) and `patched_AfterTapProfile_genmake2` (act on the
+profiler's advice). Neither is needed on c69m: `genmake2` now takes
+`-tap_extra`, which passes flags straight to Tapenade, so both are options
+rather than files. See `tools/tapenade_profiling/` — it documents the c69m
+recipe and carries the 64-routine `-nocheckpoint` list that work produced. The
+two originals are kept beside it under `c69f_originals/` as reference only:
+they are full copies of an older tree's `genmake2` and do not work here.
 
 **Which profiling mode to use** is selected at the top of the build script:
 
@@ -267,8 +257,8 @@ use_TapProfile="NO"   # <-- only "NO" is wired up in this tree
 
 Each mode also swaps in the matching `the_model_main.F` variant. Setting this to
 `"YES"` or `"AFTER"` will fail here, because the `ForTapProfile` /
-`AfterTapProfile` `genmake2` copies are not in this tree — see
-[The checkpoint69f tree](#the-checkpoint69f-tree). The matching
+`AfterTapProfile` `genmake2` copies are not in this tree — only the
+non-working reference copies noted above. The matching
 `the_model_main.F_ForTapProfile` *is* still available, under each setup's
 `00_archive/code_tap/` (SOMA's moved there 2026-08-31, like DINO's before it).
 

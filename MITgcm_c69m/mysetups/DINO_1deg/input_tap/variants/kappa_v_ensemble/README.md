@@ -1,7 +1,7 @@
 # `kappa_v_ensemble/` — adjoint runs
 
 Vertical-mixing perturbation ensemble, Part I of
-[`notes/nn_surrogate/`](../../../../../../notes/nn_surrogate/). These seven
+[`notes/directions/nn_surrogate/`](../../../../../../notes/directions/nn_surrogate/). These seven
 namelists are the **5-year adjoint**, year 2180 → 2185, each at its own vertical
 diffusivity; the forward legs that produce their pickups live in
 [`../../../input/variants/kappa_v_ensemble/`](../../../input/variants/kappa_v_ensemble/),
@@ -21,7 +21,7 @@ between a member and the reference. `nIter0=3162240` is year 2180 and
 hardcoded `ln -s`, and each member's adjoint has to read *its own* forward
 leg's `pickup.0003162240`, not the spin-up's. Chaining the two halves so the
 adjoint waits for its forward leg is written up in
-[`notes/slurm_job_chaining/`](../../../../../../notes/slurm_job_chaining/).
+[`notes/references/slurm_job_chaining/`](../../../../../../notes/references/slurm_job_chaining/).
 
 Members run with `useGrdchk=.FALSE.` (set in `input_tap/data.pkg`, so it applies
 to the reference adjoint too). The check cannot pass where it is currently
@@ -37,7 +37,7 @@ member's adjusted background state, with the plain, non-`adjViscBoost` build).
 The finite-difference comparison ran but fails as a validation: the response is
 nonlinear already at factor-2 steps. Full analysis:
 `analyses/DINO_1deg/03_adjoint/05_kappa_v_ensemble/`; results prose:
-`notes/nn_surrogate/` (master Part I §Results and the `kappa_ensemble_results`
+`notes/directions/nn_surrogate/` (master Part I §Results and the `kappa_ensemble_results`
 brief). Rerunning a blown member as-is reproduces the blow-up — pair these
 namelists with the `adjViscBoost` build+submit pair if a stable large-κ adjoint
 is the goal.

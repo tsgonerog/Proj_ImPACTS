@@ -1,27 +1,38 @@
 # notes/
 
-Prose only — nothing here builds or runs. Two kinds of material live here, kept
-apart because they answer to different standards:
+**This is the project's direction record** — where the work being pursued now,
+and the work intended next, is written down. For that material this folder is
+the only source: none of it is derivable from the code, the run output or the
+git history, so a direction that is not written here is not recorded anywhere.
+Nothing here is read by a build or submit script, though the LaTeX documents
+compile to PDFs.
 
-- **Directions** — proposals for work this project might take on. Nothing in one
-  is a commitment to do it.
-- **Practical references** — how a workflow that *has* run actually works, so it
-  can be reproduced. These describe fact, so a claim in one is either true of the
-  repository today or marked as superseded.
+Two kinds of material live here, kept apart because they answer to different
+standards — and, since 2026-09-01, in two folders so the shelf itself says
+which is which:
+
+- **[`directions/`](directions/)** — a question this project is working
+  towards, or might take on next. A direction may be anywhere from untouched
+  to partly executed; its status column says which. Being written down here is
+  not a commitment to finish it.
+- **[`references/`](references/)** — practical references: how a workflow that
+  *has* run actually works, so it can be reproduced. These describe fact, so a
+  claim in one is either true of the repository today or marked as superseded.
 
 ## Directions
 
-One subdirectory per direction, each carrying its own `README.md` that says what
-the direction is and how its documents relate.
+One subdirectory per direction under [`directions/`](directions/), each
+carrying its own `README.md` that says what the direction is and how its
+documents relate.
 
 | Direction | The question | Status |
 | --- | --- | --- |
-| [`nn_surrogate/`](nn_surrogate/) | Can a neural network predict DINO adjoint sensitivity fields instead of computing them? Includes the vertical-mixing ensemble that has to run first to decide what the surrogate should be | Part I complete and analysed (2026-08-30): strong κ_v response — mixing is a required surrogate input, and four of seven member adjoints blow up. Results in the master's Part I §Results and the `kappa_ensemble_results` brief; evidence in `analyses/DINO_1deg/03_adjoint/05_kappa_v_ensemble/`. The surrogate itself is proposed, nothing built |
-| [`dino_quarter_degree/`](dino_quarter_degree/) | What does moving DINO from 1° to 1/4° — from parameterised eddies to partly resolved ones — change about the adjoint, and what would it cost? | Placeholder — a three-page scoping note, nothing configured |
+| [`nn_surrogate/`](directions/nn_surrogate/) | Can a neural network predict DINO adjoint sensitivity fields instead of computing them? Includes the vertical-mixing ensemble that has to run first to decide what the surrogate should be | Part I complete and analysed (2026-08-30): strong κ_v response — mixing is a required surrogate input, and four of seven member adjoints blow up. Results in the master's Part I §Results and the `kappa_ensemble_results` brief; evidence in `analyses/DINO_1deg/03_adjoint/05_kappa_v_ensemble/`. The surrogate itself is proposed, nothing built |
+| [`dino_quarter_degree/`](directions/dino_quarter_degree/) | What does moving DINO from 1° to 1/4° — from parameterised eddies to partly resolved ones — change about the adjoint, and what would it cost? | Placeholder — a three-page scoping note, nothing configured |
 
 ## Adding a direction
 
-Make `notes/<direction>/`, put a `README.md` in it, add a row above. Name the
+Make `notes/directions/<direction>/`, put a `README.md` in it, add a row above. Name the
 directory after the question rather than the method, so it survives a change of
 approach. Keep each direction's material inside its own directory; a note that
 bears on two of them lives with whichever direction owns the decision and is
@@ -30,14 +41,15 @@ cited from the other.
 ## Practical references
 
 Workflow how-tos, written after the fact from a run that happened. Same
-one-subdirectory-plus-`README.md` shape as a direction; the difference is that
-these document what was done rather than what might be.
+one-subdirectory-plus-`README.md` shape as a direction, grouped under
+[`references/`](references/); the difference is that these document what was
+done rather than what might be.
 
 | Reference | Covers |
 | --- | --- |
-| [`slurm_job_chaining/`](slurm_job_chaining/) | Making one job wait for another with `--dependency`, and running a follow-on step automatically when a job finishes. Worked from the κ_v ensemble submitted 2026-08-28 |
-| [`tapenade_hooks/`](tapenade_hooks/) | Change note on replacing the TAF hook directives with Tapenade-native active-argument hooks (`ADJ*` + `ADJetan` dumps, adjViscBoost mode switching): the gap, the mechanism, a file-by-file comparison, bitwise validation, and upstream-MITgcm considerations; §6–7 add the SOMA conversion, the additive upstream+append file re-layout of both setups' `code_tap/`, and the DINO/SOMA workflow alignment. Written 2026-08-31 for advisor/MITgcm review; a styled HTML copy sits beside the README |
-| [`adxx_vs_adj/`](adxx_vs_adj/) | What the two sensitivity outputs of a Tapenade adjoint run mean: `adxx_*` control gradients vs `ADJ*` adjoint-state dumps — who writes each (call path), when, how the iteration numbers read, the measured `adxx` ≈ final-`ADJ`-dump equivalence, and which output to use for gradients vs animations. DINO 5-yr window as the worked example. Written 2026-09-01; a styled HTML copy sits beside the README |
+| [`slurm_job_chaining/`](references/slurm_job_chaining/) | Making one job wait for another with `--dependency`, and running a follow-on step automatically when a job finishes. Worked from the κ_v ensemble submitted 2026-08-28 |
+| [`tapenade_hooks/`](references/tapenade_hooks/) | Change note on replacing the TAF hook directives with Tapenade-native active-argument hooks (`ADJ*` + `ADJetan` dumps, adjViscBoost mode switching): the gap, the mechanism, a file-by-file comparison, bitwise validation, and upstream-MITgcm considerations; §6–7 add the SOMA conversion, the additive upstream+append file re-layout of both setups' `code_tap/`, and the DINO/SOMA workflow alignment. Written 2026-08-31 for advisor/MITgcm review; a styled HTML copy sits beside the README |
+| [`adxx_vs_adj/`](references/adxx_vs_adj/) | What the two sensitivity outputs of a Tapenade adjoint run mean: `adxx_*` control gradients vs `ADJ*` adjoint-state dumps — who writes each (call path), when, how the iteration numbers read, the measured `adxx` ≈ final-`ADJ`-dump equivalence, and which output to use for gradients vs animations. DINO 5-yr window as the worked example. Written 2026-09-01; a styled HTML copy sits beside the README |
 
 Keep these honest about their own scope: name the machine and the scheduler
 version they were verified on, and say plainly when something documented is the
@@ -50,7 +62,7 @@ by topic: **`master_plan/`** holds the one document where every claim and every
 number is established, and **`briefs/`** holds short single-topic documents cut
 from it for readers who get one part rather than all of it.
 `nn_surrogate/` does this and its
-[`briefs/README.md`](nn_surrogate/briefs/README.md) carries the mechanism —
+[`briefs/README.md`](directions/nn_surrogate/briefs/README.md) carries the mechanism —
 a table saying which brief must be re-read when which part of the master moves.
 
 **A brief is three pages at most, in at most three section files.** Both caps
@@ -129,7 +141,7 @@ These apply to the documents only; a Markdown note needs none of them.
 
 ### Overleaf round trip
 
-**The unit of upload is a direction, not a document.** `notes/<direction>/` goes
+**The unit of upload is a direction, not a document.** `notes/directions/<direction>/` goes
 up as one Overleaf project holding every document in it; you switch between them
 with the **gear icon at the bottom-left corner** — the bottommost icon in that
 narrow rail — then **Compiler**, where *the primary file for compiling your
@@ -157,7 +169,7 @@ whatever comes next rather than a description of anything here.
 
 Every Overleaf project is also a git remote, which turns this whole round trip
 into two commands. `tools/overleaf_sync.sh` wraps it, and works for **any**
-`notes/<direction>/` once the direction is mapped to a project id:
+`notes/directions/<direction>/` once the direction is mapped to a project id:
 
 ```bash
 ./tools/overleaf_sync.sh status <direction>       # what differs, in both directions
@@ -174,7 +186,7 @@ change sits unsent. It says so underneath when that is the case:
 ```
   ok    repo HEAD and Overleaf hold identical content
   note  uncommitted here, and NOT part of the comparison above:
-         M notes/<direction>/<file>
+         M notes/directions/<direction>/<file>
 ```
 
 Commit, then push. The same rule is why `push` refuses outright on a dirty tree.
@@ -199,8 +211,8 @@ lives uncommitted in the tree, it does not. So a pull that finds a dirty tree
 snapshots it to `refs/overleaf-prepull/<direction>` first and says so:
 
 ```bash
-git diff refs/overleaf-prepull/<direction> -- notes/<direction>      # what the pull changed
-git checkout refs/overleaf-prepull/<direction> -- notes/<direction>  # to put it back
+git diff refs/overleaf-prepull/<direction> -- notes/directions/<direction>      # what the pull changed
+git checkout refs/overleaf-prepull/<direction> -- notes/directions/<direction>  # to put it back
 ```
 
 The ref is overwritten by the next pull of that direction, so it is a safety net
@@ -210,14 +222,14 @@ for the pull you just ran, not an archive.
 produce all mean the same thing:
 
 ```bash
-nn_surrogate     nn_surrogate/     notes/nn_surrogate/     ./notes/nn_surrogate
+nn_surrogate     nn_surrogate/     directions/nn_surrogate     notes/directions/nn_surrogate/
 ```
 
 Currently mapped: **`nn_surrogate`** and **`dino_quarter_degree`**. A name that
 is wrong in either of the two possible ways says which:
 
 ```
-FAIL  no such direction: notes/nn_surrogat            <- no such folder
+FAIL  no such direction: notes/directions/nn_surrogat  <- no such folder
 FAIL  no Overleaf project mapped for 'x' — add it to project_url() in this script
 ```
 

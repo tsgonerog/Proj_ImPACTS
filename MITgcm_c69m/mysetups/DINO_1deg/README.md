@@ -375,7 +375,7 @@ mechanism are gone on purpose (`forward_step_b.f_modified*` deleted — no
 generated file is post-edited any more; `adcommon.h` archived in
 `00_archive/code_tap/` — its upstream twin `pkg/autodiff/adcommon.h` still
 serves the TAF path). The whole arrangement is written up for upstream review
-in `notes/tapenade_hooks/`.
+in `notes/references/tapenade_hooks/`.
 
 ### `code_tap/` — adjoint source overrides
 

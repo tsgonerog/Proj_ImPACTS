@@ -7,7 +7,7 @@ exactly one place.  The heavy intermediate products are produced once by
 ``build_cache.py`` (same directory) and read back here from
 ``CACHE_DIR`` — see that script's docstring for what each cache file holds.
 
-Experiment (notes/nn_surrogate master plan, Part I; submitted 2026-08-28):
+Experiment (notes/directions/nn_surrogate master plan, Part I; submitted 2026-08-28):
     seven members perturb the uniform background vertical diffusivity
     kappa_v = 1.2e-5 m^2/s by factors 0.25x .. 32x.  Each member ran a 10-yr
     forward leg from the year-2170 pickup of spin-up run 30983 with the
