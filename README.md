@@ -119,7 +119,7 @@ DINO_1deg/
 │   │                         data.cost, data.ctrl, data.grdchk)
 │   └── variants/             alternative namelists, grouped by purpose:
 │                             baseline/ viscosity_study/ adjViscBoost/
-│                             kappa_v_ensemble/
+│                             kappa_v_ensemble/ grdchk_repair/
 ├── input_binaries/           bathymetry, forcing, initial state — NOT tracked, 179 MB
 ├── input_adj_binaries/       ones_64b.bin, the uniform control weight — NOT tracked
 ├── 00_archive/               superseded config, mirroring the live dirs it came from
@@ -569,17 +569,17 @@ Python dependencies (no environment file is checked in): `numpy`, `xarray`,
 
 ## Verification status
 
-There are no unit tests. What has and has not been checked, as of 2026-08-30:
+There are no unit tests. What has and has not been checked, as of 2026-09-01:
 
 | Check | Status | What it showed |
 | --- | --- | --- |
 | Forward reproducibility | **verified** | A 10-year `from_rest_visc2x` run reproduces the first 10 years of production run 28463 **bit-identically** — 161 field comparisons, four diagnostic streams, 1334 monitor values, AMOC series, all exactly zero. Re-verified 2026-08-28: the new spin-up 30983 reproduces 28463 |
 | Builds | **verified** | All build directories compile clean. Both setups' adjoint builds generate their `TAP_*` hook calls natively from stock `genmake2` (argument counts asserted by every build script); no generated file is post-edited anywhere |
 | Adjoint runs end to end | **verified** | 30-day adjoint from the 180-year pickup writes `ADJ*` and `adxx*`, peak sensitivity on the cost section at `i=2, j=127, k=26`. The 5-yr reference adjoint 30995 reproduces the earlier 28486 bit-identically |
-| Adjoint **correctness** | **not verified** | The gradient check fails by ~8 orders of magnitude — and always has |
+| Adjoint **correctness** | **verified at gradient-check level, 2026-09-01** | The repaired check (`input_tap/variants/grdchk_repair/`) agrees with finite differences to **0.9 %** at the DINO sensitivity peak (run 31037), and SOMA's always-on check passes at 0.07–1.8 % on all five of its points. The committed `data.grdchk` still points at the historical dead spot and still fails — use the variant. A control build of the pre-hook mechanism reproduces every grdchk digit and all `adxx_*`/`ADJ*` bitwise (run 31038; that state is preserved as branch `archive/pre-tapenade-hooks`) |
 | Adjoint vs finite differences (κ_v ensemble) | **executed 2026-08-29, fails as a validation** | The linear gradient mispredicts every member's ΔJ (wrong sign for 4 of 7) — dominated by physical nonlinearity of the 10-yr state adjustment, so it neither confirms nor refutes the adjoint. Four member adjoints also blow up (linearisation instability). Full analysis: `analyses/DINO_1deg/03_adjoint/05_kappa_v_ensemble/` |
 
-### The gradient check does not currently work
+### The gradient check: the committed default measures nothing; the repaired variant passes
 
 `data.grdchk` perturbs `xx_theta` at `iGloPos=4, jGloPos=8, kGloPos=1`. The cost
 section is at `j=127`. Sensitivity at the check point is ~6e-10 against a field
@@ -595,9 +595,20 @@ evidence the adjoint is wrong; it is evidence the test is measuring nothing. The
 May 2026 production run shows the same failure with a worse ratio, so this
 predates any recent work.
 
-**To make it meaningful:** move the point into the sensitive region
-(`iGloPos=2, jGloPos=127, kGloPos=26`) and raise `grdchk_eps` to ~1e-3 so the
-response clears the noise floor.
+**Repaired on 2026-09-01, and the repaired check passes.**
+`input_tap/variants/grdchk_repair/` moves the point onto the sensitivity peak
+(global `i=2, j=127, k=26`; grdchk addresses positions tile-locally, so that
+is `iGloPos=2, jGloPos=17, iGloTile=1, jGloTile=6` — the `*GloPos` names are
+bounded by `sNx/sNy`) and sets `grdchk_eps=1e-3`. At that point the
+finite-difference and adjoint gradients agree to **0.9 %** (−3.8229e-2 vs
+−3.8566e-2; run 31037) — the first passing DINO gradient check in this
+project. The four follow-on (weaker) points predict responses of ~1e-5, at
+the noise floor above, and still return noise: cite only points whose
+`|adj grad|·eps` clears ~3e-5. A control run built from the pre-hook
+(`main`-tip) mechanism reproduces the whole `grdchk` table digit for digit
+and all `adxx_*`/`ADJ*` files bitwise (run 31038 vs 31037). SOMA's always-on
+check passes at 0.07–1.8 % on all five of its points (runs 31031/31033,
+identical output).
 
 `useGrdchk` is now `.FALSE.` in DINO's `input_tap/data.pkg` (since 2026-08-28;
 verified bit-identical `ADJ*`/`adxx*` output, and worth 8.2 h per 5-yr adjoint).

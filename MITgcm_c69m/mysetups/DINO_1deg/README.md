@@ -201,6 +201,8 @@ input_tap/
     │   └── data_from180yrPk_visc2x
     ├── viscosity_study/
     ├── adjViscBoost/             data.autodiff_adjViscBoost
+    ├── grdchk_repair/            gradient check on the sensitivity peak (passes; the
+    │                             committed data.grdchk's point measures noise)
     └── kappa_v_ensemble/
         ├── README.md
         └── data_M1 ... data_M7

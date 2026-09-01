@@ -288,7 +288,7 @@ single-tile serial (no seams) and does not need the override.
 ## Verifying correctness
 
 There are no unit tests. Four things stand in for them, and their status as of
-2026-08-30 is:
+2026-09-01 is:
 
 **1. Forward reproducibility — verified.** A 10-year run from rest with
 `from_rest_visc2x` reproduces the first 10 years of the 200-year production run
@@ -303,11 +303,13 @@ pickup produces `ADJ*` and `adxx*` output with sensitivity concentrated on the
 cost section (peak `|adxx_theta|` at `i=2, j=127, k=26`, decaying away from it).
 That is consistent with a correct adjoint but is not a proof.
 
-**3. The finite-difference gradient check — NOT currently meaningful.**
-`input_tap/data.grdchk` perturbs `xx_theta` at `iGloPos=4, jGloPos=8, kGloPos=1`
-and compares against the adjoint. It fails by ~8 orders of magnitude, and **it
-has always failed** — the May 2026 production run (28486) shows the same, with a
-worse RMS ratio (8.0e+12 against 6.6e+08).
+**3. The finite-difference gradient check — repaired 2026-09-01, and it passes
+at the sensitive point.** The committed `input_tap/data.grdchk` still perturbs
+`xx_theta` at `iGloPos=4, jGloPos=8, kGloPos=1` and fails by ~8 orders of
+magnitude, as it always has — the May 2026 production run (28486) shows the
+same, with a worse RMS ratio (8.0e+12 against 6.6e+08). The repaired check
+lives in `input_tap/variants/grdchk_repair/` (point on the sensitivity peak,
+`grdchk_eps=1e-3`) — result below.
 
 The cause is the check point, not the adjoint. `j=8` is near the southern
 boundary; the cost section is at `j=127`. Sensitivity there is ~6e-10 against a
@@ -317,11 +319,22 @@ field maximum of ~3.9e-02. The cost change the adjoint predicts for
 `FC`, which a real first derivative cannot produce. The check is dividing its own
 noise by `2*eps` and reporting the result as a gradient.
 
-**So the adjoint is not currently verified by anything in this repository.** To
-make the check mean something, move the point into the sensitive region —
-`iGloPos=2, jGloPos=127, kGloPos=26` — and raise `grdchk_eps` (1e-3) so the
-response clears the noise floor. Until that is done, do not cite `grdchk` output
-as evidence either way.
+**That repair was executed on 2026-09-01 and the check now passes where it has
+signal.** `input_tap/variants/grdchk_repair/from180yrPk_visc2x_grdchkON` moves
+the point onto the 30-day sensitivity peak — global (i=2, j=127, k=26), which
+in grdchk's tile-local addressing is `iGloPos=2, jGloPos=17, iGloTile=1,
+jGloTile=6` (**naming trap: `i/jGloPos` are bounded by `sNx/sNy`**, the tile
+comes from `i/jGloTile`) — with `grdchk_eps=1e-3`. At that point the
+finite-difference and adjoint gradients agree to **0.9 %** (−3.8229e-2 vs
+−3.8566e-2, run 31037). The four follow-on (weaker) points predict responses
+of ~1e-5, at the fc noise floor above, and still return noise — cite only
+points whose `|adj grad|·eps` clears ~3e-5. A control run built from the
+`main`-tip pre-hook mechanism (31038) reproduces the entire `grdchk` table
+digit for digit, and its 62 `adxx_*`/`ADJ*` files bitwise — so the check
+verifies the hook-generated adjoint and the hand-patched one identically.
+SOMA's always-on check passes at 0.07–1.8 % on all five of its points (5-d
+runs 31031/31033, identical output between the pre- and post-refactor
+builds).
 
 **4. The kappa_v ensemble's adjoint-vs-finite-difference comparison — executed,
 and it fails as a validation for a physical reason.** The 2026-08-28/29 ensemble
@@ -336,8 +349,9 @@ member adjoints **blow up** (linearisation instability, non-monotonic in κ:
 0.25×, 4×, 8×, 32× blow; 0.5×, 2×, 16× survive) — so a plain-build adjoint on a
 perturbed background state is not guaranteed to stay finite over 5 years, which
 is what `adjViscBoost` exists for (note the ensemble predates the mode-switch
-hooks, when adjViscBoost was silently inert — no working boost had ever run). Adjoint correctness therefore still rests on
-repairing the gradient check.
+hooks, when adjViscBoost was silently inert — no working boost had ever run). The repaired gradient
+check of item 3 now supplies the adjoint-correctness verification this item
+could not, at the points where the check has signal.
 
 **`useGrdchk` differs by setup since 2026-08-28**: DINO's `input_tap/data.pkg`
 now sets it `.FALSE.` (verified bit-identical `ADJ*`/`adxx*`; saves 8.2 h per

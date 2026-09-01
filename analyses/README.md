@@ -205,7 +205,7 @@ Two runs were added on 2026-08-18 for verification rather than science:
 | Run | What it is |
 | --- | --- |
 | `DINO_1deg_frd_10yr_from_rest_visc2x_run30945` | 10-year forward, confirmed **bit-identical** to the first 10 years of run 28463. Carries `figures/` with the MOC, AMOC and reproduction-check plots |
-| `DINO_1deg_tapAdj_30d_from180yrPk_visc2x_run30948` | 30-day adjoint, confirms `ADJ*`/`adxx*` output and sensitivity on the cost section |
+| `DINO_1deg_tapAdj_30d_from180yrPk_visc2x_run31032` | 30-day adjoint, confirms `ADJ*`/`adxx*` output (incl. `ADJetan`) and sensitivity on the cost section. Successor of the 2026-08-18 original (30948, superseded and removable): 31032 is the current-toolchain rerun of the same config, bitwise-validated back to it through the 31022 chain |
 
 ## Notebook size discipline
 

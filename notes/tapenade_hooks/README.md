@@ -1,8 +1,11 @@
 # Replacing TAF hook directives with Tapenade-native active-argument hooks
 
-*Change note for MITgcm review — Proj_ImPACTS, branch `tapenade-active-dump-hook`
-(commits `27e4ee5`, `e789533`), MITgcm checkpoint69m, Tapenade 3.16, 2026-08-31.
-A styled copy of this note lives beside it as `tapenade_hook_note.html`.*
+*Change note for MITgcm review — Proj_ImPACTS `main` (initial commits
+`27e4ee5`, `e789533`; developed on the since-merged branch
+`tapenade-active-dump-hook`, whose pre-hook base survives as
+`archive/pre-tapenade-hooks`), MITgcm checkpoint69m, Tapenade 3.16,
+2026-08-31. A styled copy of this note lives beside it as
+`tapenade_hook_note.html`.*
 
 How the DINO adjoint's `ADJ*` dumps and adjoint-mode parameter switching were
 moved off hand-patched generated code and onto a mechanism Tapenade itself
@@ -289,9 +292,22 @@ mode with `IMPACTS_*` overrides, DINO-convention job and run-directory names
 (`SOMA_1deg_<mode>_<duration>_run<jobid>`), and a restored forward
 build/submit pair (30-day 4-rank smoke run 31034 completes normally).
 
+**Gradient-check coda (2026-09-01).** The repaired DINO finite-difference
+check (perturbation moved onto the sensitivity peak, `grdchk_eps=1e-3`;
+`input_tap/variants/grdchk_repair/`) **passes at 0.9 %** at the peak point on
+the hook build (run 31037), and a control build of the pre-hook (`main`-tip)
+mechanism reproduces the entire `grdchk` table digit for digit and all
+`adxx_*`/`ADJ*` files bitwise (run 31038) — the hook-generated adjoint and
+the hand-patched one are the same object down to the finite-difference
+level. SOMA's always-on check passes at 0.07–1.8 % on all five points,
+identically on both builds. Details in the root `README.md`, *Verifying
+correctness*.
+
 ---
 
-*Prepared from branch `tapenade-active-dump-hook` (commits `27e4ee5`,
-`e789533`) of `tsgonerog/Proj_ImPACTS`; validation runs 31022–31026 on
-sverdrup, 2026-08-31; §7 validated by runs 31032 (DINO) and 31033/31034 (SOMA). Line references are to
-MITgcm checkpoint69m.*
+*Prepared on branch `tapenade-active-dump-hook` of `tsgonerog/Proj_ImPACTS`
+(initial commits `27e4ee5`, `e789533`; merged to `main` 2026-09-01, the
+pre-hook base kept as `archive/pre-tapenade-hooks`); validation runs
+31022–31026 on sverdrup, 2026-08-31; §7 validated by runs 31032 (DINO),
+31033/31034 (SOMA) and the gradient-check pair 31037/31038. Line references
+are to MITgcm checkpoint69m.*
