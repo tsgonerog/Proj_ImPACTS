@@ -25,6 +25,16 @@ Section~\ref{sec:grdchk-cost}); the pilot-first gate of
 Section~\ref{sec:sequence} was superseded and all members were submitted
 together; and the reference adjoint reproduced the earlier production run
 bit-identically, so all prior reference analysis carries over unchanged.
+(Update 2026-09-01: the eight adjoints were rerun as jobs 31039--31046 with
+the Tapenade-native dump hooks after the \code{ADEXCH} halo-fold repair.
+\code{fc} and every control gradient are bit-identical to the original runs,
+so the numbers here stand; the rerun's \code{ADJ*} dumps are seam-clean ---
+the artifact only ever touched the seven horizontal-stencil dump fields, so
+\code{ADJdiffkr} was never affected --- and \code{ADJetan} is newly
+produced. The only moved value is M4's departure lead, 0.72 to 0.70\,yr
+(two dumps; usable count 52 to 50/366); M1's entry is 935\,d = 2.55\,yr in
+both campaigns, previously rounded 2.56. The table carries the corrected
+values.)
 
 \begin{callout}
 \textbf{Where the evidence lives.} Seven executed notebooks under
@@ -65,11 +75,11 @@ in different guises:
 \textbf{Member} & \textbf{$\kv$} & \textbf{Cost $J$} & \textbf{Adjoint class}
  & \textbf{Corr.\ vs ref.} & \textbf{Departure lead} & \textbf{Usable dumps}\\
 \midrule
-M1 & $0.25\times$ & 0.2141 & blown up        & $-0.01$ & 2.56 yr & 186/366\\
+M1 & $0.25\times$ & 0.2141 & blown up        & $-0.01$ & 2.55 yr & 186/366\\
 M2 & $0.5\times$  & 0.2598 & stable          & 0.82    & ---     & 366/366\\
 ref & $1\times$   & 0.3310 & stable          & 1.00    & ---     & 366/366\\
 M3 & $2\times$    & 0.2649 & stable          & 0.85    & ---     & 366/366\\
-M4 & $4\times$    & 0.2731 & blown up (inf)  & 0.03    & 0.72 yr & 52/366\\
+M4 & $4\times$    & 0.2731 & blown up (inf)  & 0.03    & 0.70 yr & 50/366\\
 M5 & $8\times$    & 0.3021 & blown up        & $-0.02$ & 1.28 yr & 93/366\\
 M6 & $16\times$   & 0.3654 & degraded        & 0.49    & ---     & 366/366\\
 M7 & $32\times$   & 0.5102 & blown up        & 0.01    & 0.36 yr & 25/366\\

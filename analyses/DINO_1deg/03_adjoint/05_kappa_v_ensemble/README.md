@@ -4,25 +4,35 @@ Analysis of the vertical-diffusivity perturbation ensemble (notes/directions/nn_
 master plan, Part I): seven members perturbing the uniform background
 `kappa_v = 1.2e-5 m²/s` by 0.25×–32×, each with a 10-yr forward leg (years
 2170–2180) and a 5-yr adjoint (2180–2185), against the reference adjoint run
-30995. The runs were submitted 2026-08-28; this analysis was built 2026-08-30.
+31039. The forward legs and original adjoints ran 2026-08-28 and the analysis
+was built 2026-08-30; on 2026-09-01 the **adjoints were rerun** (jobs below)
+with the Tapenade-native hook build and the analysis re-executed against them.
+Validated per run against the originals (reference 30995, members 31003–31009):
+`fc` and all 32 `adxx_*` files bitwise identical — every conclusion carries
+over — while the rerun's `ADJ*` dumps are seam-clean (the originals carried the
+pre-31022 tile-seam artifact within ~2 cells of tile edges) and `ADJetan` is
+newly present (367 dumps per run). The artifact only ever affected the seven
+dump fields with horizontal stencils: the four local-operator fields —
+`ADJdiffkr` (the surrogate target), `ADJqnet`, `ADJqsw`, `ADJempmr` — are
+bit-identical between the campaigns at every dump.
 
-| run | κ factor | forward job | adjoint job | run directory (under `/scratch2/tshahriar/DINO_1deg_tapAdj_runs/`) |
+| run | κ factor | forward job | adjoint job (2026-09-01 rerun; original) | run directory (under `/scratch2/tshahriar/DINO_1deg_tapAdj_runs/`) |
 | --- | --- | --- | --- | --- |
-| REF | 1× | 30983 (spin-up) | 30995 | `DINO_1deg_tapAdj_5yr_from180yrPk_visc2x_run30995` |
-| M1 | 0.25× | 30996 | 31003 | `DINO_1deg_tapAdj_5yr_M1_run31003` |
-| M2 | 0.5× | 30997 | 31004 | `DINO_1deg_tapAdj_5yr_M2_run31004` |
-| M3 | 2× | 30998 | 31005 | `DINO_1deg_tapAdj_5yr_M3_run31005` |
-| M4 | 4× | 30999 | 31006 | `DINO_1deg_tapAdj_5yr_M4_run31006` |
-| M5 | 8× | 31000 | 31007 | `DINO_1deg_tapAdj_5yr_M5_run31007` |
-| M6 | 16× | 31001 | 31008 | `DINO_1deg_tapAdj_5yr_M6_run31008` |
-| M7 | 32× | 31002 | 31009 | `DINO_1deg_tapAdj_5yr_M7_run31009` |
+| REF | 1× | 30983 (spin-up) | 31039 (30995) | `DINO_1deg_tapAdj_5yr_from180yrPk_visc2x_run31039` |
+| M1 | 0.25× | 30996 | 31040 (31003) | `DINO_1deg_tapAdj_5yr_M1_run31040` |
+| M2 | 0.5× | 30997 | 31041 (31004) | `DINO_1deg_tapAdj_5yr_M2_run31041` |
+| M3 | 2× | 30998 | 31042 (31005) | `DINO_1deg_tapAdj_5yr_M3_run31042` |
+| M4 | 4× | 30999 | 31043 (31006) | `DINO_1deg_tapAdj_5yr_M4_run31043` |
+| M5 | 8× | 31000 | 31044 (31007) | `DINO_1deg_tapAdj_5yr_M5_run31044` |
+| M6 | 16× | 31001 | 31045 (31008) | `DINO_1deg_tapAdj_5yr_M6_run31045` |
+| M7 | 32× | 31002 | 31046 (31009) | `DINO_1deg_tapAdj_5yr_M7_run31046` |
 
 ## Reading order
 
 | notebook | question it answers |
 | --- | --- |
 | `01_run_inventory_and_cost.ipynb` | Are the nine runs complete and consistent? How does the cost J vary with κ, and does the adjoint gradient predict the measured ΔJ (finite-difference check + initial-state decomposition)? |
-| `02_reference_adjoint_run30995.ipynb` | What does the reference adjoint sensitivity look like (maps, vertical structure, time accumulation)? Continuation of `../01_5yr_from_180yr_pickup_visc2x.ipynb`, whose run 28486 this run reproduces bit-identically. |
+| `02_reference_adjoint_run31039.ipynb` | What does the reference adjoint sensitivity look like (maps, vertical structure, time accumulation)? Continuation of `../01_5yr_from_180yr_pickup_visc2x.ipynb`, via the chain 28486 → 30995 → 31039 (fc/adxx bit-identical throughout; 31039's ADJ* seam-corrected). |
 | `03_ensemble_sensitivity_maps.ipynb` | What does each member's accumulated sensitivity look like, side by side across κ? Which members are physically usable? |
 | `04_member_vs_reference_metrics.ipynb` | Quantitatively, how far is each member from the reference — in amplitude vs in spatial structure — per variable, per depth, per lead time? |
 | `05_ensemble_statistics.ipynb` | Ensemble mean/spread: where (horizontally, vertically, per variable) does the ensemble disagree most? |

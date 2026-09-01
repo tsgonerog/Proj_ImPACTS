@@ -53,8 +53,12 @@ functional are as given in Section~\ref{sec:modelconfig}.
 
 \paragraph{Adjoint output.}
 The reverse sweep dumps eleven adjoint fields at \code{adjDumpFreq}. For the
-reference five-year run (job 28486, from the 180-year pickup, \code{visc2x})
-that is $366$ dumps at five-day spacing:
+reference five-year run (job 31039, from the 180-year pickup, \code{visc2x};
+the 2026-09-01 seam-clean rerun --- \code{fc} and gradients bit-identical
+along the chain 28486\,$\equiv$\,30995\,$\equiv$\,31039) that is $366$
+dumps at five-day spacing (the rerun adds a twelfth dump field, the
+free-surface adjoint \code{ADJetan}, 367 dumps; not listed below as it is
+not a candidate target):
 
 \begin{center}
 \begin{tabularx}{\textwidth}{@{}Y{0.7}Y{1.1}Y{1.2}@{}}

@@ -7,14 +7,18 @@ exactly one place.  The heavy intermediate products are produced once by
 ``build_cache.py`` (same directory) and read back here from
 ``CACHE_DIR`` — see that script's docstring for what each cache file holds.
 
-Experiment (notes/directions/nn_surrogate master plan, Part I; submitted 2026-08-28):
+Experiment (notes/directions/nn_surrogate master plan, Part I; submitted
+2026-08-28, adjoints rerun 2026-09-01 with the Tapenade-native hook build):
     seven members perturb the uniform background vertical diffusivity
     kappa_v = 1.2e-5 m^2/s by factors 0.25x .. 32x.  Each member ran a 10-yr
     forward leg from the year-2170 pickup of spin-up run 30983 with the
     perturbed kappa, then a 5-yr adjoint (years 2180-2185) from its own
-    year-2180 pickup.  The reference adjoint (run 30995) uses the spin-up's
+    year-2180 pickup.  The reference adjoint (run 31039) uses the spin-up's
     own year-2180 pickup and the unperturbed kappa.  All nine adjoint runs
     share the same window: nIter0=3162240, nTimeSteps=87840, dT=1800 s.
+    The rerun reproduces the original adjoints (30995, 31003-31009) bitwise
+    in fc and adxx_*; its ADJ* dumps are seam-clean (the originals carried
+    the pre-31022 tile-seam artifact) and ADJetan is new with the rerun.
 
 Cost function (code_tap/cost_atlantic_heat.F, DOMASS branch, mult_atl=1):
     J = 1e-6 * sum_{tiles} sum_{k<=25} drF(k)/countV_tile(k)
@@ -68,27 +72,35 @@ MITGCMUTILS_PATH = ("/home/tshahriar/Proj_ImPACTS/MITgcm_c69m/MITgcm/"
 
 # ----------------------------------------------------------------------------
 # Run registry — ordered by kappa factor; REF sits between M2 (0.5x) and M3 (2x)
+#
+# adj_job/dir point at the 2026-09-01 RERUN with the Tapenade-native hook build
+# (jobs 31039-31046).  Validated 2026-09-01 against the 2026-08-28 originals
+# (REF 30995, members 31003-31009): fc and all 32 adxx_* files bitwise
+# identical per run, ADJ* differing ONLY within the pre-31022 tile-seam dump
+# artifact the rerun removes, ADJetan newly present (367 dumps incl. the
+# window-end iteration, non-finite only in M4 beyond its documented overflow
+# lead).  The 10-yr forward legs (fwd_job) are unchanged.
 # ----------------------------------------------------------------------------
 
 KAPPA0 = 1.2e-5  # m^2/s, the unperturbed uniform background diffusivity
 
 RUNS = {
-    "M1":  dict(factor=0.25, adj_job=31003, fwd_job=30996,
-                dir=SCRATCH / "DINO_1deg_tapAdj_5yr_M1_run31003"),
-    "M2":  dict(factor=0.5,  adj_job=31004, fwd_job=30997,
-                dir=SCRATCH / "DINO_1deg_tapAdj_5yr_M2_run31004"),
-    "REF": dict(factor=1.0,  adj_job=30995, fwd_job=30983,
-                dir=SCRATCH / "DINO_1deg_tapAdj_5yr_from180yrPk_visc2x_run30995"),
-    "M3":  dict(factor=2.0,  adj_job=31005, fwd_job=30998,
-                dir=SCRATCH / "DINO_1deg_tapAdj_5yr_M3_run31005"),
-    "M4":  dict(factor=4.0,  adj_job=31006, fwd_job=30999,
-                dir=SCRATCH / "DINO_1deg_tapAdj_5yr_M4_run31006"),
-    "M5":  dict(factor=8.0,  adj_job=31007, fwd_job=31000,
-                dir=SCRATCH / "DINO_1deg_tapAdj_5yr_M5_run31007"),
-    "M6":  dict(factor=16.0, adj_job=31008, fwd_job=31001,
-                dir=SCRATCH / "DINO_1deg_tapAdj_5yr_M6_run31008"),
-    "M7":  dict(factor=32.0, adj_job=31009, fwd_job=31002,
-                dir=SCRATCH / "DINO_1deg_tapAdj_5yr_M7_run31009"),
+    "M1":  dict(factor=0.25, adj_job=31040, fwd_job=30996,
+                dir=SCRATCH / "DINO_1deg_tapAdj_5yr_M1_run31040"),
+    "M2":  dict(factor=0.5,  adj_job=31041, fwd_job=30997,
+                dir=SCRATCH / "DINO_1deg_tapAdj_5yr_M2_run31041"),
+    "REF": dict(factor=1.0,  adj_job=31039, fwd_job=30983,
+                dir=SCRATCH / "DINO_1deg_tapAdj_5yr_from180yrPk_visc2x_run31039"),
+    "M3":  dict(factor=2.0,  adj_job=31042, fwd_job=30998,
+                dir=SCRATCH / "DINO_1deg_tapAdj_5yr_M3_run31042"),
+    "M4":  dict(factor=4.0,  adj_job=31043, fwd_job=30999,
+                dir=SCRATCH / "DINO_1deg_tapAdj_5yr_M4_run31043"),
+    "M5":  dict(factor=8.0,  adj_job=31044, fwd_job=31000,
+                dir=SCRATCH / "DINO_1deg_tapAdj_5yr_M5_run31044"),
+    "M6":  dict(factor=16.0, adj_job=31045, fwd_job=31001,
+                dir=SCRATCH / "DINO_1deg_tapAdj_5yr_M6_run31045"),
+    "M7":  dict(factor=32.0, adj_job=31046, fwd_job=31002,
+                dir=SCRATCH / "DINO_1deg_tapAdj_5yr_M7_run31046"),
 }
 for k, r in RUNS.items():
     r["kappa"] = KAPPA0 * r["factor"]

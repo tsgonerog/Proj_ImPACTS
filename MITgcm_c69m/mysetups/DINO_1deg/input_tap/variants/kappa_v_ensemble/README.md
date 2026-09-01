@@ -29,7 +29,13 @@ pointed and costs roughly 2.6× the adjoint proper; the ensemble's own
 finite-difference comparison was to serve as the real validation — see the
 outcome below for how that turned out.
 
-**Outcome (runs 31003–31009, 2026-08-29; analysed 2026-08-30).** All seven
+**Rerun (runs 31040–31046 + reference 31039, 2026-09-01).** The adjoints were
+rerun with the Tapenade-native hook build (ADEXCH-fixed `ADJ*` dumps +
+`ADJetan`); `fc` and `adxx_*` reproduce the original runs below bitwise, so
+the outcome stands — read `ADJ*` from the rerun directories.
+
+**Outcome (original runs 31003–31009, 2026-08-29; analysed 2026-08-30;
+conclusions re-verified on the 2026-09-01 rerun).** All seven
 completed, but only `M2` (0.5×) and `M3` (2×) produced healthy full-length
 adjoints; `M6` (16×) is structurally degraded, and `M1`/`M4`/`M5`/`M7` blow up
 partway through the reverse sweep (non-monotonically in κ — a property of each

@@ -1,16 +1,17 @@
 # TODO — DINO_1deg
 
-- [ ] **Rerun the kappa_v ensemble with the ADEXCH-fixed build** (added
-  2026-08-31). The 2026-08-28/29 ensemble (reference 30995 + members
-  31003–31009) was run before the `code_tap/stubs_tap_adj.F` override, so its
-  `ADJ*` dumps carry the tile-edge/periodic-seam artifact. Only the dumps need
-  refreshing — `fc` and `adxx_*` from those runs are unaffected (validated
-  bitwise, run 31022 vs 30994). Same recipe as before: `submit_tapAdj.sh` with
-  `IMPACTS_TEST_CASE=kappa_v_ensemble/M<n>` per member, plain 5-yr defaults
-  for the reference. The current `build_tapAdj/` (Tapenade-native hooks incl. the
-  `ADJetan` hook, validated bitwise: 31032 ≡ 31022 ≡ 31023 ≡ 31024) is the
-  right build for this — and it now also produces `ADJetan`.
-  Analysis suite: `analyses/DINO_1deg/03_adjoint/05_kappa_v_ensemble/`.
+- [x] ~~Rerun the kappa_v ensemble with the ADEXCH-fixed build~~ (added
+  2026-08-31, **done 2026-09-01**). Reference 31039 + members 31040–31046,
+  fresh `build_tapAdj/` from `main`, member pickups repointed per
+  `notes/references/slurm_job_chaining/` §2.2. Validated per run against the
+  originals (30995, 31003–31009): `fc` + all 32 `adxx_*` bitwise identical;
+  `ADJ*` differences seam-confined (0 cells outside the mask in all 4,026
+  dump pairs/run) — and only for the 7 horizontal-stencil fields, the 4
+  local-operator fields (`ADJdiffkr`, `ADJqnet`, `ADJqsw`, `ADJempmr`) being
+  bit-identical; `ADJetan` new, 367 dumps/run, finite except M4 beyond its
+  documented overflow lead. Analysis suite re-executed against the new runs;
+  the only moved conclusion number is M4's departure lead 0.72 → 0.70 yr
+  (52 → 50/366 usable dumps). Old runs cleared for scratch deletion.
 
 - [ ] **Retry the four blown ensemble members (M1/M4/M5/M7) with adjViscBoost**
   (added 2026-08-31). Not possible before: the boost was silently inert under

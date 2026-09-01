@@ -240,11 +240,11 @@ machine-readable copies:
 
 | Claim | Source |
 | --- | --- |
-| Member fc values 0.214–0.510, monotonic; REF 0.3310 | `costfunction.0000` of runs 30995, 31003–31009; `stats/01_*.csv`; notebook 01 |
-| Run 30995 bit-identical to 28486; `useGrdchk` off saves 8.2 h/run | md5 comparison + `run_timing.txt`, notebooks 01/02 |
+| Member fc values 0.214–0.510, monotonic; REF 0.3310 | `costfunction.0000` of runs 31039–31046 (2026-09-01 hook-build rerun; fc bitwise identical to the original 30995, 31003–31009); `stats/01_*.csv`; notebook 01 |
+| Reference chain 28486 ≡ 30995 ≡ 31039 (fc/adxx bitwise; the rerun's ADJ* seam-corrected, ADJetan new); `useGrdchk` off saves 8.2 h/run | md5 comparisons + `run_timing.txt`, notebooks 01/02 |
 | Noise floor σ = 0.007 (annual) / 0.012 (instantaneous) | J-proxy over 2,402 spin-up-30983 pickups (`build_jproxy.py`), notebook 01 |
 | Stable-member metrics (corr 0.82/0.85, amp ×1.37/×0.77; ADJdiffkr corr 0.21 at 2×; ∂J/∂κ sums −251/−436/−78/+673) | `cache/member_metrics_time.nc`, `cache/adxx_fields_3d.nc`; notebooks 04/07 |
-| Blow-up departure leads 0.36/0.72/1.28/2.56 yr; burst e-folds 1–3 d; Southern Ocean seeds; 62 % usable dumps | `stats/06_blowup_departure_table.csv`, `stats/07_training_data_budget.csv`; notebook 06 |
+| Blow-up departure leads 0.36/0.70/1.28/2.55 yr; burst e-folds 1–3 d; Southern Ocean seeds; 62 % usable dumps | `stats/06_blowup_departure_table.csv`, `stats/07_training_data_budget.csv`; notebook 06 |
 | Linear ΔJ prediction: wrong sign 4/7, none within 30 % | `cache/dJ_decomposition.csv`; notebook 01 |
 | fc is a terminal-30-day mean; per-MPI-tile normalisation (decomposition-dependent) | `pkg/cost` source + proxy validation (fc reproduced within 3–19 %), notebook 01 |
 | Six control gradients identically zero (`xx_uvel/vvel`, four wind controls) | `cache/adxx_fields_*.nc`, notebook 02 |

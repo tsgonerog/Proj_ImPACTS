@@ -279,8 +279,12 @@ its own correct path (`EXCH2_*_CUBE_AD` via the Tapenade-generated
 (implementing the stubs with those same `_AD` routines, via `-mods` same-name
 shadowing, keeping the vendored tree pristine) was validated with run 31022 vs
 30994: `fc` and all 33 `adxx_*` files bitwise identical, `ADJ*` differences
-confined to the seams. When reading `ADJ*` from older runs (including 28486,
-30995 and the kappa_v ensemble), mask ~2 cells around those seams. Do not
+confined to the seams. The artifact only ever affected the seven dump fields
+with horizontal stencils — `ADJdiffkr`/`ADJqnet`/`ADJqsw`/`ADJempmr` have
+empty adjoint halos and were never touched. The kappa_v ensemble's dumps were
+replaced by the seam-clean 2026-09-01 rerun (31039–31046; the pre-fix
+originals are deleted), so 28486 is the only pre-fix run left on scratch —
+mask ~2 cells around those seams when reading its `ADJ*`. Do not
 "clean up" the override into `MITgcm/pkg/tapenade/` — that would create a
 modified-upstream deviation the verification procedure above flags. SOMA is
 single-tile serial (no seams) and does not need the override.
@@ -338,7 +342,9 @@ builds).
 
 **4. The kappa_v ensemble's adjoint-vs-finite-difference comparison — executed,
 and it fails as a validation for a physical reason.** The 2026-08-28/29 ensemble
-(reference 30995 + members 31003–31009; analysed in
+(reference 30995 + members 31003–31009; adjoints rerun seam-clean on 2026-09-01
+as 31039–31046 with fc/adxx bitwise identical, so every number here stands and
+the analysis now reads the rerun; analysed in
 `analyses/DINO_1deg/03_adjoint/05_kappa_v_ensemble/`) compared measured ΔJ
 against the linear adjoint prediction: wrong sign for 4 of 7 members, none
 within 30 %. The failure is dominated by nonlinearity of the 10-yr state

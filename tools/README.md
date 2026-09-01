@@ -266,13 +266,17 @@ even when an earlier one fails.
 R=/scratch2/$USER/DINO_1deg_tapAdj_runs
 
 # the comparison that established 30995 reproduces the May baseline exactly
+# (2026-08-28; 30995 was deleted after the 2026-09-01 rerun — the rerun's own
+#  validation reports sit in each 31039-31046 run directory as
+#  comparison_vs_*.txt, ADJ* differing seam-only there by design)
 tools/compare_adj_runs.sh \
   "$R/DINO_1deg_tapAdj_5yr_from180yrPk_visc2x_run28486" \
   "$R/DINO_1deg_tapAdj_5yr_from180yrPk_visc2x_run30995"
 echo "verdict: $?"          # 0 = equivalent
 #   EQUIVALENT: all 8116 sensitivity fields bit-identical, fc identical to every
 #   printed digit (3.30992121938681E-01), 18801 %MON lines byte-identical.
-#   Its report is still in that run directory as comparison_vs_..._run28486.txt
+#   Its report went with the deleted directory; the surviving reports are the
+#   rerun ones described above
 
 # submit and compare unattended, from the setup directory
 cd MITgcm_c69m/mysetups/DINO_1deg

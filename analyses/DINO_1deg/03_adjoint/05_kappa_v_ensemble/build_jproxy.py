@@ -139,4 +139,4 @@ if __name__ == "__main__":
     # quick sanity summary
     w = (ds.model_year >= 2180) & (ds.model_year < 2185)
     print("mean jproxy 2180-2185:", float(ds.jproxy[w].mean()),
-          " (fc of run 30995 = 0.330992)")
+          " (fc of run 31039 = 0.330992)")

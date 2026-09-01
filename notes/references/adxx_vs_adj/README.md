@@ -33,7 +33,9 @@ questions.
 The bridge between them: for an *initial-condition* control, the control **is**
 the state at the window start — so `adxx_theta` and the **last-computed**
 (lowest-numbered) `ADJtheta` dump are the same object through two different
-pipelines. Measured on run 30995: pattern correlation **+0.999999** (§6).
+pipelines. Measured on the seam-clean run 31039: pattern correlation
+**+1.000000**, equal to float32 rounding (§7 — pre-fix run 30995 gave
++0.999999, its 0.7 % residual being entirely the seam artifact).
 
 ## 2 · Two objects, two pipelines
 
@@ -139,12 +141,13 @@ REVERSE  <==|====|====|====|====|====|====|====|====|====|====|====|====|==|  co
          |
          ├─ last computed:  ADJ*.0003162240   = fully accumulated (lead 5 yr)
          └─ then:           adxx_*.0000000000 = adjoint of the control read
-                            ~= final ADJ dump: corr = +0.999999  (run 30995)
+                            = final ADJ dump to float32 rounding:
+                              corr +1.000000, max rel diff 3e-8  (run 31039)
 ```
 
 The forward sweep runs left→right, reading the controls at the start and
 accumulating the cost only over the terminal 30 days (`lastinterval` =
-2 592 000 s; run 30995's `fc = 3.30992121938681E-01`). The reverse sweep runs
+2 592 000 s; run 31039's `fc = 3.30992121938681E-01`). The reverse sweep runs
 right→left, writing `ADJ*` snapshots as it passes each 5-day mark — so the
 *highest*-numbered file (`0003249840`) is computed *first* and holds ~30 days
 of accumulation, while the *lowest*-numbered (`0003162240`) is computed *last*
@@ -153,15 +156,16 @@ window-end iteration (`3250080`) itself is not dumped.
 
 ![theta sensitivity at 231 m, run 30995: first-computed ADJ dump, lead 1 yr, fully accumulated lead 5 yr, and adxx_theta](figures/adjtheta_leads_vs_adxx_k14.png)
 
-*The timeline made real — θ-sensitivity at 231 m, run 30995. The reverse
+*The timeline made real — θ-sensitivity at 231 m, run 31039 (the seam-clean
+hook build). The reverse
 sweep's first-computed dump (left) holds only ~30 days of accumulation: a band
 hugging the 26°N cost section, where the terminal-month cost forcing enters. By
 lead 1 yr the signal has spread through the gyres; the last-computed dump
 (lead 5.0 yr) is the fully accumulated pattern — and `adxx_theta` (right) is
 the same field arriving through the other pipeline. Note the per-panel colour
-scales. The faint stripes in the left panel are the pre-31022 tile-seam dump
-artifact (§8's first caveat) that the ensemble rerun removes; `adxx` never had
-it.*
+scales. (An earlier version of this figure, drawn from pre-fix run 30995,
+showed faint tile-seam stripes in the left panel — the §8 artifact, since
+removed by the 2026-09-01 rerun.)*
 
 ## 6 · Numbering and timestamps
 
@@ -180,25 +184,26 @@ it.*
 
 ## 7 · The fully back-propagated state ≈ adxx
 
-For initial-condition controls the equivalence is measurable. On run 30995
-(θ, wet cells only):
+For initial-condition controls the equivalence is measurable. On the
+seam-clean run 31039 (θ, wet cells only):
 
-- corr(`adxx_theta`, `ADJtheta.0003162240`) = **+0.999999**, RMS ratio 1.0002,
-  max pointwise difference ≈ 0.7 % of the field peak;
-- corr(`adxx_theta`, `ADJtheta.0003249840`) = **−0.004** — the first-computed
+- corr(`adxx_theta`, `ADJtheta.0003162240`) = **+1.000000**, RMS ratio 1.00000,
+  max pointwise difference 3×10⁻⁸ of the field peak — exactly the float32
+  rounding of the dump, nothing more;
+- corr(`adxx_theta`, `ADJtheta.0003249840`) = **−0.005** — the first-computed
   dump is essentially unrelated to the accumulated gradient.
 
 ![scatter of adxx_theta vs the final ADJtheta dump, every wet cell on the y=x line](figures/adxx_vs_final_adj_scatter.png)
 
 *The equivalence, cell by cell: `adxx_theta` against the final `ADJtheta` dump
-over every wet cell of run 30995 — the cloud collapses onto y = x. The residual
-thread width is the float32 dump vs the float64 gradient, plus the two
-pipelines' different halo folds.*
+over every wet cell of run 31039 — the cloud collapses onto y = x at
+corr +1.000000, max relative difference 3×10⁻⁸: pure float32 rounding.*
 
-Why ≈ and not bit-identical: the dump is float32 vs the float64 gradient, the
-two pipelines fold tile halos differently (`ADEXCH` vs the ctrl path), and they
-tap slightly different points of the step loop. The ensemble cache build uses
-exactly this as its internal consistency check (`adxx_diffkr` vs final
+So once the dump path folds tile halos correctly, the two pipelines agree to
+the dump's own precision. The historical contrast is instructive: on pre-fix
+run 30995 the same comparison gave +0.999999 with a 0.7 % max residual — that
+entire residual was the seam artifact. The ensemble cache build uses exactly
+this equivalence as its internal consistency check (`adxx_diffkr` vs final
 `ADJdiffkr`, expected ≈ 1).
 
 The equivalence holds *only* for controls that are initial conditions. For
@@ -223,8 +228,12 @@ Three caveats when reading `ADJ*`:
 
 - **Pre-31022 DINO dumps carry the tile-seam artifact** (the `ADEXCH` stubs
   were no-ops): mask ~2 cells around i=17|18, 34|35, every j multiple of 22,
-  and the periodic seam. `fc` and `adxx_*` were never affected. The 2026-09-01
-  ensemble rerun exists to replace those dumps.
+  and the periodic seam. `fc` and `adxx_*` were never affected — nor were the
+  four local-operator dump fields (`ADJdiffkr`, `ADJqnet`, `ADJqsw`,
+  `ADJempmr`), whose halos hold nothing to fold; only the 7 horizontal-stencil
+  fields carried it. The 2026-09-01 ensemble rerun (31039–31046) replaced the
+  affected dumps and the old runs are deleted; 28486 is the one pre-fix run
+  still on scratch.
 - **`ADJtaux`/`ADJtauy` are snapshots of the `fu`/`fv` adjoints** — the names
   come from upstream's dump labels, not from the `xx_tauu`/`xx_tauv` controls
   (whose gradients are identically zero here; stress enters through
@@ -258,4 +267,5 @@ Three caveats when reading `ADJ*`:
 `pkg/autodiff/dump_adj_xyz.F` (`WRITE_REC_XYZ_RL`),
 `model/src/forward_step.F:927` (`INTEGR_CONTINUITY` call site),
 `build_tapAdj/the_main_loop_b.f` (`THE_MAIN_LOOP_B`). Correlations measured on
-run 30995, 2026-09-01.*
+run 31039, 2026-09-01 (the +0.999999 historical contrast on pre-fix run
+30995, since deleted).*

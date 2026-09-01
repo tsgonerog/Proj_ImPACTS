@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build the intermediate-product cache for the kappa_v ensemble analysis.
 
-Reads every ADJ*/adxx_* dump of the nine 5-yr adjoint runs (reference 30995 +
+Reads every ADJ*/adxx_* dump of the nine 5-yr adjoint runs (reference 31039 +
 members M1..M7) plus the year-2180 pickups, and writes netCDF/CSV products to
 ensemble_common.CACHE_DIR so the notebooks in this directory stay fast and
 light.  Metric definitions live in ensemble_common (imported, not duplicated);

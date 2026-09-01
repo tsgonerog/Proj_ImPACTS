@@ -115,17 +115,18 @@ viscosity is set. 06 compares a half-year adjoint against the 5-yr reference.
 | `02_5yr_from_50yr_pickup_viscD2x_Zref.ipynb` | 24493 | 50-year pickup (878400) | `viscAhD` 2×, `viscAhZ` at reference |
 | `03_5yr_from_50yr_pickup_viscGrid1p8e-2_adjViscBoost.ipynb` | 28461 | 50-year pickup (878400) | `viscAhGrid=1.8E-2`, adjoint-mode visc boost |
 | `04_5yr_from_rest_viscGrid1p8e-2_adjViscBoost.ipynb` | 28453 | rest (0) | `viscAhGrid=1.8E-2`, adjoint-mode visc boost |
-| `06_0p5yr_from_180yr_pickup_visc2x_vs_5yr_ref.ipynb` | 31028 vs 30995 | 180-year pickup (3162240) | `visc2x`, Tapenade-native-hook build (31028); matched-lead comparison against the 5-yr reference 30995, seam-masked because 30995 predates the ADEXCH stubs fix. Figures/animations go to 31028's run directory |
+| `06_0p5yr_from_180yr_pickup_visc2x_vs_5yr_ref.ipynb` | 31028 vs 31039 | 180-year pickup (3162240) | `visc2x`, Tapenade-native-hook builds; matched-lead comparison against the 5-yr reference 31039 (the 2026-09-01 seam-clean rerun of 30995; seam mask retained for metric continuity). Figures/animations go to 31028's run directory |
 
 Settings in this table were read back from each run's own staged `data`
 namelist on scratch, not from the run-directory tag.
 
-`05_kappa_v_ensemble/` is a seven-notebook suite (2026-08-30) analysing the
-vertical-diffusivity perturbation ensemble of the `notes/directions/nn_surrogate` master
-plan, Part I: the new reference adjoint 30995 (bit-identical to 28486) against
-members M1–M7 (runs 31003–31009, κ_v scaled 0.25×–32×), plus the
-internal-variability noise floor reconstructed from spin-up 30983's 2,402
-pickups. It has its own `README.md` (run table, reading order, conventions);
+`05_kappa_v_ensemble/` is a seven-notebook suite (2026-08-30; re-executed
+2026-09-01 on the hook-build adjoint rerun) analysing the vertical-diffusivity
+perturbation ensemble of the `notes/directions/nn_surrogate` master plan,
+Part I: the reference adjoint 31039 (fc/adxx bit-identical to 30995 and 28486;
+seam-clean `ADJ*` + new `ADJetan`) against members M1–M7 (runs 31040–31046,
+reruns of 31003–31009, κ_v scaled 0.25×–32×), plus the internal-variability
+noise floor reconstructed from spin-up 30983's 2,402 pickups. It has its own `README.md` (run table, reading order, conventions);
 shared code lives in `ensemble_common.py`, and `build_cache.py` /
 `build_jproxy.py` must be run once before re-executing the notebooks — they
 write the intermediates the notebooks read. Unlike the single-run notebooks,
