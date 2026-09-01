@@ -626,8 +626,9 @@ def write_html_animation(path, title, groups, subtitle="", footer="",
     groups : dict {group_label: [(frame_label, jpeg_bytes, mime), ...]}
         one entry per depth level (or any second dimension); a single-entry
         dict hides the group selector.  Frames must be in DISPLAY order —
-        for adjoint fields pass them reversed (most-recently-computed lead
-        first or last, your choice, but label them).
+        the suite convention (all notebooks, since 2026-09-01) is ADJOINT
+        COMPUTATION order for ADJ* fields: lead increasing, i.e. iterate
+        the forward-numbered dumps reversed, and label every frame.
     """
     path = Path(path)
     payload = {}
