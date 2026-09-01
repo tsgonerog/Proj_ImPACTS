@@ -7,8 +7,9 @@
   refreshing — `fc` and `adxx_*` from those runs are unaffected (validated
   bitwise, run 31022 vs 30994). Same recipe as before: `submit_tapAdj.sh` with
   `IMPACTS_TEST_CASE=kappa_v_ensemble/M<n>` per member, plain 5-yr defaults
-  for the reference. The current `build_tapAdj/` (Tapenade-native hooks,
-  validated bitwise: 31024 ≡ 31023 ≡ 31022) is the right build for this.
+  for the reference. The current `build_tapAdj/` (Tapenade-native hooks incl. the
+  `ADJetan` hook, validated bitwise: 31032 ≡ 31022 ≡ 31023 ≡ 31024) is the
+  right build for this — and it now also produces `ADJetan`.
   Analysis suite: `analyses/DINO_1deg/03_adjoint/05_kappa_v_ensemble/`.
 
 - [ ] **Retry the four blown ensemble members (M1/M4/M5/M7) with adjViscBoost**

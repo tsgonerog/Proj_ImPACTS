@@ -36,7 +36,7 @@ these document what was done rather than what might be.
 | Reference | Covers |
 | --- | --- |
 | [`slurm_job_chaining/`](slurm_job_chaining/) | Making one job wait for another with `--dependency`, and running a follow-on step automatically when a job finishes. Worked from the κ_v ensemble submitted 2026-08-28 |
-| [`tapenade_hooks/`](tapenade_hooks/) | Change note on replacing the TAF hook directives with Tapenade-native active-argument hooks (`ADJ*` dumps + adjViscBoost mode switching): the gap, the mechanism, a file-by-file comparison, bitwise validation, and upstream-MITgcm considerations. Written 2026-08-31 for advisor/MITgcm review; a styled HTML copy sits beside the README |
+| [`tapenade_hooks/`](tapenade_hooks/) | Change note on replacing the TAF hook directives with Tapenade-native active-argument hooks (`ADJ*` + `ADJetan` dumps, adjViscBoost mode switching): the gap, the mechanism, a file-by-file comparison, bitwise validation, and upstream-MITgcm considerations; §6–7 add the SOMA conversion, the additive upstream+append file re-layout of both setups' `code_tap/`, and the DINO/SOMA workflow alignment. Written 2026-08-31 for advisor/MITgcm review; a styled HTML copy sits beside the README |
 
 Keep these honest about their own scope: name the machine and the scheduler
 version they were verified on, and say plainly when something documented is the

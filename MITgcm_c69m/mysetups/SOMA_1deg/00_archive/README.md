@@ -6,15 +6,60 @@ in here is history, not current behaviour.
 
 **Layout rule: the archive mirrors the live directory a file came from (or would
 go back to)** — the same rule as `../DINO_1deg/00_archive/` and
-`MITgcm_c69m/00_archive/`. Only `scripts/` is populated here; `code_tap/` and
-`input_tap/` subdirectories appear if something is ever archived from them.
+`MITgcm_c69m/00_archive/`. `scripts/` and `code_tap/` are populated;
+`input_tap/` appears if something is ever archived from it.
 
 ---
 
+## `code_tap/`
+
+Archived 2026-08-31, when SOMA converted to the Tapenade-native `TAP_*` hook
+mechanism (see the DINO README, *"How the Tapenade hooks work"*). Apart from
+`the_model_main.F_ForTapProfile` (archived later the same day), all of these
+belonged to the old mechanism, in which the `ADJ*` dump call was hand-inserted
+into a frozen copy of the generated `forward_step_b.f` and the adjoint state
+reached hand-written `_b`-named routines through the `adcommon.h`
+common-block mirror.
+
+| File | What it is | Why it is not live |
+| --- | --- | --- |
+| `adcommon.h` | Hand-mirror of Tapenade's generated adjoint common blocks | The hook's `_B` receives adjoint fields as arguments; no consumer remains |
+| `addummy_for_etan.F` | `DUMMY_FOR_ETAN_b`; would dump `ADJetan` | Never called by generated code; needs the archived `adcommon.h`. Superseded by the live `code_tap/addummy_for_etan.F` (`TAP_DUMMY_FOR_ETAN` hook, added later on 2026-08-31) |
+| `monitor_ad.F` | `MONITOR_b`, adjoint-state monitor | Same |
+| `exf_monitor_ad.F` | `EXF_MONITOR_b` | Same |
+| `exf_adjoint_snapshots_ad.F` | `EXF_ADJOINT_SNAPSHOTS_b`, body already defused behind `DONT_DISABLE` | Same; the upstream TAF-named `pkg/exf` copies compile in its place as dead code |
+| `the_model_main.F_ForTapProfile` | `the_model_main.F` instrumented for the Tapenade profiling tool | Profiling cannot be run from this repository (no patched `genmake2` here; see `tools/tapenade_profiling/`); archived 2026-08-31 when the workflows were aligned — DINO archived its counterpart the same way |
+
+`forward_step_b.f_modified` (the frozen 7,306-line generated copy) was deleted
+rather than archived — git history keeps it, and it is the one file with
+negative reference value: **it had gone stale against the evolving tree**
+(274 diff lines vs freshly generated code), and splicing it into 2026-08-31
+builds misaligned Tapenade's tape enough to crash every adjoint run at the
+backward-sweep start (`integer divide by zero` in `pkg/longstep`, runs
+31029/31030). The first successful c69m SOMA adjoint is the hook build's run
+31031.
+
 ## `scripts/`
 
-Four superseded submit scripts, from before the action-first naming
-(`submit_tapAdj_<duration>.sh`) was applied to this setup.
+Two generations of superseded submit scripts.
+
+**Archived 2026-08-31, when the SOMA workflow was aligned with DINO's** — the
+five pre-made per-duration scripts, replaced by the single `submit_tapAdj.sh`
+with `IMPACTS_DURATION_DAYS`-style overrides (durations are now submissions,
+not scripts). They still work, but write DINO-convention-violating
+`pd_StP_srl_no-kpp-GM_*` / `test_*` run-directory names and lack the
+`ADJetan`-era build pairing:
+
+| File | Simulated days |
+| --- | --- |
+| `submit_tapAdj_001d_smoketest.sh` | 1 (job name `test`) |
+| `submit_tapAdj_005d.sh` | 5 |
+| `submit_tapAdj_030d.sh` | 30 |
+| `submit_tapAdj_180d.sh` | 180 |
+| `submit_tapAdj_360d.sh` | 360 |
+
+**From before the action-first naming** (`submit_tapAdj_<duration>.sh`) was
+applied to this setup:
 
 | File | Why it is not live |
 | --- | --- |

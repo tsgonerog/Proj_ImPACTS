@@ -120,13 +120,13 @@ make -j 8 tap_adj
 # list must match its hand-written routine; F77 would silently misalign a
 # mismatch, so fail loudly instead.
 check_gen_call() {
-    local name=$1 expect=$2 n
+    local name=$1 expect=$2 file=$3 n
     n=$(awk -v pat="CALL ${name}\\\\(" '$0 ~ pat {f=1}
          f{buf=buf $0; if (index($0,")")) exit}
          END{if (buf=="") {print 0} else {print gsub(/,/,",",buf)+1}}' \
-        forward_step_b.f)
+        "$file")
     if [ "${n:-0}" -ne "$expect" ]; then
-        echo "ERROR: generated CALL ${name} in forward_step_b.f has ${n:-0}"
+        echo "ERROR: generated CALL ${name} in ${file} has ${n:-0}"
         echo "       arguments, expected ${expect}. Align the hand-written"
         echo "       routine with the generated call before using this"
         echo "       executable."
@@ -134,6 +134,7 @@ check_gen_call() {
     fi
     echo "OK: generated ${name} call has ${expect} arguments."
 }
-check_gen_call TAP_DUMMY_IN_STEPPING_B 25
-check_gen_call TAP_INADMODE_SET_B 5
-check_gen_call TAP_INADMODE_UNSET_B 5
+check_gen_call TAP_DUMMY_IN_STEPPING_B 25 forward_step_b.f
+check_gen_call TAP_INADMODE_SET_B 5 forward_step_b.f
+check_gen_call TAP_INADMODE_UNSET_B 5 forward_step_b.f
+check_gen_call TAP_DUMMY_FOR_ETAN_B 5 integr_continuity_b.f

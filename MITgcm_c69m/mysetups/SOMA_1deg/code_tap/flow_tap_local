@@ -15,21 +15,3 @@ subroutine tap_dummy_for_etan:
   ReadNotWritten:     (0,1,1,1)
   NotReadThenWritten: (0,0,0,0)
   ReadThenWritten:    (1,0,0,0)
-
-subroutine tap_inadmode_set:
-  external:
-  shape: (param 1, param 2, param 3, param 4)
-  type: (none(),none(),none(),none())
-  NotReadNotWritten:  (0,0,0,0)
-  ReadNotWritten:     (0,1,1,1)
-  NotReadThenWritten: (0,0,0,0)
-  ReadThenWritten:    (1,0,0,0)
-
-subroutine tap_inadmode_unset:
-  external:
-  shape: (param 1, param 2, param 3, param 4)
-  type: (none(),none(),none(),none())
-  NotReadNotWritten:  (0,0,0,0)
-  ReadNotWritten:     (0,1,1,1)
-  NotReadThenWritten: (0,0,0,0)
-  ReadThenWritten:    (1,0,0,0)

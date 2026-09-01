@@ -7,6 +7,21 @@
 \section{Running the experiment}
 %-----------------------------------------------------------------------
 
+\begin{callout}
+\textbf{Snapshot note (added 2026-08-31).} This appendix records the machine
+and toolchain state Part~I actually ran under, and is kept as that record. The
+adjoint toolchain has since moved to Tapenade-native \code{TAP\_*} hooks:
+stock \code{genmake2}, no post-edited generated files (the
+\code{forward\_step\_b.f\_modified\_*} staging described below is gone), the
+\code{rawTapenade} control build retired --- raw Tapenade output \emph{is}
+the working configuration --- \code{ADJ*} dumps free of the tile-seam
+artifact and now including \code{ADJetan}, and \code{useGrdchk = .FALSE.}
+as the committed DINO default (this plan's per-member instruction, adopted
+repo-wide). The commands themselves are unchanged
+(\code{build\_tapAdj.sh}, \code{tools/submit.sh} with \code{IMPACTS\_*}
+overrides). See \code{notes/tapenade\_hooks/} for the full change note.
+\end{callout}
+
 \subsection{Environment}
 
 Verified on 2026-08-21 on the machine the experiment will be run from.

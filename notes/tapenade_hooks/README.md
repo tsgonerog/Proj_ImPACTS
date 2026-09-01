@@ -138,7 +138,7 @@ setup's `-mods` directory.
 | **added** `code_tap/autodiff_inadmode_unset_ad.F` (+ `_OG`, `_aste` variants) | No local copy; upstream's `ADAUTODIFF_INADMODE_UNSET` compiled but unreachable; ASTE's `outAd*` restore side never ported | Shadow with the upstream body + `TAP_INADMODE_UNSET_B` wrapper; the `_aste` variant newly implements the `outAd*` restore (parameters existed in the header/readparms, nothing applied them) | Forward-mode parameters must be restored at each backward step's end, before re-forwards | **upstream-ready** (restore body itself is ASTE-config-specific) |
 | **removed** `code_tap/forward_step_b.f_modified` (+ `_mpi`, `_serial`) | Frozen 5,547-line copies of generated code; sole content = one inserted call; overwritten into the build by the patched `genmake2` | Deleted — the call is generated | Eliminates hand-editing of generated code and per-variant regeneration burden | n/a |
 | **archived** `code_tap/adcommon.h` | Hand-mirror of Tapenade's generated adjoint commons; member order had to silently match or dumps were mislabeled | Archived (`00_archive/code_tap/`) — no consumer remains | Adjoint fields are explicit arguments now | n/a — TAF path keeps its own `pkg/autodiff/adcommon.h` |
-| **archived** `code_tap/addummy_for_etan.F`, `code_tap/monitor_ad.F` | Present but dead: no generated code ever called `DUMMY_FOR_ETAN_B` / `MONITOR_b`; no run ever produced `ADJetan` | Archived with notes; an `ADJetan` hook at the `integr_continuity.F` call site is a documented follow-up | Could not compile without the retired `adcommon.h`; were inert regardless | deferred |
+| **archived** `code_tap/addummy_for_etan.F`, `code_tap/monitor_ad.F` | Present but dead: no generated code ever called `DUMMY_FOR_ETAN_B` / `MONITOR_b`; no run ever produced `ADJetan` | Archived with notes; an `ADJetan` hook at the `integr_continuity.F` call site is a documented follow-up — **landed, see §7** | Could not compile without the retired `adcommon.h`; were inert regardless | done (§7) |
 | **retired** `build_tapAdj_rawTapenade.sh` | Control build demonstrating uncorrected raw Tapenade output | Deleted for DINO — raw output *is* the working configuration | The patched/raw axis no longer exists here | n/a |
 | **modified** `build_tapAdj.sh`, `build_tapAdj_adjViscBoost.sh` | Invoked the patched `genmake2_override_forward_step_b`; staged the frozen file | Invoke **stock** `genmake2` + `-tap_extra "-ext …"`; stage the new `unset` variant; run `check_gen_call` argument-count assertions on all three generated calls | No vendored-tree patch needed; loud failure instead of silent F77 misalignment | pattern **upstream-ready** (the assertion could live in a genmake2 rule) |
 | **unchanged** `MITgcm/tools/genmake2_override_forward_step_b` | Load-bearing for all adjoint builds | Kept, but used only by the not-yet-converted SOMA setup | Deletable once SOMA adopts the same hooks | transitional |
@@ -189,15 +189,109 @@ bodies and dual-guard adjoint bodies in `pkg/autodiff` (replacing the
   and the `-ext` must share one instance; Tapenade may emit `_B0`-suffixed
   names when it specializes (cf. `CG2D_B0`) — verify the emitted name once per
   hook.
-- **Adjacent gaps**, same root cause: `DUMMY_FOR_ETAN`/`ADJetan` (unwired),
+- **Adjacent gaps**, same root cause: `DUMMY_FOR_ETAN`/`ADJetan` (unwired
+  when this was written; since closed by the same pattern — see §7),
   and the `ADEXCH_*` adjoint halo exchanges that upstream
   `pkg/tapenade/stubs_tap_adj.F` ships as no-ops (implemented in this repo via
   `EXCH2_*_CUBE_AD` in an earlier commit, `7378086`; without them multi-tile
   `ADJ*` dumps carry seam artifacts). TLM counterparts (`_D`) are currently
   link-safe no-ops and would need real bodies for tangent-mode dumps.
 
+## 6 · Addendum — SOMA converted; deviation set now empty (same day, later)
+
+The follow-up anticipated in §5 landed the same day, and it produced the
+strongest evidence for this note's thesis. Converting SOMA to the same
+mechanism (dump hook only — SOMA has no adjViscBoost machinery to switch)
+required a baseline run of the *old* patched mechanism first, and that
+baseline **crashed at the backward-sweep start** (`integer divide by zero` in
+`pkg/longstep`, runs 31029/31030) — at every duration. The cause: SOMA's
+frozen `forward_step_b.f_modified` had silently gone stale against the
+evolving tree (274 diff lines vs freshly generated code), and splicing it into
+current builds misaligned Tapenade's tape. **The c69m SOMA adjoint had never
+actually run.** The hook build completed on the first attempt: run 31031,
+`fc` bitwise-identical to the crashed baseline's forward value, full finite
+`ADJ*`/`adxx_*` output — the failure mode hand-frozen generated code invites,
+and the one this redesign eliminates, demonstrated in one experiment.
+
+With both setups on generated hook calls, the two remaining tree deviations
+dissolved: `tools/genmake2_override_forward_step_b` is deleted (nothing uses
+it), and `pkg/tapenade/dummy_tap.F` is restored verbatim (the `TAP_*` renaming
+removed the symbol collision that had forced it out at vendoring time; its
+stubs compile as dead code). **The vendored MITgcm tree is now byte-for-byte
+upstream in every file** — everything this project adds lives in the setups'
+`-mods` directories and one `-tap_extra` flag, which is exactly the shape an
+upstream patch would formalize.
+
+## 7 · Addendum — ADJetan wired; shadows re-laid out additively (later still)
+
+Two follow-ups, same day, after the SOMA conversion (first in DINO, then
+SOMA — see the closing paragraph):
+
+**The fourth hook: `ADJetan`.** Upstream dumps the free-surface adjoint from
+its own hook — `DUMMY_FOR_ETAN`, called inside `INTEGR_CONTINUITY`
+(`model/src/integr_continuity.F:313`), not from `FORWARD_STEP` — because
+`adEtaN` is half a time step out of phase with the other adjoint variables
+(the comment block in `pkg/autodiff/addummy_for_etan.F` explains). The stock
+`flow_tap` declares it all-passive (three scalars), so Tapenade dropped it
+exactly as it dropped `DUMMY_IN_STEPPING`: the generated
+`integr_continuity_b.f` kept an `EXTERNAL DUMMY_FOR_ETAN` and no call, the
+`dummy_tap.F` `DUMMY_FOR_ETAN_B` stub sat unreferenced, and no Tapenade run
+here had ever produced `ADJetan`. Wired with the identical recipe: an
+`integr_continuity.F` shadow whose one change is
+`TAP_DUMMY_FOR_ETAN(etaN, myTime, myIter, myThid)` under
+`#ifdef ALLOW_TAPENADE`; a `tap_dummy_for_etan.F` no-op forward body; an
+`etaN` read-then-written stanza in `flow_tap_local`; the hand-written
+`TAP_DUMMY_FOR_ETAN_B` (dumps `etaNb` via `DUMP_ADJ_XY` on the separate
+`dumpAdRecEt` counter; like upstream, no ADEXCH fold) appended to an
+`addummy_for_etan.F` shadow; and a fourth `check_gen_call` assertion
+(5 arguments, in `integr_continuity_b.f`). Tape cost: one 2-D
+`PUSH`/`POP` of `etaN` per call.
+
+**Additive re-layout of the shadows.** In the same pass every DINO shadow was
+rebuilt to be *upstream file byte-for-byte + guarded additions only*:
+`addummy_in_stepping.F` now carries the complete upstream TAF/OpenAD body
+unmodified (it compiles as dead code under Tapenade, exactly as in an
+upstream Tapenade verification build — no more condensed `#else` copy) with
+the `TAP_*` block appended; `addummy_for_etan.F` follows the same shape; and
+the six option headers that had drifted from older MITgcm versions
+(`CPP_OPTIONS.h`, `COST_OPTIONS.h`, `CTRL_OPTIONS.h`, `CTRL_SIZE.h`,
+`GMREDI_OPTIONS.h`, `MOM_COMMON_OPTIONS.h`) were rebased onto the c69m text
+with only `#define`/`#undef` toggles changed, the effective macro set
+verified identical. Every `code_tap/` file is now one `vimdiff` hunk-set away
+from its upstream counterpart — the shape an upstream contribution needs.
+
+**Validation (run 31032 vs baseline 31022, 30-day adjoint from the 180-yr
+pickup, identical namelists).** Rebuilding both variants after the re-layout
+changed the generated `.f` code lines *only* by the new hook (11 lines in
+`integr_continuity_b.f`; everything else comment/case-identical). The run:
+`fc` = 3.48990284064362E-01 bitwise identical, all 32 `adxx_*` and all 66
+`ADJ*` files bitwise identical, wall time 13:31 vs 14:22 — plus 7 new
+`ADJetan` records (one per 5-day dump plus the `nIter0` initialization call,
+mirroring TAF's `initialise_varia -> integr_continuity` path), all finite,
+zero at the reverse-sweep start and growing with lead as the cost information
+propagates backward.
+
+**SOMA received the identical treatment** (validated by run 31033 vs baseline
+31031: `fc` = -9.21812947379697E-03, all 32 `adxx_*` and all 55 `ADJ*`
+bitwise identical, 6 finite `ADJetan` records). The shared-content files —
+`addummy_in_stepping.F`, `addummy_for_etan.F`, `integr_continuity.F`, the
+`tap_dummy_*` no-op bodies, `the_main_loop.F` and the rebased option headers —
+are byte-identical between the two setups on purpose. Two SOMA-specific
+findings from the pass: its `the_main_loop.F` was still a c69f-era copy whose
+rebase restored upstream's `COST_DRIVER` call (a runtime no-op in this
+configuration — it drives only OBCS/ECCO cost terms — but it pulls
+`cost_driver`/`ctrl_cost_*` into Tapenade's differentiated call graph, where
+DINO always had them; the bitwise result above shows the numbers are
+untouched), and its forward `code/packages.conf` still listed `timeave`,
+removed upstream in c69m, so the forward model could not even configure. The
+SOMA workflow was aligned with DINO's in the same pass: one submit script per
+mode with `IMPACTS_*` overrides, DINO-convention job and run-directory names
+(`SOMA_1deg_<mode>_<duration>_run<jobid>`), and a restored forward
+build/submit pair (30-day 4-rank smoke run 31034 completes normally).
+
 ---
 
 *Prepared from branch `tapenade-active-dump-hook` (commits `27e4ee5`,
 `e789533`) of `tsgonerog/Proj_ImPACTS`; validation runs 31022–31026 on
-sverdrup, 2026-08-31. Line references are to MITgcm checkpoint69m.*
+sverdrup, 2026-08-31; §7 validated by runs 31032 (DINO) and 31033/31034 (SOMA). Line references are to
+MITgcm checkpoint69m.*

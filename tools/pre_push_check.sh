@@ -59,7 +59,7 @@ staged_variants=$(git diff --name-only HEAD -- \
     '*/code_tap/SIZE.h' '*/code_tap/the_model_main.F' '*/code_tap/AUTODIFF_PARAMS.h' \
     '*/code_tap/autodiff_readparms.F' '*/code_tap/autodiff_inadmode_set_ad.F' \
     '*/code_tap/autodiff_inadmode_unset_ad.F' \
-    '*/code_tap/forward_step_b.f_modified' ':(exclude)*/00_archive/*' 2>/dev/null)
+    ':(exclude)*/00_archive/*' 2>/dev/null)
 if [[ -n "$staged_variants" ]]; then
     warn "build-staged variant files differ — edit the suffixed sibling, not these:"
     printf "        %s\n" $staged_variants

@@ -24,7 +24,7 @@ C -- exclude the clipping/tapering part of the code that is not used
 #define GM_EXCLUDE_CLIPPING
 #define GM_EXCLUDE_FM07_TAP
 #define GM_EXCLUDE_AC02_TAP
-#undef GM_EXCLUDE_TAPERING
+C #define GM_EXCLUDE_TAPERING
 #define GM_EXCLUDE_SUBMESO
 
 C Allows to read-in background 3-D Redi and GM diffusivity coefficients
@@ -34,9 +34,9 @@ C Note: need these to be defined for use as control (pkg/ctrl) parameters
 
 C This allows to use Visbeck et al formulation to compute K_GM+Redi
 #undef GM_VISBECK_VARIABLE_K
-C Use old calculation (before 2007/05/24) of Visbeck etal K_GM+Redi
-C (which depends on tapering scheme)
-#undef OLD_VISBECK_CALC
+
+C This allows to use the GEOMETRIC formulation to compute K_GM
+#undef GM_GEOM_VARIABLE_K
 
 C This allows the Bates et al formulation to calculate the
 C bolus transport and K for Redi

@@ -32,9 +32,11 @@ physics.
 \subsection{The gradient check cannot be used as a verification}
 \label{app:grdchk}
 
-\code{useGrdchk = .TRUE.} is set, so the check does run on every adjoint job,
-its settings held in \code{input\_tap/data.grdchk}. It cannot pass at its
-current setting, and it never has.
+\code{useGrdchk = .TRUE.} was set when this was written, so the check ran on
+every adjoint job, its settings held in \code{input\_tap/data.grdchk}. (Since
+2026-08-28 the committed DINO \code{data.pkg} sets it \code{.FALSE.}; the
+analysis below applies whenever the check is switched back on.) It cannot pass
+at its current setting, and it never has.
 
 The check perturbs \code{xx\_theta} at
 \code{iGloPos=4, jGloPos=8, kGloPos=1}, near the southern boundary, while the

@@ -122,6 +122,11 @@ depart --- the stability boundary is a property of the member's background
 state, not of $\kv$ itself. All runs used the plain adjoint;
 \code{adjViscBoost} (the configured stabiliser for exactly this failure mode,
 Section~\ref{sec:inputs}) was not applied and is the natural remedy to test.
+(Update 2026-08-31: at the time of the ensemble \code{adjViscBoost} was in
+fact silently inert under Tapenade --- the TAF-named routine that applies the
+\code{inAd*} parameters was never called; the \code{TAP\_INADMODE\_*} hooks
+have since made it functional, first working boosted run 31025, so this remedy
+is now actually available.)
 
 \subsection{The finite-difference validation}
 \label{sec:results-fd}

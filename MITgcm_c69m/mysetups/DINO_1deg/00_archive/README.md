@@ -21,7 +21,7 @@ plain `ls`.
 | `autodiff_inadmode_set_ad.F_aste_90x150x60` | The **ASTE original**, before porting to checkpoint69m | Superseded by the ported copy — see lineage below |
 | `the_model_main.F_ForTapProfile` | `the_model_main.F` instrumented for the Tapenade profiling tool | Profiling cannot be run here — see below |
 | `adcommon.h` | Hand-mirror of Tapenade's generated adjoint common blocks (`/DYNVARS_R_b/`, `Thetab`, …) | Obsoleted by the 2026-08-31 dump-hook redesign — see below |
-| `addummy_for_etan.F` | `DUMMY_FOR_ETAN_b` reading `EtaNb` from `adcommon.h`; would dump `ADJetan` | Was never called: raw Tapenade emits no `DUMMY_FOR_ETAN_B` call, so no run ever produced `ADJetan`. Cannot compile without the archived `adcommon.h` |
+| `addummy_for_etan.F` | `DUMMY_FOR_ETAN_b` reading `EtaNb` from `adcommon.h`; would dump `ADJetan` | Was never called: raw Tapenade emits no `DUMMY_FOR_ETAN_B` call, so no run ever produced `ADJetan`. Cannot compile without the archived `adcommon.h`. Superseded by the live `code_tap/addummy_for_etan.F` (`TAP_DUMMY_FOR_ETAN` hook) — see below |
 | `monitor_ad.F` | `MONITOR_b`, an adjoint-state monitor over the `adcommon.h` commons | Same: nothing generated ever called it, and it needs the archived `adcommon.h` |
 
 **Lineage worth knowing.** `autodiff_inadmode_set_ad.F_aste_90x150x60` is the
@@ -55,11 +55,12 @@ receives the adjoint fields as explicit arguments, so `adcommon.h` — whose
 member ordering had to silently track Tapenade's generated commons — has no
 live consumer. The two `.F` files were *already dead before the redesign*
 (nothing in the generated adjoint ever called their `_b` routines; `ADJetan`
-was never produced by any Tapenade run). They are kept here as the starting
-point for a future `ADJetan` hook: that would be a second
-`TAP_DUMMY_FOR_ETAN`-style hook at the `DUMMY_FOR_ETAN` call site in
-`integr_continuity.F`, wired the same way as the main hook — not a revival of
-these files as they stand.
+was never produced by any Tapenade run). The `ADJetan` follow-up anticipated
+here **landed later the same day**: the live `code_tap/addummy_for_etan.F`
+(upstream file + appended `TAP_DUMMY_FOR_ETAN_B`), `tap_dummy_for_etan.F` and
+the `integr_continuity.F` shadow wire the hook exactly as sketched — it is a
+fresh implementation on the hook pattern, not a revival of this archived file,
+which still documents the dead-end `adcommon.h` approach it replaced.
 
 ## `input_tap/`
 

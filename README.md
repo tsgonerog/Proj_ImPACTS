@@ -136,8 +136,8 @@ DINO_1deg/
 └── clean_slurm_logs.sh       deletes *.out/*.err in this directory
 ```
 
-`SOMA_1deg/` is the same shape with fewer files and serial rather than MPI
-scripts. **Each setup has its own `README.md`** covering its grid, its
+`SOMA_1deg/` is the same shape with fewer files (serial adjoint, small-MPI
+forward). **Each setup has its own `README.md`** covering its grid, its
 build/submit pairings and its quirks — read that before working in one.
 
 ### Which script builds what
@@ -156,17 +156,22 @@ mismatched configuration, so this is the table to check first:
 | `build_tapAdj.sh` | `build_tapAdj/` | `mitgcmuv_tap_adj` | `submit_tapAdj.sh` |
 | `build_tapAdj_adjViscBoost.sh` | `build_tapAdj_adjViscBoost/` | `mitgcmuv_tap_adj` | `submit_tapAdj_adjViscBoost.sh` |
 
-**`SOMA_1deg` — serial only**
+**`SOMA_1deg` — serial adjoint, 4-rank MPI forward**
 
 | Build script | Build directory | Executable | Submit script |
 | --- | --- | --- | --- |
-| `build_tapAdj.sh` | `build_tapAdj/` | `mitgcmuv_tap_adj` | `submit_tapAdj_{001d_smoketest,005d,030d,180d,360d}.sh` |
-| `build_tapAdj_rawTapenade.sh` | `build_tapAdj_rawTapenade/` | `mitgcmuv_tap_adj` | *(none — control build)* |
+| `build_frd.sh` | `build_frd/` | `mitgcmuv` | `submit_frd.sh` |
+| `build_tapAdj.sh` | `build_tapAdj/` | `mitgcmuv_tap_adj` | `submit_tapAdj.sh` |
+
+(The five pre-made per-duration SOMA submit scripts were replaced by the single
+`submit_tapAdj.sh` + `IMPACTS_DURATION_DAYS` on 2026-08-31; they are archived
+in `SOMA_1deg/00_archive/scripts/`.)
 
 **Parallelism is a property of the setup, not a flag.** Both setups ship
 `SIZE.h_mpi` *and* `SIZE.h_serial` in `code_tap/`, but only one is ever staged:
 DINO's scripts stage `_mpi` (`nPx=3, nPy=9` over `sNx=17, sNy=22`, hence 27
-ranks), SOMA's stage `_serial`. Finding `SIZE.h_serial` in DINO does **not** mean
+ranks), SOMA's adjoint stages `_serial` (its forward `code/SIZE.h` is a fixed
+`nPx=nPy=2`). Finding `SIZE.h_serial` in DINO does **not** mean
 a serial DINO build is wired up — no script stages it and no submit script
 expects it.
 
@@ -179,7 +184,6 @@ itself:
 | --- | --- | --- |
 | `frd` / `tapAdj` | scripts, build dirs, run dirs | forward model / Tapenade adjoint |
 | *(unmarked)* | scripts and build dirs, both setups | the working configuration. Only deviations carry a token |
-| `rawTapenade` | control build, SOMA only | stock `genmake2`, so Tapenade's generated `forward_step_b.f` is compiled uncorrected. Nothing submits it. DINO retired its control in the 2026-08-31 dump-hook redesign: there, raw Tapenade output *is* the working configuration |
 | `adjViscBoost` | DINO build *and* submit script (SOMA has none) | larger viscosity/diffusivity during the adjoint sweep than in the forward (`viscFacInAd = 10` vs `viscFacInFw = 1`), which keeps a long adjoint from blowing up. Build supplies the machinery, namelist supplies the values — the two scripts are a pair |
 | `adjViscBoost` | DINO only | SOMA has no such variant |
 | `visc2x`, `viscD2x_Zref`, `viscRef`, `viscGrid<v>` | notebooks, scratch run dirs | the viscosity setting the run used — see `analyses/README.md` |
@@ -196,8 +200,8 @@ directive (`ADNAME`/`REQUIRED` in `pkg/autodiff/dummy_in_stepping.flow`) that
 forces a hand-written adjoint routine into the reverse sweep even though the
 hook `DUMMY_IN_STEPPING(myTime,myIter,myThid)` carries no active data. Tapenade
 has no such directive — its `-ext` library is purely data-flow driven, and a
-passive external is dropped from the backward sweep. The two setups bridge that
-gap differently.
+passive external is dropped from the backward sweep. Both setups bridge that
+gap the same way since 2026-08-31.
 
 **DINO — Tapenade-native (since 2026-08-31).** The hook's activity is made
 visible through its interface, which is the one mechanism Tapenade honours:
@@ -217,22 +221,34 @@ generated file, and assert after every `make` that each generated `_B` call
 carries exactly the argument count the hand-written routines declare (F77
 would silently misalign a mismatch).
 
-**SOMA — patched `genmake2` (still).** `MITgcm/tools/` contains
-`genmake2_override_forward_step_b` alongside the original `genmake2` — named
-for what it does, and sorting beside the file it is a copy of. The patch is a
-single line, injected into the `adj_tap_all` make rule immediately after
-Tapenade runs, so a hand-edited frozen copy overwrites the generated
-`forward_step_b.f` before the AD sources are concatenated:
+**SOMA — converted the same day, and the conversion was a rescue.** SOMA had
+used a patched `genmake2` (`genmake2_override_forward_step_b`) that overwrote
+the generated `forward_step_b.f` with a hand-edited frozen copy. That frozen
+copy had silently gone stale against the evolving tree (274 diff lines vs
+freshly generated code), and the misaligned tape crashed every c69m SOMA
+adjoint at the backward-sweep start — the setup had never actually completed
+an adjoint on this tree (runs 31029/31030). The hook conversion fixed it: run
+31031 is the first successful c69m SOMA adjoint, with `fc` bitwise-identical
+to the crashed baseline's forward value. The override script and the frozen
+copy are deleted, and `pkg/tapenade/dummy_tap.F` — removed at vendoring time
+for a symbol collision the `TAP_*` renaming dissolved — is restored verbatim.
+**The vendored `MITgcm/` tree now deviates from upstream in zero files.**
 
-```diff
-+ cp ../code_tap/forward_step_b.f_modified forward_step_b.f
-```
-
-That frozen copy differs from raw Tapenade output by exactly one inserted
-`CALL DUMMY_IN_STEPPING_B(...)`; SOMA's `code_tap/` keeps the
-`adcommon.h`-based dump routine it reaches. Converting SOMA the DINO way is the
-natural follow-up, and until then the override script and SOMA's
-`forward_step_b.f_modified` must stay.
+**ADJetan, and the additive file layout (later the same day).** The
+free-surface adjoint has its own upstream hook (`DUMMY_FOR_ETAN`, inside
+`INTEGR_CONTINUITY` — `adEtaN` is half a time step out of phase with the
+`forward_step` fields), passive under Tapenade for the same reason and
+therefore never dumped. Both setups now wire it identically:
+`code_tap/integr_continuity.F` calls `TAP_DUMMY_FOR_ETAN(etaN, …)`, and the
+hand-written `_B` in `code_tap/addummy_for_etan.F` writes `ADJetan`. In the
+same pass every `code_tap/` shadow in both setups was re-laid out to be the
+upstream c69m file byte-for-byte plus guarded additions (and each option
+header the upstream text with only `#define`/`#undef` toggles changed), so
+every file vimdiffs cleanly against its upstream counterpart — see DINO's
+README, *"How the Tapenade hooks work"*, for the file-by-file map. The SOMA
+workflow was aligned with DINO's at the same time: one submit script per
+mode, `IMPACTS_*` overrides, DINO-convention job and run-directory names, and
+a restored forward build/submit pair.
 
 checkpoint69f additionally carried `patched_ForTapProfile_genmake2` (Tapenade
 profiling) and `patched_AfterTapProfile_genmake2` (acting on the profiler's
@@ -253,8 +269,8 @@ Each mode also swaps in the matching `the_model_main.F` variant. Setting this to
 `"YES"` or `"AFTER"` will fail here, because the `ForTapProfile` /
 `AfterTapProfile` `genmake2` copies are not in this tree — see
 [The checkpoint69f tree](#the-checkpoint69f-tree). The matching
-`the_model_main.F_ForTapProfile` *is* still available, under
-`DINO_1deg/00_archive/code_tap/`.
+`the_model_main.F_ForTapProfile` *is* still available, under each setup's
+`00_archive/code_tap/` (SOMA's moved there 2026-08-31, like DINO's before it).
 
 **Hand-adapted AD sources.** `code_tap/` carries several files in `_OG`
 (original) and `_aste_90x150x60` (adapted from the ASTE regional setup) flavours
@@ -390,8 +406,8 @@ Four things to know before editing or submitting one:
 
   What is committed is the cheap regression configuration; production runs are
   opt-in and leave no diff. The run directory name and its staged `data` are the
-  record of what ran. SOMA is excluded on purpose — its five scripts are
-  pre-made per duration, so you pick one rather than editing it.
+  record of what ran. Since 2026-08-31 SOMA works the same way (one script per
+  mode; its duration override patches `endTime` rather than `nTimeSteps`).
 - **`nIter0` is not auto-patched.** The start iteration lives in whichever
   `data_<tag>` the `test_cases` string selects, while the pickup is a hardcoded
   `ln -s` further down the same script. Changing the duration is safe; changing
@@ -558,7 +574,7 @@ There are no unit tests. What has and has not been checked, as of 2026-08-30:
 | Check | Status | What it showed |
 | --- | --- | --- |
 | Forward reproducibility | **verified** | A 10-year `from_rest_visc2x` run reproduces the first 10 years of production run 28463 **bit-identically** — 161 field comparisons, four diagnostic streams, 1334 monitor values, AMOC series, all exactly zero. Re-verified 2026-08-28: the new spin-up 30983 reproduces 28463 |
-| Builds | **verified** | All build directories compile clean. DINO's adjoint builds generate the `TAP_DUMMY_IN_STEPPING_B` dump call natively (asserted by the build scripts); SOMA's `patched` build carries the hand-corrected `forward_step_b.f` byte-for-byte, its `rawTapenade` control does not |
+| Builds | **verified** | All build directories compile clean. Both setups' adjoint builds generate their `TAP_*` hook calls natively from stock `genmake2` (argument counts asserted by every build script); no generated file is post-edited anywhere |
 | Adjoint runs end to end | **verified** | 30-day adjoint from the 180-year pickup writes `ADJ*` and `adxx*`, peak sensitivity on the cost section at `i=2, j=127, k=26`. The 5-yr reference adjoint 30995 reproduces the earlier 28486 bit-identically |
 | Adjoint **correctness** | **not verified** | The gradient check fails by ~8 orders of magnitude — and always has |
 | Adjoint vs finite differences (κ_v ensemble) | **executed 2026-08-29, fails as a validation** | The linear gradient mispredicts every member's ΔJ (wrong sign for 4 of 7) — dominated by physical nonlinearity of the 10-yr state adjustment, so it neither confirms nor refutes the adjoint. Four member adjoints also blow up (linearisation instability). Full analysis: `analyses/DINO_1deg/03_adjoint/05_kappa_v_ensemble/` |

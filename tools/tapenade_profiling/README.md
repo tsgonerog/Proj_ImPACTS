@@ -49,11 +49,12 @@ Adapt the build script's `genmake2` line by hand:
 ```
 
 Two things about these command lines since the 2026-08-31 dump-hook redesign:
-DINO uses **stock** `genmake2` (the `genmake2_override_forward_step_b` copy is
-now SOMA-only), and genmake2's `-tap_extra` **overwrites** rather than appends
-on repeat, so the profiling flag and DINO's `-ext ../code_tap/flow_tap_local`
-(which generates the `ADJ*` dump call) must share a single `-tap_extra` as
-shown. For SOMA, keep the override script and drop the `-ext` part.
+both setups use **stock** `genmake2` (`genmake2_override_forward_step_b` was
+deleted when SOMA converted), and genmake2's `-tap_extra` **overwrites**
+rather than appends on repeat, so the profiling flag and the setup's
+`-ext ../code_tap/flow_tap_local` (which generates the `ADJ*` dump call) must
+share a single `-tap_extra` as shown — in SOMA drop the `-mpi` and use
+`$SERIAL_OPTFILE`.
 
 ### The one real gap: `adProfile.c`
 
@@ -145,6 +146,6 @@ revision, not copied here.
 their original names and fail. If you make profiling routine, that block is
 better replaced by a single `TAP_EXTRA` variable passed through to `genmake2`
 than by recreating the old three-way file selection. The `YES` branch also stages
-`code_tap/the_model_main.F_ForTapProfile`, which lives in
-`../../MITgcm_c69m/mysetups/DINO_1deg/00_archive/code_tap/` and would need
-copying back into `code_tap/` first.
+`code_tap/the_model_main.F_ForTapProfile`, which lives in each setup's
+`00_archive/code_tap/` (both DINO's and SOMA's copies were archived there)
+and would need copying back into `code_tap/` first.
