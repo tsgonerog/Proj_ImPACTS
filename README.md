@@ -249,18 +249,16 @@ recipe and carries the 64-routine `-nocheckpoint` list that work produced. The
 two originals are kept beside it under `c69f_originals/` as reference only:
 they are full copies of an older tree's `genmake2` and do not work here.
 
-**Which profiling mode to use** is selected at the top of the build script:
-
-```bash
-use_TapProfile="NO"   # <-- only "NO" is wired up in this tree
-```
-
-Each mode also swaps in the matching `the_model_main.F` variant. Setting this to
-`"YES"` or `"AFTER"` will fail here, because the `ForTapProfile` /
-`AfterTapProfile` `genmake2` copies are not in this tree — only the
-non-working reference copies noted above. The matching
-`the_model_main.F_ForTapProfile` *is* still available, under each setup's
-`00_archive/code_tap/` (SOMA's moved there 2026-08-31, like DINO's before it).
+**There is no profiling mode switch in the build scripts any more** (removed
+2026-09-01, DINO and SOMA). The c69f-era `use_TapProfile="NO|YES|AFTER"` block
+chose among patched `genmake2` copies that are not in this tree and staged a
+`the_model_main.F` variant; the `_OG` variant it normally staged was
+byte-identical to upstream, so both `code_tap/the_model_main.F` copies were
+deleted and the vendored `model/src/the_model_main.F` is compiled. The
+profiling main program `the_model_main.F_ForTapProfile` remains under each
+setup's `00_archive/code_tap/` as history. Profiling and `-nocheckpoint` are
+plain Tapenade flags on c69m, passed through `genmake2 -tap_extra` — see
+`tools/tapenade_profiling/README.md`.
 
 **Hand-adapted AD sources.** `code_tap/` carries several files in `_OG`
 (original) and `_aste_90x150x60` (adapted from the ASTE regional setup) flavours
@@ -714,7 +712,7 @@ something would actually break. It checks the five things that go wrong here:
 | --- | --- |
 | `nbstrip` filter installed | Without it, notebooks commit with every embedded figure and animation. Git filters live in `.git/config`, which is untracked, so a fresh clone has none. |
 | Namelist under `mysetups/*/input*/` modified | Submit scripts patch the *staged* namelist in the run directory, so a submission should leave no diff at all. If one appears and you did not edit the file by hand, something regressed — investigate rather than committing it. |
-| Build-staged variant files | Build scripts copy `SIZE.h_mpi` over `SIZE.h`, `the_model_main.F_OG` over `the_model_main.F`, and so on. Running a build dirties the tree even when nothing was authored — and edits to the bare file are lost on the next build. |
+| Build-staged variant files | Build scripts copy `SIZE.h_mpi` over `SIZE.h`, `AUTODIFF_PARAMS.h_OG` over `AUTODIFF_PARAMS.h`, and so on. Running a build dirties the tree even when nothing was authored — and edits to the bare file are lost on the next build. |
 | Images staged under `analyses/` | Figures and animations belong in the scratch run directory, not here. |
 | Notebook scratch paths resolve | These rot silently when a run directory is renamed or deleted. |
 

@@ -108,17 +108,16 @@ Build scripts **overwrite tracked files by copying variant siblings over them** 
 
 ```
 code_tap/SIZE.h_mpi                  -> code_tap/SIZE.h
-code_tap/the_model_main.F_OG         -> code_tap/the_model_main.F
 code_tap/AUTODIFF_PARAMS.h_OG        -> code_tap/AUTODIFF_PARAMS.h
 code_tap/autodiff_readparms.F_OG     -> code_tap/autodiff_readparms.F
 ```
 
 Both sides are tracked in git. So:
 
-- **Edit the suffixed variant, never the bare destination file** — `SIZE.h`, `the_model_main.F`, `AUTODIFF_PARAMS.h`, `autodiff_readparms.F`, `autodiff_inadmode_set_ad.F` are all regenerated and your edits will vanish on the next build.
+- **Edit the suffixed variant, never the bare destination file** — `SIZE.h`, `AUTODIFF_PARAMS.h`, `autodiff_readparms.F`, `autodiff_inadmode_set_ad.F`, `autodiff_inadmode_unset_ad.F` are all regenerated and your edits will vanish on the next build.
 - Running any build script dirties the working tree even when nothing was authored. Check `git diff` before assuming a change is yours.
 
-Suffix meanings: `_mpi` / `_serial` (parallelism), `_OG` (original) vs `_aste_90x150x60` / `_adapted_frm_aste_90x150x60` (adapted from the ASTE regional setup — this is what the `adjViscBoost` variant selects), `_ForTapProfile` (Tapenade profiling build).
+Suffix meanings: `_mpi` / `_serial` (parallelism), `_OG` (original) vs `_aste_90x150x60` / `_adapted_frm_aste_90x150x60` (adapted from the ASTE regional setup — this is what the `adjViscBoost` variant selects), `_ForTapProfile` (the c69f-era Tapenade profiling main program; only in `00_archive/code_tap/` now — `code_tap/` carries no `the_model_main.F` at all since 2026-09-01, the vendored one is compiled).
 
 ### Build directories symlink back into `code_tap/`
 
@@ -158,16 +157,7 @@ Each `_B` signature is fixed (dump hook: 25 arguments = 11 value/adjoint pairs +
 
 **SOMA (converted 2026-08-31, same day): the same mechanism, dump hooks only.** SOMA carries `forward_step.F` (shadow with the `TAP_DUMMY_IN_STEPPING` call — its inadmode call sites stay stock, since SOMA has no adjViscBoost machinery to switch), `integr_continuity.F` (the `TAP_DUMMY_FOR_ETAN`/`ADJetan` hook), `tap_dummy_in_stepping.F`, `tap_dummy_for_etan.F`, `addummy_in_stepping.F`, `addummy_for_etan.F`, and a `flow_tap_local` with the two dump stanzas. It follows the same additive layout as DINO (the shared-content files are byte-identical between the setups), and its `the_main_loop.F` was rebased from a c69f-era copy onto c69m upstream in the process — which restored upstream's `COST_DRIVER` call, a runtime no-op here (it only drives OBCS/ECCO cost terms, both absent). The conversion **fixed SOMA's c69m adjoint, which had never actually run**: the old frozen `forward_step_b.f_modified` had gone stale against the evolving tree (274 diff lines vs freshly generated code), misaligning Tapenade's tape enough to crash every adjoint at the backward-sweep start (`integer divide by zero` in `pkg/longstep` — runs 31029/31030). The hook build's run 31031 is the first successful c69m SOMA adjoint: `fc` bitwise-identical to the crashed baseline's forward value, full `ADJ*`/`adxx_*` output, finite. With the conversion, `genmake2_override_forward_step_b` and the frozen file were deleted and `pkg/tapenade/dummy_tap.F` restored — the vendored tree is pristine.
 
-`use_TapProfile` at the top of each build script selects the mode (`NO` / `YES` / `AFTER`) and picks both the `genmake2` variant and the matching `the_model_main.F`. **Only the `NO` mode works** (it resolves to stock `genmake2` in both setups now): `MITgcm_c69m/MITgcm/tools/` has no `patched_*TapProfile_genmake2`, and neither setup's `code_tap/` has `the_model_main.F_ForTapProfile` any more (both are in their `00_archive/code_tap/`). Setting `use_TapProfile` to `YES` or `AFTER` fails.
-
-**That switch is the wrong shape for c69m and should not be repaired as-is.** It selects among three patched `genmake2` copies, which is how c69f had to do it. c69m's `genmake2` takes `-tap_extra`, passed straight through to the Tapenade command line (`genmake2:1568`, expanded by the rule at `:3751`), so both profiling modes are now flags rather than files:
-
-| Mode | c69m |
-| --- | --- |
-| profile the adjoint | `-tap_extra "-profile"`, plus a `pkg/tapenade/adProfile.c` symlink — c69m ships the source but does not expose it to the build |
-| skip checkpointing on chosen routines | `-tap_extra '-nocheckpoint "…"'` — nothing else needed |
-
-`tools/tapenade_profiling/` documents both, and carries the 64-routine `-nocheckpoint` list extracted from the c69f work plus the two c69f originals for reference. Those originals are full copies of the *c69f* `genmake2` (~200 lines adrift of c69m's) and must not be installed into `MITgcm/tools/`. `the_model_main.F_ForTapProfile` is still in `00_archive/code_tap/` and would have to be copied into `code_tap/` by hand.
+**The c69f-era `use_TapProfile` switch is gone from every build script (2026-09-01).** It selected among three patched `genmake2` copies that do not exist in c69m and staged a `the_model_main.F` variant — `_OG`, which was byte-identical to upstream, or `_ForTapProfile`, now only in each setup's `00_archive/code_tap/`. Both `code_tap/the_model_main.F` copies were deleted from DINO and SOMA; the vendored `model/src/the_model_main.F` is compiled, as it always effectively was. c69m's `genmake2` takes `-tap_extra`, passed straight through to the Tapenade command line (`genmake2:1568`, expanded by the rule at `:3751`), so profiling (`-profile`) and checkpoint tuning (`-nocheckpoint "…"`) are flags, not build-tool variants; `tools/tapenade_profiling/README.md` documents them, and the `tapenade-profiling` branch carries the DINO builds that use them. The c69f originals kept there are full copies of the *c69f* `genmake2` (~200 lines adrift of c69m's) and must not be installed into `MITgcm/tools/`.
 
 ## Run
 

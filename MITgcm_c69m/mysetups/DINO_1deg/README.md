@@ -387,7 +387,6 @@ bare one** — the bare one is regenerated on every build and your edits vanish.
 | File | Purpose |
 | --- | --- |
 | `the_main_loop.F` | differentiation head, see above |
-| `the_model_main.F` | model driver that calls it (`_OG` variant staged) |
 | `cost_atlantic_heat.F` | the cost function |
 | `forward_step.F` | shadow of `model/src/forward_step.F`; its only changes are the three `TAP_*` hook calls under `ALLOW_TAPENADE` (dump hook in the `ALLOW_AUTODIFF_MONITOR` block, mode-switch hooks at step start/end) |
 | `integr_continuity.F` | shadow of `model/src/integr_continuity.F`; its only change is the guarded `TAP_DUMMY_FOR_ETAN(etaN,…)` call replacing `DUMMY_FOR_ETAN` under `ALLOW_TAPENADE` |

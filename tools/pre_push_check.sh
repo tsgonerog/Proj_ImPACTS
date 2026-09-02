@@ -56,7 +56,7 @@ fi
 
 # Build scripts copy variant siblings over these tracked files.
 staged_variants=$(git diff --name-only HEAD -- \
-    '*/code_tap/SIZE.h' '*/code_tap/the_model_main.F' '*/code_tap/AUTODIFF_PARAMS.h' \
+    '*/code_tap/SIZE.h' '*/code_tap/AUTODIFF_PARAMS.h' \
     '*/code_tap/autodiff_readparms.F' '*/code_tap/autodiff_inadmode_set_ad.F' \
     '*/code_tap/autodiff_inadmode_unset_ad.F' \
     ':(exclude)*/00_archive/*' 2>/dev/null)

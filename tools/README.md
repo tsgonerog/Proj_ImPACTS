@@ -322,7 +322,7 @@ Exit status is **1 only if something would actually break a push or a run**
 | notebook output filter | `filter.nbstrip.clean` is configured — filters live in untracked `.git/config`, so **a fresh clone commits notebooks unstripped** until `./analyses/tools/install_git_filters.sh` is run | **FAIL** |
 | | `tools/machine_env.sh` sources cleanly, and reports the resolved `MACHINE` | **FAIL** |
 | side effects you did not author | a modified `*/mysetups/*/input*/data*` — submit scripts now patch the staged copy in the run directory, so a modified namelist should only ever be one you edited by hand | note |
-| | build-staged variant files differ: `SIZE.h`, `the_model_main.F`, `AUTODIFF_PARAMS.h`, `autodiff_readparms.F`, `autodiff_inadmode_{set,unset}_ad.F`. **Edit the suffixed sibling, not these** — a build overwrites them | note |
+| | build-staged variant files differ: `SIZE.h`, `AUTODIFF_PARAMS.h`, `autodiff_readparms.F`, `autodiff_inadmode_{set,unset}_ad.F`. **Edit the suffixed sibling, not these** — a build overwrites them | note |
 | derived output | `*.png/jpg/gif/html` staged under `analyses/` — figures belong in the scratch run directory | **FAIL** |
 | | staged blobs over 10 MB (GitHub hard-fails at 100 MB) | note |
 | notebook scratch paths | every `/scratch*/...` path a notebook builds still exists on disk, reassembling literals split across lines first | note |

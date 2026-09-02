@@ -91,7 +91,7 @@ The same trace as a call tree, for one DINO 5-yr adjoint:
 
 ```
 mitgcmuv_tap_adj
-└─ THE_MODEL_MAIN                          code_tap/the_model_main.F
+└─ THE_MODEL_MAIN                          model/src/the_model_main.F (vendored; code_tap/ carries no copy)
    ├─ forward sweep — THE_MAIN_LOOP        taped (checkpoints + store)
    │    ├─ CTRL_MAP_INI_GENARR/GENTIM2D    reads xx_theta.0000000000 … (ACTIVE_READ)
    │    ├─ 87 840 × FORWARD_STEP           physics; cost_atlantic_heat accumulates

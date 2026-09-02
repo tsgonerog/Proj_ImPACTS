@@ -39,44 +39,13 @@ if [ -z "$MPI_OPTFILE" ] || [ ! -f "$MPI_OPTFILE" ]; then
     exit 1
 fi
 
-###############################################
-# Choose TapProfile behavior here:
-#   NO    : no Tapenade profiling      -> tools/genmake2_override_forward_step_b
-#   YES   : use Tapenade profiling      -> patched_ForTapProfile_genmake2    (NOT here)
-#   AFTER : after acting on its advice  -> patched_AfterTapProfile_genmake2  (NOT here)
-#
-# Only NO works in this repository. The YES/AFTER variants keep their original
-# names because that is what they are called in the one place they still exist,
-# Proj_ImPACTS_old/MITgcm_c69f/MITgcm/tools/.
-###############################################
-
-use_TapProfile="NO"   # <-- change this to "YES" or "AFTER" as needed
-
-# Decide which the_model_main.F and which patched_genmake2 to use
-case "$use_TapProfile" in
-    "NO")
-        echo "Not Using Tapenade Profiling Tool"
-        cp code_tap/the_model_main.F_OG code_tap/the_model_main.F
-        GENMAKE_SCRIPT="genmake2"
-        ;;
-
-    "YES")
-        echo "Using Tapenade Profiling Tool"
-        cp code_tap/the_model_main.F_ForTapProfile code_tap/the_model_main.F
-        GENMAKE_SCRIPT="patched_ForTapProfile_genmake2"
-        ;;
-
-    "AFTER")
-        echo "Have Implemented Suggession Provided by Tapenade Profiling Tool"
-        cp code_tap/the_model_main.F_OG code_tap/the_model_main.F
-        GENMAKE_SCRIPT="patched_AfterTapProfile_genmake2"
-        ;;
-
-    *)
-        echo "ERROR: Invalid use_TapProfile='$use_TapProfile'. Must be NO, YES, or AFTER." >&2
-        exit 1
-        ;;
-esac
+# No main-program staging: code_tap/ carries no the_model_main.F, so the
+# vendored model/src/the_model_main.F is compiled. (The c69f-era use_TapProfile
+# switch that used to live here staged an _OG copy -- byte-identical to
+# upstream -- or a _ForTapProfile one, now archived in 00_archive/code_tap/,
+# and selected among patched genmake2 copies that do not exist in c69m.)
+# Tapenade profiling and -nocheckpoint tuning are separate builds driven by
+# -tap_extra; see tools/tapenade_profiling/README.md.
 
 # Ensure build directory exists
 if [ ! -d build_tapAdj ]; then
@@ -95,7 +64,7 @@ make CLEAN || true
 # Tapenade command line, alongside the stock flow_tap; it declares the
 # TAP_DUMMY_IN_STEPPING hook's fields active so the ADJ* dump call is
 # generated (relative path resolves because Tapenade runs in build_tapAdj/).
-"$MITGCM_ROOT/tools/$GENMAKE_SCRIPT" -mpi -tap \
+"$MITGCM_ROOT/tools/genmake2" -mpi -tap \
     -rd="$MITGCM_ROOT" \
     -of="$MPI_OPTFILE" \
     -mods=../code_tap \
