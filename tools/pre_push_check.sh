@@ -54,19 +54,6 @@ else
     ok "no namelist churn from a submitted job"
 fi
 
-# Build scripts copy variant siblings over these tracked files.
-staged_variants=$(git diff --name-only HEAD -- \
-    '*/code_tap/SIZE.h' '*/code_tap/AUTODIFF_PARAMS.h' \
-    '*/code_tap/autodiff_readparms.F' '*/code_tap/autodiff_inadmode_set_ad.F' \
-    '*/code_tap/autodiff_inadmode_unset_ad.F' \
-    ':(exclude)*/00_archive/*' 2>/dev/null)
-if [[ -n "$staged_variants" ]]; then
-    warn "build-staged variant files differ — edit the suffixed sibling, not these:"
-    printf "        %s\n" $staged_variants
-else
-    ok "no build-script variant staging in the tree"
-fi
-
 echo
 echo "── derived output leaking into the repo ─────────────────────────────"
 imgs=$(git diff --cached --name-only --diff-filter=A 2>/dev/null | grep -E '^analyses/.*\.(png|jpg|gif|html)$' || true)

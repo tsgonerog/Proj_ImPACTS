@@ -46,14 +46,6 @@ MITGCM_ROOT="$SCRIPT_DIR/../../MITgcm"
 source "$SCRIPT_DIR/../../../tools/machine_env.sh"
 impacts_load_modules
 
-# Replace SIZE.h with mpi version; stage the same plain (_OG) variants as
-# build_tapAdj_ckpAll.sh so the profile describes the production configuration.
-cp code_tap/SIZE.h_mpi code_tap/SIZE.h
-cp code_tap/AUTODIFF_PARAMS.h_OG code_tap/AUTODIFF_PARAMS.h
-cp code_tap/autodiff_readparms.F_OG code_tap/autodiff_readparms.F
-cp code_tap/autodiff_inadmode_set_ad.F_OG code_tap/autodiff_inadmode_set_ad.F
-cp code_tap/autodiff_inadmode_unset_ad.F_OG code_tap/autodiff_inadmode_unset_ad.F
-
 # MPI_OPTFILE is defaulted by machine_env.sh; this catches a machine with none.
 if [ -z "$MPI_OPTFILE" ] || [ ! -f "$MPI_OPTFILE" ]; then
     echo "ERROR: MPI_OPTFILE is unset or missing: '$MPI_OPTFILE'"
@@ -148,11 +140,7 @@ echo "OK: profiler instrumentation, main program and runtime are all in place."
 # refuse an executable without it (or newer than it) and take run_token from
 # it, so a run directory is named from what was actually built, not from what
 # the submit script assumes:  DINO_1deg_<run_token>_<duration>[_<tag>]_run<jobid>
-dirty=$(git -C "$SCRIPT_DIR" diff --name-only HEAD -- . \
-          ':(exclude)code_tap/SIZE.h' ':(exclude)code_tap/AUTODIFF_PARAMS.h' \
-          ':(exclude)code_tap/autodiff_readparms.F' \
-          ':(exclude)code_tap/autodiff_inadmode_set_ad.F' \
-          ':(exclude)code_tap/autodiff_inadmode_unset_ad.F' 2>/dev/null | wc -l)
+dirty=$(git -C "$SCRIPT_DIR" diff --name-only HEAD -- . 2>/dev/null | wc -l)
 {
     echo "build_script=$(basename "$(readlink -f "$SCRIPT_DIR/$(basename "${BASH_SOURCE[0]}")")")"   # resolved from the setup dir: after the cd above, a relative BASH_SOURCE would not resolve the symlink
     echo "invoked_as=$(basename "${BASH_SOURCE[0]}")"
@@ -162,7 +150,7 @@ dirty=$(git -C "$SCRIPT_DIR" diff --name-only HEAD -- . \
     echo "run_token=tapAdj_ckpAll_tapProfile"
     echo "tap_extra=$(sed -n 's/^TAP_EXTRA *= *//p' Makefile)"
     echo "git_commit=$(git -C "$SCRIPT_DIR" rev-parse --short HEAD 2>/dev/null || echo unknown)"
-    echo "git_modified_tracked_files=${dirty}   # in this setup, build-staged files excluded"
+    echo "git_modified_tracked_files=${dirty}   # in this setup"
     echo "built=$(date '+%Y-%m-%d %H:%M:%S %Z') on $(hostname)"
 } > build_info.txt
 echo "OK: wrote $(basename "$PWD")/build_info.txt (run_token=tapAdj_ckpAll_tapProfile)."

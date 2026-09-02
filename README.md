@@ -165,13 +165,12 @@ mismatched configuration, so this is the table to check first:
 `submit_tapAdj.sh` + `IMPACTS_DURATION_DAYS` on 2026-08-31; they are archived
 in `SOMA_1deg/00_archive/scripts/`.)
 
-**Parallelism is a property of the setup, not a flag.** Both setups ship
-`SIZE.h_mpi` *and* `SIZE.h_serial` in `code_tap/`, but only one is ever staged:
-DINO's scripts stage `_mpi` (`nPx=3, nPy=9` over `sNx=17, sNy=22`, hence 27
-ranks), SOMA's adjoint stages `_serial` (its forward `code/SIZE.h` is a fixed
-`nPx=nPy=2`). Finding `SIZE.h_serial` in DINO does **not** mean
-a serial DINO build is wired up — no script stages it and no submit script
-expects it.
+**Parallelism is a property of the setup, not a flag.** Each source directory
+carries exactly one `SIZE.h` (since 2026-09-02; the unused `_mpi`/`_serial`
+siblings are gone): DINO's `code/` and `code_tap/` are `nPx=3, nPy=9` over
+`sNx=17, sNy=22`, hence 27 ranks; SOMA's adjoint `code_tap/SIZE.h` is one
+serial tile and its forward `code/SIZE.h` a fixed `nPx=nPy=2`. There is no
+serial DINO build and no MPI SOMA adjoint.
 
 ### Naming conventions
 
@@ -273,11 +272,12 @@ plain one and 1.47× faster over 5 years — **DINO's default adjoint since
 2026-09-02**, with `build_tapAdj.sh` a symlink to it and the plain build
 renamed `build_tapAdj_ckpAll.sh`) — see `tools/tapenade_profiling/README.md`.
 
-**Hand-adapted AD sources.** `code_tap/` carries several files in `_OG`
-(original) and `_aste_90x150x60` (adapted from the ASTE regional setup) flavours
-— `AUTODIFF_PARAMS.h`, `autodiff_readparms.F`, `autodiff_inadmode_set_ad.F`.
-Build scripts choose between them, which is how the `adjViscBoost` experiment
-variant is produced.
+**Hand-adapted AD sources.** The ASTE-derived shadows of `pkg/autodiff`
+(`AUTODIFF_PARAMS.h`, `autodiff_readparms.F`, `autodiff_inadmode_set_ad.F`,
+`autodiff_inadmode_unset_ad.F`) live in `DINO_1deg/code_tap/variants/adjViscBoost/`
+under their real names; `build_tapAdj_adjViscBoost.sh` lists that directory
+first in `-mods`, which is how the `adjViscBoost` variant is produced. The plain
+builds compile the vendored files.
 
 ---
 
@@ -319,13 +319,15 @@ cd MITgcm_c69m/mysetups/DINO_1deg
 ./build_tapAdj.sh      # adjoint -> build_tapAdj_nocheckpoint/mitgcmuv_tap_adj (DINO: symlink to the default variant)
 ```
 
-Each script does the same five things:
+Each script does the same four things, and none copies anything into
+`code_tap/`:
 
-1. stage the right `SIZE.h` and AD source variants into `code_tap/`;
-2. `make CLEAN`;
-3. run the chosen `genmake2` with `-tap` and `-adof=.../adjoint_tap`;
-4. `make depend`;
-5. `make -j 8 tap_adj`.
+1. `make CLEAN`;
+2. run stock `genmake2` with `-tap`, `-adof=.../adjoint_tap` and `-mods` (the
+   boost build lists `code_tap/variants/adjViscBoost` ahead of `code_tap`);
+3. `make depend`;
+4. `make -j 8 tap_adj`, then assert the generated hook calls and write
+   `build_info.txt`.
 
 Build directories are gitignored, large, and fully reproducible — delete and
 rebuild freely. Two things about them are worth knowing:
@@ -333,30 +335,22 @@ rebuild freely. Two things about them are worth knowing:
 - **They are not relocatable.** `genmake2` bakes the setup's absolute path into
   the generated `Makefile`, so renaming or moving a setup invalidates every build
   inside it. Re-run the build script rather than patching the `Makefile`.
-- **They symlink back into `code_tap/`.** Most staged sources are symlinks, not
-  copies, so building a second variant re-stages `code_tap/` and repoints every
-  earlier build's headers. Never run bare `make` in an older build directory after
-  building a different variant — re-run its build script. The generated `.f` files
-  are real and frozen at compile time, so those are what actually record which
-  variant a build used.
+- **They symlink back into `code_tap/`.** Sources are symlinks, not copies
+  (the boost build's point into `code_tap/variants/adjViscBoost/`). Since no
+  build rewrites `code_tap/`, building one variant leaves the others' links
+  valid; after editing a source, re-run the build script rather than running
+  bare `make` in a build directory. The generated `.f` files are real and
+  frozen at compile time, so those are what actually record what a build used.
 
-### The variant-staging gotcha
+### Variants are directories, not staged copies
 
-Build scripts **overwrite tracked files by copying variant siblings over them**:
-
-```
-code_tap/SIZE.h_mpi                    -> code_tap/SIZE.h
-code_tap/AUTODIFF_PARAMS.h_OG          -> code_tap/AUTODIFF_PARAMS.h
-code_tap/autodiff_readparms.F_OG       -> code_tap/autodiff_readparms.F
-```
-
-Both sides are tracked in git, so:
-
-- **Edit the suffixed variant, never the bare destination.** Edits to `SIZE.h`,
-  `AUTODIFF_PARAMS.h` or `autodiff_readparms.F`
-  vanish on the next build.
-- Running a build can dirty the working tree even when you authored nothing.
-  `./tools/pre_push_check.sh` tells you when that has happened.
+Until 2026-09-02 the build scripts overwrote tracked files with suffixed
+siblings (`SIZE.h_mpi -> SIZE.h`, `AUTODIFF_PARAMS.h_OG -> AUTODIFF_PARAMS.h`,
+…), so a build dirtied the tree and the bare file was whatever the last build
+staged. That is gone: each file exists once under its MITgcm name, and a
+variant is a second `-mods` directory (`code_tap/variants/adjViscBoost/`,
+mirroring `input_tap/variants/adjViscBoost/` on the namelist side). If
+`git status` shows a change after a build, something regressed.
 
 ## Running
 
@@ -387,7 +381,7 @@ A submit script:
 
 Four things to know before editing or submitting one:
 
-- **`-n` must match `SIZE.h`.** DINO requests 27 ranks because `SIZE.h_mpi` sets
+- **`-n` must match `SIZE.h`.** DINO requests 27 ranks because `code_tap/SIZE.h` sets
   `nPx=3, nPy=9`. Changing the decomposition means changing both.
 - **Submitting a job leaves the repo clean.** Step 2's `sed -i` runs after the
   namelist is staged and patches the copy in the run directory, so `git status`
@@ -748,13 +742,12 @@ Run one command:
 ```
 
 It is read-only — it never edits, stages, or pushes — and exits non-zero only if
-something would actually break. It checks the five things that go wrong here:
+something would actually break. It checks the four things that go wrong here:
 
 | Check | Why it matters |
 | --- | --- |
 | `nbstrip` filter installed | Without it, notebooks commit with every embedded figure and animation. Git filters live in `.git/config`, which is untracked, so a fresh clone has none. |
 | Namelist under `mysetups/*/input*/` modified | Submit scripts patch the *staged* namelist in the run directory, so a submission should leave no diff at all. If one appears and you did not edit the file by hand, something regressed — investigate rather than committing it. |
-| Build-staged variant files | Build scripts copy `SIZE.h_mpi` over `SIZE.h`, `AUTODIFF_PARAMS.h_OG` over `AUTODIFF_PARAMS.h`, and so on. Running a build dirties the tree even when nothing was authored — and edits to the bare file are lost on the next build. |
 | Images staged under `analyses/` | Figures and animations belong in the scratch run directory, not here. |
 | Notebook scratch paths resolve | These rot silently when a run directory is renamed or deleted. |
 

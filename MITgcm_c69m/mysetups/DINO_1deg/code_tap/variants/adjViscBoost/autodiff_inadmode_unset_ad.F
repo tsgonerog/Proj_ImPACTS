@@ -3,8 +3,15 @@
 # include "CTRL_OPTIONS.h"
 #endif
 
-C     Body identical to pkg/autodiff/autodiff_inadmode_unset_ad.F (c69m);
-C     the ALLOW_TAPENADE wrapper at the end is what this shadow adds.
+C     adjViscBoost shadow of pkg/autodiff/autodiff_inadmode_unset_ad.F,
+C     compiled ahead of the vendored file by
+C     build_tapAdj_adjViscBoost.sh (its first -mods directory).
+C     Upstream c69m body plus the outAd* restore block mirroring the
+C     inAd* block of autodiff_inadmode_set_ad.F beside it. ASTE never
+C     had this half - the mechanism was unreachable under Tapenade until
+C     the TAP mode-switch hooks (2026-08-31) - so it was written here to
+C     complete the pair. Reached at the end of each backward step through
+C     TAP_INADMODE_UNSET_B (code_tap/tap_inadmode.F).
 
       SUBROUTINE ADAUTODIFF_INADMODE_UNSET( myTime, myIter, myThid )
 C     *==========================================================*
@@ -42,6 +49,7 @@ C     myThid    :: my Thread Id number
 
 C     !LOCAL VARIABLES:
       CHARACTER*(MAX_LEN_MBUF) msgBuf
+      INTEGER k
 
 #ifdef ALLOW_AUTODIFF_MONITOR
 # ifdef ALLOW_DIAGNOSTICS
@@ -58,6 +66,18 @@ C --- Grab modelEnd, necessary input for diagnostics routines
 #endif /* ALLOW_AUTODIFF_MONITOR */
 
       inAdMode  = .FALSE.
+
+C--   Restore the forward-mode values of the fields the ASTE-derived
+C     ADAUTODIFF_INADMODE_SET overrides (mirror of its inAd* block):
+      viscA4Grid = outAdviscA4Grid
+      viscAhGrid = outAdviscAhGrid
+      do k=1,Nr
+       viscArNr(k)  = outAdviscArNr
+      end do
+      diffKhT = outAddiffKhT
+      diffKhS = outAddiffKhS
+      diffK4T = outAddiffK4T
+      diffK4S = outAddiffK4S
 
       useKPP    = useKPPinFwdMode
       useGMRedi = useGMRediInFwdMode
@@ -135,50 +155,3 @@ C     SIregFacInFw = UNSET_RL by default, so we need to check this here
 
       RETURN
       END
-
-#ifdef ALLOW_TAPENADE
-CBOP
-C     !ROUTINE: TAP_INADMODE_UNSET_B
-C     !INTERFACE:
-      SUBROUTINE TAP_INADMODE_UNSET_B( uVel, uVelb,
-     I                                 myTime, myIter, myThid )
-C     !DESCRIPTION:
-C     Reverse-sweep body of the Tapenade mode-switch hook
-C     TAP_INADMODE_UNSET (called at the START of FORWARD_STEP, so
-C     this runs at the END of each backward step): leave adjoint
-C     mode, restoring forward-mode parameters for the next
-C     checkpoint re-forward. uVel is only the activity vehicle that
-C     makes Tapenade generate this call (declared read-then-written
-C     in flow_tap_local); uVelb must be left untouched (identity
-C     adjoint). The argument list must match the generated call in
-C     forward_step_b.f; the build script asserts it.
-C     !USES:
-      IMPLICIT NONE
-#include "SIZE.h"
-#include "EEPARAMS.h"
-C     !INPUT/OUTPUT PARAMETERS:
-      _RL uVel  (1-OLx:sNx+OLx,1-OLy:sNy+OLy,Nr,nSx,nSy)
-      _RL uVelb (1-OLx:sNx+OLx,1-OLy:sNy+OLy,Nr,nSx,nSy)
-      _RL     myTime
-      INTEGER myIter
-      INTEGER myThid
-CEOP
-      CALL ADAUTODIFF_INADMODE_UNSET( myTime, myIter, myThid )
-      RETURN
-      END
-
-C     No-op tangent-linear counterpart so `make tap_tlm` links; verify
-C     the argument list against the generated call before first TLM use.
-      SUBROUTINE TAP_INADMODE_UNSET_D( uVel, uVeld,
-     I                                 myTime, myIter, myThid )
-      IMPLICIT NONE
-#include "SIZE.h"
-#include "EEPARAMS.h"
-      _RL uVel  (1-OLx:sNx+OLx,1-OLy:sNy+OLy,Nr,nSx,nSy)
-      _RL uVeld (1-OLx:sNx+OLx,1-OLy:sNy+OLy,Nr,nSx,nSy)
-      _RL     myTime
-      INTEGER myIter
-      INTEGER myThid
-      RETURN
-      END
-#endif /* ALLOW_TAPENADE */

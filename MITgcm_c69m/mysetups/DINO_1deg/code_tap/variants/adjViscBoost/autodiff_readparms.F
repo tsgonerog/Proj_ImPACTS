@@ -3,6 +3,12 @@
 # include "MOM_COMMON_OPTIONS.h"
 #endif /* ALLOW_MOM_COMMON */
 
+C     adjViscBoost shadow of pkg/autodiff/autodiff_readparms.F, compiled
+C     ahead of the vendored file by build_tapAdj_adjViscBoost.sh (its
+C     first -mods directory). Upstream c69m body plus the reading,
+C     defaulting and echoing of the inAd*/outAd* parameters declared in
+C     the AUTODIFF_PARAMS.h beside it. See README.md here.
+
 C---+----1----+----2----+----3----+----4----+----5----+----6----+----7-|--+----|
 CBOP 0
 C !ROUTINE: AUTODIFF_READPARMS
@@ -57,6 +63,16 @@ C     retired parameter
      &       viscFacInAd, viscFacInFw, SIregFacInAd, SIregFacInFw,
      &       SEAICEuseFREEDRIFTswitchInAd, SEAICEuseDYNAMICSswitchInAd,
      &       cg2dFullAdjoint
+     &      ,inSEAICEadjMODE, outSEAICEadjMODE
+     &      ,inAddiffKhT, inAddiffKhS,
+     &       inAddiffK4T, inAddiffK4S,
+     &       outAddiffKhT, outAddiffKhS,
+     &       outAddiffK4T, outAddiffK4S
+     &      ,inAdviscA4Grid, inAdviscAhGrid, inAdviscArNr,
+     &       outAdviscA4Grid, outAdviscAhGrid, outAdviscArNr
+C     &      ,inAddiffKrNrT, inAddiffKrNrS,
+C     &       outAddiffKrNrT, outAddiffKrNrS,
+C     &       useInOutAdvar,
 
       IF ( .NOT.useAUTODIFF ) THEN
 C-    pkg AUTODIFF is not used
@@ -90,10 +106,33 @@ C--   default : write one file per record
       SEAICEapproxLevInAd = 0
       viscFacInFw        = 1. _d 0
       viscFacInAd        = 1. _d 0
+CAB
       SIregFacInAd       = UNSET_RL
       SIregFacInFw       = UNSET_RL
+CAB 
+c      useInOutAdvar      = .FALSE.
+      inAdviscA4Grid     = UNSET_RL
+      inAdviscAhGrid     = UNSET_RL
+      inAdviscArNr       = UNSET_RL
+c      inAddiffKrNrT      = UNSET_RL
+c      inAddiffKrNrS      = UNSET_RL
+      inAddiffKhT        = UNSET_RL
+      inAddiffKhS        = UNSET_RL
+      inAddiffK4T        = UNSET_RL
+      inAddiffK4S        = UNSET_RL
+      outAdviscA4Grid    = UNSET_RL
+      outAdviscAhGrid    = UNSET_RL
+      outAdviscArNr      = UNSET_RL
+c      outAddiffKrNrT     = UNSET_RL
+c      outAddiffKrNrS     = UNSET_RL
+      outAddiffKhT       = UNSET_RL
+      outAddiffKhS       = UNSET_RL
+c      outAddiffK4T       = UNSET_RL
+c      outAddiffK4S       = UNSET_RL
 
 C-- pkg/seaice related switches
+      inSEAICEadjMODE    = 0
+      outSEAICEadjMODE   = 0
       SEAICEuseFREEDRIFTswitchInAd = .FALSE.
       SEAICEuseDYNAMICSswitchInAd  = .FALSE.
       useSmoothCorrel2DinAdMode    = .TRUE.
@@ -215,6 +254,44 @@ C--   Print out some key parameters :
      &  'SEAICEapproxLevInAd =',
      &  ' /* -1:SEAICE_FAKE, >0:other adjoint approximation */')
 #endif /* ALLOW_SEAICE */
+c       CALL WRITE_0D_L( useInOutAdvar, INDEX_NONE,
+c     &   'useInOutAdvar =', ' /* useInOutAdvar */')
+       CALL WRITE_0D_RL( inAdviscA4Grid        ,INDEX_NONE,
+     & 'inAdviscA4Grid =', ' /* inAdviscA4Grid */')
+       CALL WRITE_0D_RL( inAdviscAhGrid        ,INDEX_NONE,
+     & 'inAdviscAhGrid =', ' /* inAdviscAhGrid */')
+       CALL WRITE_0D_RL( inAdviscArNr          ,INDEX_NONE,
+     & 'inAdviscArNr =', ' /* inAdviscArNr */')
+c       CALL WRITE_0D_RL( inAddiffKrNrT         ,INDEX_NONE,
+c     & 'inAddiffKrNrT =', ' /* inAddiffKrNrT */')
+c       CALL WRITE_0D_RL( inAddiffKrNrS         ,INDEX_NONE,
+c     & 'inAddiffKrNrS =', ' /* inAddiffKrNrS */')
+       CALL WRITE_0D_RL( inAddiffKhT         ,INDEX_NONE,
+     & 'inAddiffKhT =', ' /* inAddiffKhT */')
+       CALL WRITE_0D_RL( inAddiffKhS         ,INDEX_NONE,
+     & 'inAddiffKhS =', ' /* inAddiffKhS */')
+       CALL WRITE_0D_RL( inAddiffK4T         ,INDEX_NONE,
+     & 'inAddiffK4T =', ' /* inAddiffK4T */')
+       CALL WRITE_0D_RL( inAddiffK4S         ,INDEX_NONE,
+     & 'inAddiffK4S =', ' /* inAddiffK4S */')
+       CALL WRITE_0D_RL( outAdviscA4Grid        ,INDEX_NONE,
+     & 'outAdviscA4Grid =', ' /* outAdviscA4Grid */')
+       CALL WRITE_0D_RL( outAdviscAhGrid        ,INDEX_NONE,
+     & 'outAdviscAhGrid =', ' /* outAdviscAhGrid */')
+       CALL WRITE_0D_RL( outAdviscArNr          ,INDEX_NONE,
+     & 'outAdviscArNr =', ' /* outAdviscArNr */')
+c       CALL WRITE_0D_RL( outAddiffKrNrT         ,INDEX_NONE,
+c     & 'outAddiffKrNrT =', ' /* outAddiffKrNrT */')
+c       CALL WRITE_0D_RL( outAddiffKrNrS         ,INDEX_NONE,
+c     & 'outAddiffKrNrS =', ' /* outAddiffKrNrS */')
+       CALL WRITE_0D_RL( outAddiffKhT         ,INDEX_NONE,
+     & 'outAddiffKhT =', ' /* outAddiffKhT */')
+       CALL WRITE_0D_RL( outAddiffKhS         ,INDEX_NONE,
+     & 'outAddiffKhS =', ' /* outAddiffKhS */')
+       CALL WRITE_0D_RL( outAddiffK4T         ,INDEX_NONE,
+     & 'outAddiffK4T =', ' /* outAddiffK4T */')
+       CALL WRITE_0D_RL( outAddiffK4S         ,INDEX_NONE,
+     & 'outAddiffK4S =', ' /* outAddiffK4S */')
        CALL WRITE_0D_I( dumpAdVarExch, INDEX_NONE,
      &  'dumpAdVarExch =', ' /* control adexch before dumpinp */')
        CALL WRITE_0D_I( mon_AdVarExch, INDEX_NONE,
@@ -223,6 +300,11 @@ C--   Print out some key parameters :
      &  'viscFacInFw =', ' /* viscosity factor for forward model */')
        CALL WRITE_0D_RL( viscFacInAd, INDEX_NONE,
      &  'viscFacInAd =', ' /* viscosity factor for adjoint */')
+       CALL WRITE_0D_I( inSEAICEadjMODE, INDEX_NONE,
+     &  'inSEAICEadjMODE =', ' /* -1:insideAdMode:use FAKE_ICE */')
+       CALL WRITE_0D_I( outSEAICEadjMODE, INDEX_NONE,
+     &  'outSEAICEadjMODE =', ' /* 0:outsideAdMode */')
+CAB
        CALL WRITE_0D_RL( SIregFacInAd, INDEX_NONE,
      &  'SIregFacInAd =', ' /* sea ice factor for adjoint model */')
        CALL WRITE_0D_RL( SIregFacInFw, INDEX_NONE,

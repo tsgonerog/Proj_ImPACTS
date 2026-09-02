@@ -20,9 +20,6 @@ MITGCM_ROOT="$SCRIPT_DIR/../../MITgcm"
 source "$SCRIPT_DIR/../../../tools/machine_env.sh"
 impacts_load_modules
 
-# Replace SIZE.h with mpi version
-cp code/SIZE.h_mpi code/SIZE.h
-
 # MPI_OPTFILE is defaulted by machine_env.sh; this catches a machine with none.
 if [ -z "$MPI_OPTFILE" ] || [ ! -f "$MPI_OPTFILE" ]; then
     echo "ERROR: MPI_OPTFILE is unset or missing: '$MPI_OPTFILE'"

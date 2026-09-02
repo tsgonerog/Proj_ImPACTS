@@ -174,7 +174,7 @@ cp -p "$build_dir/mitgcmuv_tap_adj" .
 run_start_time=$(date +%s)
 echo "Run started at: $(date)" > run_timing.txt
 
-# run the model in serial (SOMA's adjoint is serial-only; see SIZE.h_serial)
+# run the model in serial (SOMA's adjoint is serial-only; see code_tap/SIZE.h)
 ./mitgcmuv_tap_adj > output_tap_adj.txt 2>&1
 
 # record end time

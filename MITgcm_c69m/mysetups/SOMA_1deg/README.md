@@ -4,8 +4,8 @@ Wind-driven, bowl-shaped idealised basin. **62 × 62 × 31**, spherical polar,
 `delX = delY = 1°`, `ygOrigin = 14.` so the domain spans **14°N–76°N**,
 ~3500 m deep, `dT = 1200 s`.
 
-**The adjoint is serial-only** (`code_tap/SIZE.h_serial`, one 62×62 tile;
-`SIZE.h_mpi` exists in `code_tap/` but no script stages it). **The forward
+**The adjoint is serial-only** (`code_tap/SIZE.h`, one 62×62 tile; there is
+no MPI adjoint variant, and nothing is copied into `code_tap/` at build time). **The forward
 model is MPI**: `code/SIZE.h` is `nPx=2, nPy=2` over `sNx=sNy=31` = 4 ranks.
 
 ## Quick start
@@ -80,9 +80,10 @@ baseline's forward value (`-9.21812947379697E-03`, 5 d), full finite
 when the two setups' workflows were aligned; `code/packages.conf` drops the
 c69f-era `timeave`, removed upstream in c69m).
 
-Building a second variant re-stages `code_tap/`, and build directories symlink
-back into it. Never run bare `make` in an older build directory afterwards —
-re-run its build script.
+Build directories symlink back into `code_tap/`, and no build script copies
+anything into it (since 2026-09-02; `code_tap/SIZE.h` is the one serial
+decomposition), so a build leaves `git status` clean. After editing a source,
+re-run the build script rather than running bare `make` in a build directory.
 
 ## Run
 

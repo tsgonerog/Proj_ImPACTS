@@ -1,0 +1,59 @@
+# `code_tap/variants/adjViscBoost/` — sources for the adjoint-mode viscosity inflation
+
+The four files here are the **source half** of the adjViscBoost configuration;
+the namelist half is `input_tap/variants/adjViscBoost/data.autodiff_adjViscBoost`.
+`build_tapAdj_adjViscBoost.sh` compiles them by listing this directory *first*
+in `genmake2 -mods`:
+
+```
+-mods="../code_tap/variants/adjViscBoost ../code_tap"
+```
+
+`genmake2` gives a file in an earlier `-mods` directory preference over a
+same-named file anywhere later, so these four shadow both `code_tap/` and the
+vendored `MITgcm/pkg/autodiff/`. No other build script names this directory,
+and `genmake2` only enumerates `*.F *.h *.c *.flow *.F90` directly inside each
+`-mods` directory, so the plain builds never see what is in here. Nothing is
+copied into `code_tap/`, and building leaves the working tree clean. The files
+carry their real MITgcm names because the compiler, not a script, resolves
+them — the directory name is the variant tag. After `make`, the build script
+checks that the compiled `autodiff_*.f` really came from here.
+
+| File | Upstream counterpart (vimdiff target) | What the diff shows |
+| --- | --- | --- |
+| `AUTODIFF_PARAMS.h` | `../../../../../MITgcm/pkg/autodiff/AUTODIFF_PARAMS.h` | declares `inAd*`/`outAd*` (`viscA4Grid`, `viscAhGrid`, `viscArNr`, `diffKh*`, `diffK4*`, `SEAICEadjMODE`) and adds them to the common blocks |
+| `autodiff_readparms.F` | `../../../../../MITgcm/pkg/autodiff/autodiff_readparms.F` | reads them from `AUTODIFF_PARM01`, defaults them to `UNSET_RL`, echoes them to STDOUT |
+| `autodiff_inadmode_set_ad.F` | `../../../../../MITgcm/pkg/autodiff/autodiff_inadmode_set_ad.F` | the `inAd*` apply block, run at the start of each backward step through `TAP_INADMODE_SET_B` in `../../tap_inadmode.F` |
+| `autodiff_inadmode_unset_ad.F` | `../../../../../MITgcm/pkg/autodiff/autodiff_inadmode_unset_ad.F` | the `outAd*` restore block, run at the end of each backward step through `TAP_INADMODE_UNSET_B`, so checkpoint re-forwards use forward physics |
+
+Each file is the upstream c69m file plus its block, in the same additive
+layout as every other shadow in `code_tap/`. The three `.F` files carry a
+short header comment saying so; `AUTODIFF_PARAMS.h` deliberately does not,
+because the preprocessor copies a header's comments into every `.f` that
+includes it (about 25 files here), which would make the generated code of
+this build differ from the plain build's in files the variant never touches.
+
+**Provenance.** The apply block and the parameter plumbing were adapted from
+the ASTE 90×150×60 regional setup; its original `autodiff_inadmode_set_ad.F`
+is archived in `../../../00_archive/code_tap/`, whose README describes the
+c69f→c69m port. The restore block has no ASTE ancestor: it was written on
+2026-08-31, when the `TAP_INADMODE_*` hooks first made the mechanism reachable
+under Tapenade. Until 2026-09-02 these files lived in `code_tap/` itself as
+`*_aste_90x150x60` / `*_adapted_frm_aste_90x150x60` siblings that the build
+script copied over the bare names; the copy step and the suffixes are gone,
+and git history holds the old layout.
+
+Two rules:
+
+- **The build and the submit script are a pair.** This directory only makes
+  the parameters exist; `submit_tapAdj_adjViscBoost.sh` swaps in the namelist
+  that gives them values. Either half alone silently runs plain physics.
+- **The boost stays a checkpoint-everything build.** The default build's
+  `-nocheckpoint` list changes the boosted adjoint at order one (run 31056 vs
+  31025, 2026-09-02) — see `../../../README.md`, "Profiling and checkpoint
+  tuning".
+
+**Validated 2026-09-02.** Run 31070 (this layout, 30 d from rest) reproduces
+run 31025 (the same sources while they were still copy-staged) bit for bit:
+`fc`, all 32 `adxx_*`, all 66 common `ADJ*` dumps and the 441-line `%MON`
+stream (`comparison_vs_…run31025.txt` in the 31070 run directory on scratch).

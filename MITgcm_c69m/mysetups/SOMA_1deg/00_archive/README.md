@@ -63,7 +63,7 @@ applied to this setup:
 
 | File | Why it is not live |
 | --- | --- |
-| `submit_tapAdj_mpi_on_sverdrup.sh` | **SOMA is serial-only.** `code_tap/SIZE.h_mpi` still exists but no script stages it and no submit script expects it. |
+| `submit_tapAdj_mpi_on_sverdrup.sh` | **SOMA is serial-only.** The `code_tap/SIZE.h_mpi` it expected was deleted on 2026-09-02 (git history has it); `code_tap/SIZE.h` is the single serial tile. |
 | `submit_frd_mpi_on_sverdrup.sh` | Both MPI *and* forward — there is no forward build script in this setup at all |
 | `submit_tapAdj_serial_on_sverdrup_150_day.sh` | Superseded by `submit_tapAdj_180d.sh`; the live scripts are zero-padded so they sort |
 | `submit_tapAdj_serial_on_sverdrup_5_day_noTpatched.sh` | The `noTpatched` (raw-Tapenade) control, now expressed as `build_tapAdj_rawTapenade.sh` |

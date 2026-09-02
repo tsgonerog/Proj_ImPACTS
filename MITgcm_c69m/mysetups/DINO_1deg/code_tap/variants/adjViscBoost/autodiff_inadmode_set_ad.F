@@ -3,6 +3,15 @@
 # include "CTRL_OPTIONS.h"
 #endif
 
+C     adjViscBoost shadow of pkg/autodiff/autodiff_inadmode_set_ad.F,
+C     compiled ahead of the vendored file by
+C     build_tapAdj_adjViscBoost.sh (its first -mods directory).
+C     Upstream c69m body plus the inAd* override block adapted from the
+C     ASTE 90x150x60 setup, whose original is archived in
+C     00_archive/code_tap/. Reached at the start of each backward step
+C     through TAP_INADMODE_SET_B (code_tap/tap_inadmode.F); the values
+C     come from input_tap/variants/adjViscBoost/. See README.md here.
+
 CBOP
 C !ROUTINE: ADAUTODIFF_INADMODE_SET
 
@@ -47,6 +56,7 @@ C     !LOCAL VARIABLES:
       _RL wrTime
       INTEGER wrIter
 #endif /* ALLOW_DIAGNOSTICS */
+      INTEGER k
 CEOP
 
 C--   Set backward-sweep switch:
@@ -60,6 +70,29 @@ C-    Consistent with S/R DIAGNOSTICS_WRITE_ADJ and where both S/R are called:
         CALL DIAGNOSTICS_SWITCH_ONOFF( -1, wrTime, wrIter, myThid )
       ENDIF
 #endif /* ALLOW_DIAGNOSTICS */
+
+cph(
+c      IF ( useInOutAdvar ) THEN
+        viscA4Grid = inAdviscA4Grid
+        viscAhGrid = inAdviscAhGrid
+        do k=1,Nr
+         viscArNr(k)  = inAdviscArNr
+c         diffKrNrT(k) = inAddiffKrNrT
+c         diffKrNrS(k) = inAddiffKrNrS
+        end do
+        diffKhT = inAddiffKhT
+        diffKhS = inAddiffKhS
+        diffK4T = inAddiffK4T
+        diffK4S = inAddiffK4S
+cCatn#ifdef ALLOW_SEAICE
+cCatn        SEAICEadjMODE = inSEAICEadjMODE      
+cCatn#endif /* ALLOW_SEAICE */
+c      ENDIF
+cph)
+catn: takes seaiceadjmode outside of useinoutadvar
+#ifdef ALLOW_SEAICE
+        SEAICEadjMODE = inSEAICEadjMODE      
+#endif /* ALLOW_SEAICE */
 
 C--   Update some pkg and scheme switches:
       useKPP    = useKPPinAdMode
@@ -134,6 +167,21 @@ C--   Print status of some switches:
          CALL PRINT_MESSAGE( msgBuf, standardMessageUnit,
      &                       SQUEEZE_RIGHT, myThid )
        ENDIF
+CAB
+C       IF ( SEAICEapproxLevInAd.NE.0 ) THEN
+         WRITE(msgBuf,'(2A,e24.17)') 'S/R ADAUTODIFF_INADMODE_SET: ',
+     &        'SIregFacInAD =', SIregFacInAD
+         CALL PRINT_MESSAGE( msgBuf, standardMessageUnit,
+     &                       SQUEEZE_RIGHT, myThid )
+         WRITE(msgBuf,'(2A,e24.17)') 'S/R ADAUTODIFF_INADMODE_SET: ',
+     &        'SIregFacInFW =', SIregFacInFW
+         CALL PRINT_MESSAGE( msgBuf, standardMessageUnit,
+     &                       SQUEEZE_RIGHT, myThid )
+         WRITE(msgBuf,'(2A,e24.17)') 'S/R ADAUTODIFF_INADMODE_SET: ',
+     &        'SINegFac =', SINegFac
+         CALL PRINT_MESSAGE( msgBuf, standardMessageUnit,
+     &                       SQUEEZE_RIGHT, myThid )
+C       ENDIF
 #endif /* ALLOW_SEAICE */
 
 C--   end printing switch status (if debugLevel >= debLevC).
@@ -141,49 +189,3 @@ C--   end printing switch status (if debugLevel >= debLevC).
 
       RETURN
       END
-
-#ifdef ALLOW_TAPENADE
-CBOP
-C     !ROUTINE: TAP_INADMODE_SET_B
-C     !INTERFACE:
-      SUBROUTINE TAP_INADMODE_SET_B( uVel, uVelb,
-     I                               myTime, myIter, myThid )
-C     !DESCRIPTION:
-C     Reverse-sweep body of the Tapenade mode-switch hook
-C     TAP_INADMODE_SET (called at the END of FORWARD_STEP, so this
-C     runs at the START of each backward step): enter adjoint mode.
-C     uVel is only the activity vehicle that makes Tapenade generate
-C     this call (declared read-then-written in flow_tap_local); uVelb
-C     must be left untouched (identity adjoint). The argument list
-C     must match the generated call in forward_step_b.f; the build
-C     script asserts it.
-C     !USES:
-      IMPLICIT NONE
-#include "SIZE.h"
-#include "EEPARAMS.h"
-C     !INPUT/OUTPUT PARAMETERS:
-      _RL uVel  (1-OLx:sNx+OLx,1-OLy:sNy+OLy,Nr,nSx,nSy)
-      _RL uVelb (1-OLx:sNx+OLx,1-OLy:sNy+OLy,Nr,nSx,nSy)
-      _RL     myTime
-      INTEGER myIter
-      INTEGER myThid
-CEOP
-      CALL ADAUTODIFF_INADMODE_SET( myTime, myIter, myThid )
-      RETURN
-      END
-
-C     No-op tangent-linear counterpart so `make tap_tlm` links; verify
-C     the argument list against the generated call before first TLM use.
-      SUBROUTINE TAP_INADMODE_SET_D( uVel, uVeld,
-     I                               myTime, myIter, myThid )
-      IMPLICIT NONE
-#include "SIZE.h"
-#include "EEPARAMS.h"
-      _RL uVel  (1-OLx:sNx+OLx,1-OLy:sNy+OLy,Nr,nSx,nSy)
-      _RL uVeld (1-OLx:sNx+OLx,1-OLy:sNy+OLy,Nr,nSx,nSy)
-      _RL     myTime
-      INTEGER myIter
-      INTEGER myThid
-      RETURN
-      END
-#endif /* ALLOW_TAPENADE */

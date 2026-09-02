@@ -101,18 +101,18 @@ Builds present, all dated 2026-08-18:
 \end{center}
 
 \begin{callout}
-\textbf{\code{code\_tap/} is currently staged for the plain MPI adjoint} ---
-\code{SIZE.h\_mpi}, \code{AUTODIFF\_PARAMS.h\_OG}, \code{the\_model\_main.F\_OG},
-\code{autodiff\_readparms.F\_OG}, \code{forward\_step\_b.f\_modified\_mpi} ---
-which is what \code{build\_tapAdj/} was compiled against, so that build directory
-is internally consistent.
+\textbf{\code{code\_tap/} is compiled as-is} --- since 2026-09-02 no build
+script copies anything into it: \code{SIZE.h} is the one decomposition, the
+plain builds compile the vendored \code{pkg/autodiff} sources, and the
+adjViscBoost build takes its four ASTE-derived shadows from
+\code{code\_tap/variants/adjViscBoost/} as a second \code{-mods} directory.
 
-Build directories \emph{symlink} their headers back into \code{code\_tap/}, so
-building a different variant re-stages \code{code\_tap/} and silently repoints
-\code{build\_tapAdj/}'s headers. For this ensemble: do not build another variant
-in between, and never run bare \code{make} in an older build directory ---
-re-run its build script instead. To check what a build actually compiled against,
-diff its generated \code{.f} file, not its symlinked \code{.h}.
+Build directories \emph{symlink} their sources back into \code{code\_tap/}, so
+an edit there reaches every build directory. For this ensemble: after any
+source edit re-run the build script of the build you submit, and never run
+bare \code{make} in an older build directory. To check what a build actually
+compiled against, diff its generated \code{.f} file, not its symlinked
+\code{.h}.
 \end{callout}
 
 Inputs are staged: \code{input\_binaries/} (23 files, 179 MB) and

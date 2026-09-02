@@ -150,6 +150,20 @@ Project-local housekeeping (not review-relevant): `tools/pre_push_check.sh`
 gained the new staged-variant path; `CLAUDE.md` and the READMEs document the
 mechanism.
 
+**Update 2026-09-02.** The staged-variant layout the table above refers to
+(`_OG` / `_aste` siblings copied over the bare names by the build scripts) is
+gone. The `TAP_INADMODE_SET_B`/`UNSET_B` wrappers now live in
+`code_tap/tap_inadmode.F` beside the forward no-ops, so a plain build no longer
+shadows `autodiff_inadmode_{set,unset}_ad.F` at all (the `_OG` copies of
+`AUTODIFF_PARAMS.h` and `autodiff_readparms.F` were byte-identical to upstream
+and are deleted too); the ASTE-derived shadows live in
+`code_tap/variants/adjViscBoost/` under their real names and reach the boost
+build as a second `-mods` directory
+(`-mods="../code_tap/variants/adjViscBoost ../code_tap"`). No build copies
+anything into `code_tap/`, and `tools/pre_push_check.sh` lost its
+staged-variant clause. The hook mechanism and the validation below are
+unchanged.
+
 ## 4 · Validation
 
 All runs: DINO 1°, 51×198×36, 27 MPI ranks, 30-day adjoints (1,440 steps),

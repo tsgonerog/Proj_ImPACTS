@@ -17,11 +17,15 @@
 # and what 31025 validated. Record: analyses/DINO_1deg/03_adjoint/
 # 07_tapenade_profiling/compare_30d_adjViscBoost_run31025_vs_nocheckpoint_run31056.md.
 #
-# What differs from build_tapAdj_ckpAll.sh is that this build stages the ASTE-derived
-# AUTODIFF_PARAMS.h / autodiff_readparms.F / autodiff_inadmode_set_ad.F, which
-# add the inAd*/outAd* parameters. Those let the model run with larger viscosity
-# and diffusivity during the adjoint sweep than in the forward - the standard
-# trick for keeping a long adjoint from blowing up.
+# What differs from build_tapAdj_ckpAll.sh is a second -mods directory,
+# code_tap/variants/adjViscBoost/, listed FIRST so that its four files shadow
+# both code_tap/ and the vendored tree: AUTODIFF_PARAMS.h / autodiff_readparms.F
+# declare and read the inAd*/outAd* parameters, autodiff_inadmode_set_ad.F /
+# autodiff_inadmode_unset_ad.F apply and restore them. Those let the model run
+# with larger viscosity and diffusivity during the adjoint sweep than in the
+# forward - the standard trick for keeping a long adjoint from blowing up.
+# Nothing is copied into code_tap/; the check after make confirms the variant
+# is what got compiled.
 #
 # The build only provides the machinery; the values come from
 # input_tap/data.autodiff_adjViscBoost at run time (viscFacInAd = 10 vs
@@ -53,13 +57,6 @@ MITGCM_ROOT="$SCRIPT_DIR/../../MITgcm"
 source "$SCRIPT_DIR/../../../tools/machine_env.sh"
 impacts_load_modules
 
-# Replace SIZE.h with mpi version
-cp code_tap/SIZE.h_mpi code_tap/SIZE.h
-cp code_tap/AUTODIFF_PARAMS.h_aste_90x150x60 code_tap/AUTODIFF_PARAMS.h
-cp code_tap/autodiff_readparms.F_aste_90x150x60 code_tap/autodiff_readparms.F
-cp code_tap/autodiff_inadmode_set_ad.F_adapted_frm_aste_90x150x60 code_tap/autodiff_inadmode_set_ad.F
-cp code_tap/autodiff_inadmode_unset_ad.F_adapted_frm_aste_90x150x60 code_tap/autodiff_inadmode_unset_ad.F
-
 # MPI_OPTFILE is defaulted by machine_env.sh; this catches a machine with none.
 if [ -z "$MPI_OPTFILE" ] || [ ! -f "$MPI_OPTFILE" ]; then
     echo "ERROR: MPI_OPTFILE is unset or missing: '$MPI_OPTFILE'"
@@ -90,11 +87,14 @@ make CLEAN || true
 # Configure the build (this creates the Makefile here); -tap_extra injects
 # the setup-local external library that makes Tapenade generate the ADJ*
 # dump-hook call (see build_tapAdj_ckpAll.sh). No -nocheckpoint here, on
-# purpose -- see the header.
+# purpose -- see the header. -mods names the variant directory FIRST: genmake2
+# gives a file in an earlier -mods directory preference over a same-named file
+# anywhere later, so the four files in code_tap/variants/adjViscBoost/ replace
+# their code_tap/ and pkg/autodiff/ counterparts without any copy step.
 "$MITGCM_ROOT/tools/genmake2" -mpi -tap \
     -rd="$MITGCM_ROOT" \
     -of="$MPI_OPTFILE" \
-    -mods=../code_tap \
+    -mods="../code_tap/variants/adjViscBoost ../code_tap" \
     -adof="$MITGCM_ROOT/tools/adjoint_options/adjoint_tap" \
     -tap_extra "-ext ../code_tap/flow_tap_local"
 
@@ -103,6 +103,18 @@ make depend
 
 # Build the adjoint model using 8 threads
 make -j 8 tap_adj
+
+# The variant must be what was compiled: genmake2 links the first match it
+# finds, so a wrong -mods order would silently build the plain adjoint under
+# this build's name. The inAd*/outAd* names exist only in the variant sources.
+for f in autodiff_readparms.f autodiff_inadmode_set_ad.f autodiff_inadmode_unset_ad.f; do
+    if ! grep -qE 'inAdviscAhGrid|outAdviscAhGrid' "$f"; then
+        echo "ERROR: the compiled $f is not the adjViscBoost variant;"
+        echo "       check the -mods order (code_tap/variants/adjViscBoost must come first)."
+        exit 1
+    fi
+done
+echo "OK: the compiled autodiff sources are the adjViscBoost variant."
 
 # Same generated-call checks as build_tapAdj_ckpAll.sh: each hook's _B argument
 # list must match its hand-written routine; F77 would silently misalign a
@@ -133,21 +145,17 @@ check_gen_call TAP_DUMMY_FOR_ETAN_B 5 integr_continuity_b.f
 # refuse an executable without it (or newer than it) and take run_token from
 # it, so a run directory is named from what was actually built, not from what
 # the submit script assumes:  DINO_1deg_<run_token>_<duration>[_<tag>]_run<jobid>
-dirty=$(git -C "$SCRIPT_DIR" diff --name-only HEAD -- . \
-          ':(exclude)code_tap/SIZE.h' ':(exclude)code_tap/AUTODIFF_PARAMS.h' \
-          ':(exclude)code_tap/autodiff_readparms.F' \
-          ':(exclude)code_tap/autodiff_inadmode_set_ad.F' \
-          ':(exclude)code_tap/autodiff_inadmode_unset_ad.F' 2>/dev/null | wc -l)
+dirty=$(git -C "$SCRIPT_DIR" diff --name-only HEAD -- . 2>/dev/null | wc -l)
 {
     echo "build_script=$(basename "$(readlink -f "$SCRIPT_DIR/$(basename "${BASH_SOURCE[0]}")")")"   # resolved from the setup dir: after the cd above, a relative BASH_SOURCE would not resolve the symlink
     echo "invoked_as=$(basename "${BASH_SOURCE[0]}")"
     echo "build_dir=$(basename "$PWD")"
     echo "tapenade_checkpointing=ckpAll        # every call checkpointed; the -nocheckpoint list is NOT equivalent under the boost (run 31056 vs 31025)"
-    echo "variant=adjViscBoost                 # ASTE-derived inAd*/outAd* staging; pair with submit_tapAdj_adjViscBoost.sh"
+    echo "variant=adjViscBoost                 # code_tap/variants/adjViscBoost/ compiled ahead of code_tap/ (inAd*/outAd*); pair with submit_tapAdj_adjViscBoost.sh"
     echo "run_token=tapAdj_ckpAll_adjViscBoost"
     echo "tap_extra=$(sed -n 's/^TAP_EXTRA *= *//p' Makefile)"
     echo "git_commit=$(git -C "$SCRIPT_DIR" rev-parse --short HEAD 2>/dev/null || echo unknown)"
-    echo "git_modified_tracked_files=${dirty}   # in this setup, build-staged files excluded"
+    echo "git_modified_tracked_files=${dirty}   # in this setup"
     echo "built=$(date '+%Y-%m-%d %H:%M:%S %Z') on $(hostname)"
 } > build_info.txt
 echo "OK: wrote $(basename "$PWD")/build_info.txt (run_token=tapAdj_ckpAll_adjViscBoost)."

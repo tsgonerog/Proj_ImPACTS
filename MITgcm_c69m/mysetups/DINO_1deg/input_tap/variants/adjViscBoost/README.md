@@ -11,7 +11,7 @@ and the values were adapted from the ASTE 90×150×60 regional setup.
 
 | Piece | Supplies |
 | --- | --- |
-| `build_tapAdj_adjViscBoost.sh` | stages the ASTE-derived `AUTODIFF_PARAMS.h` and friends, which is what makes the `inAd*`/`outAd*` parameters exist at all |
+| `build_tapAdj_adjViscBoost.sh` | compiles `code_tap/variants/adjViscBoost/` ahead of `code_tap/` (its first `-mods` directory; see the README there), which is what makes the `inAd*`/`outAd*` parameters exist at all |
 | `submit_tapAdj_adjViscBoost.sh` | copies this file over `data.autodiff` in the staged run directory, which is what gives them values |
 
 Pairing the plain submit script with the adjViscBoost build, or the reverse,

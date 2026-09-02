@@ -185,7 +185,7 @@ adj=$(IMPACTS_TEST_CASE=kappa_v_ensemble/M3 ../../../tools/submit.sh submit_tapA
 echo "M3: forward $fwd -> adjoint $adj"
 ```
 
-The DINO adjoint requests `-n 27` because `SIZE.h_mpi` sets `nPx=3, nPy=9`;
+The DINO adjoint requests `-n 27` because `code_tap/SIZE.h` sets `nPx=3, nPy=9`;
 changing the decomposition means changing both. `IMPACTS_TEST_CASE` uses
 `${VAR-default}`, so an explicit empty value (`IMPACTS_TEST_CASE=`) selects the
 live `input_tap/data` rather than the committed variant.
@@ -329,7 +329,6 @@ Exit status is **1 only if something would actually break a push or a run**
 | notebook output filter | `filter.nbstrip.clean` is configured — filters live in untracked `.git/config`, so **a fresh clone commits notebooks unstripped** until `./analyses/tools/install_git_filters.sh` is run | **FAIL** |
 | | `tools/machine_env.sh` sources cleanly, and reports the resolved `MACHINE` | **FAIL** |
 | side effects you did not author | a modified `*/mysetups/*/input*/data*` — submit scripts now patch the staged copy in the run directory, so a modified namelist should only ever be one you edited by hand | note |
-| | build-staged variant files differ: `SIZE.h`, `AUTODIFF_PARAMS.h`, `autodiff_readparms.F`, `autodiff_inadmode_{set,unset}_ad.F`. **Edit the suffixed sibling, not these** — a build overwrites them | note |
 | derived output | `*.png/jpg/gif/html` staged under `analyses/` — figures belong in the scratch run directory | **FAIL** |
 | | staged blobs over 10 MB (GitHub hard-fails at 100 MB) | note |
 | notebook scratch paths | every `/scratch*/...` path a notebook builds still exists on disk, reassembling literals split across lines first | note |
@@ -341,16 +340,17 @@ in the header is the total.
 
 ### DINO example
 
-The check that pays for itself here is the variant-staging one. Building both
-DINO adjoint variants restages `code_tap/`, so:
+A build no longer touches the tree (since 2026-09-02 nothing is copied into
+`code_tap/`; the boost variant is a second `-mods` directory), so after
+building any variant the check should report nothing:
 
 ```bash
 cd MITgcm_c69m/mysetups/DINO_1deg
 ./build_tapAdj_adjViscBoost.sh
-./build_tapAdj.sh                    # re-stages code_tap/ back to the _OG variants (symlink -> _nocheckpoint)
+./build_tapAdj.sh                    # symlink -> _nocheckpoint
 
 cd ../../..
-./tools/pre_push_check.sh            # says whether the diff you see is yours
+./tools/pre_push_check.sh            # a diff here is yours, or a regression
 ```
 
 Build variants **in the order you want `code_tap/` left in**, and never `make`
@@ -665,7 +665,7 @@ R=$SCRATCH_ROOT/DINO_1deg_tapAdj_runs
 
 # 4. before pushing, check what in the tree is actually yours
 cd ../../..
-./tools/pre_push_check.sh               # the build in step 1 re-staged code_tap/
+./tools/pre_push_check.sh               # builds no longer touch the tree; any diff is yours
 
 # 5. if the result changes a direction, sync the write-up
 ./tools/overleaf_sync.sh status nn_surrogate

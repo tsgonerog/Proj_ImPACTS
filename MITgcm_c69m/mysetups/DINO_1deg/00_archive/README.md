@@ -25,11 +25,13 @@ plain `ls`.
 | `monitor_ad.F` | `MONITOR_b`, an adjoint-state monitor over the `adcommon.h` commons | Same: nothing generated ever called it, and it needs the archived `adcommon.h` |
 
 **Lineage worth knowing.** `autodiff_inadmode_set_ad.F_aste_90x150x60` is the
-direct ancestor of the live `code_tap/autodiff_inadmode_set_ad.F_adapted_frm_aste_90x150x60`,
-which `build_tapAdj_adjViscBoost.sh` stages. Diffing the two shows the
-c69f→c69m API port plus, since 2026-08-31, the appended `ALLOW_TAPENADE`
-wrapper block (`TAP_INADMODE_SET_B/_D`) that the mode-switch hooks added to
-every live variant. The port itself was:
+direct ancestor of the live `code_tap/variants/adjViscBoost/autodiff_inadmode_set_ad.F`,
+which `build_tapAdj_adjViscBoost.sh` compiles from its first `-mods` directory
+(until 2026-09-02 that file was the staged sibling
+`code_tap/autodiff_inadmode_set_ad.F_adapted_frm_aste_90x150x60`). Diffing the
+two shows the c69f→c69m API port; the `TAP_INADMODE_SET_B/_D` wrapper that the
+2026-08-31 mode-switch hooks added lives in `code_tap/tap_inadmode.F`, not in
+this file. The port itself was:
 
 - `DIAGNOSTICS.h` + `DIAGNOSTICS_SIZE.h` → `DIAGNOSTICS_P2SHARE.h`
 - `CTRL_SIZE.h` added
@@ -90,7 +92,7 @@ subdirectories.
 
 | File | Why it is not live |
 | --- | --- |
-| `tapAdj_build_serial_patched.sh`, `tapAdj_build_serial_noTpatched.sh` | **DINO is MPI-only now.** `code_tap/SIZE.h_serial` still exists but no live script stages it and no submit script expects it. |
+| `tapAdj_build_serial_patched.sh`, `tapAdj_build_serial_noTpatched.sh` | **DINO is MPI-only now.** The `code_tap/SIZE.h_serial` they staged was deleted on 2026-09-02 (git history has it); `code_tap/SIZE.h` is the 27-rank decomposition. |
 | `tapAdj_submit_serial_patched_on_sverdrup.sh` | Serial counterpart of the above |
 | `frd_submit_mpi_on_sv_debug_{tr5,adv30_from_start,kppON,viscAhD_2p50}.sh` | One-off forward debug runs (job names `debug_tr5`, `debug_tr6`, `debug_tr7`, `debug_tr12`). Their settings now live as namelists in `input/variants/`, selected by `test_cases`. |
 

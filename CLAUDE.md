@@ -19,8 +19,8 @@ direction it tests, and never commits or moves `HEAD`.
 
 `./tools/pre_push_check.sh` is the other standing check: a read-only
 pre-push sanity check covering the nbstrip filter, submit-script namelist churn,
-build-script variant staging, stray images under `analyses/`, and notebook
-scratch paths that no longer resolve. Exits non-zero only on real breakage. Run
+stray images under `analyses/`, and notebook scratch paths that no longer
+resolve. Exits non-zero only on real breakage. Run
 it before concluding a tree is clean — `git status` alone does not distinguish a
 change the user authored from one a build or submit script made.
 
@@ -103,51 +103,40 @@ Both setups name scripts action-first (`build_*`, `submit_*`), and the `rawTapen
 | `build_tapAdj.sh` → `_nocheckpoint`, `submit_tapAdj.sh` → `_nocheckpoint` | `build_tapAdj_nocheckpoint/` | **the default**: symlinks, repointed when the default changes |
 | `build_tapAdj_nocheckpoint.sh` / `submit_tapAdj_nocheckpoint.sh` | `build_tapAdj_nocheckpoint/` | profile-guided `-nocheckpoint` list (33 routines in split mode); bitwise identical to `ckpAll`, 1.5× faster |
 | `build_tapAdj_ckpAll.sh` / `submit_tapAdj_ckpAll.sh` | `build_tapAdj_ckpAll/` | the reference: every call checkpointed (Tapenade's default). **Was `build_tapAdj.sh` / `build_tapAdj/` until 2026-09-02** — every run up to job 31055 that is not named `nocheckpoint`/`tapProfile`/`adjViscBoost` came from it. Kept as the profiler's base, the fallback if a configuration change invalidates the list, and the timing baseline; not needed as a correctness control |
-| `build_tapAdj_adjViscBoost.sh` / `submit_tapAdj_adjViscBoost.sh` | `build_tapAdj_adjViscBoost/` | `ckpAll` **plus** the ASTE `inAd*` staging. Deliberately without the list: under the boost, split mode changes the adjoint at order one (run 31056 vs 31025, 2026-09-02 — see the `adjViscBoost` bullet under "Run") |
+| `build_tapAdj_adjViscBoost.sh` / `submit_tapAdj_adjViscBoost.sh` | `build_tapAdj_adjViscBoost/` | `ckpAll` **plus** the ASTE `inAd*` sources, compiled from `code_tap/variants/adjViscBoost/` as a second `-mods` directory. Deliberately without the list: under the boost, split mode changes the adjoint at order one (run 31056 vs 31025, 2026-09-02 — see the `adjViscBoost` bullet under "Run") |
 | `build_tapAdj_tapProfile.sh` / `submit_tapAdj_tapProfile.sh` | `build_tapAdj_tapProfile/` | diagnostic: `ckpAll` + Tapenade's `-profile` (deliberately without the list, so the profile sees every checkpoint) |
 
-SOMA's `build_tapAdj.sh` / `submit_tapAdj.sh` are real files and still checkpoint every call — no SOMA profile exists yet — so the bare name means different things in the two setups. Optfiles come from `tools/machine_env.sh`, so nothing needs exporting. Every build script does the same six steps: stage variant files, `make CLEAN`, run **stock** `genmake2` with `-tap -adof=<root>/tools/adjoint_options/adjoint_tap -mods=../code_tap -tap_extra "-ext ../code_tap/flow_tap_local"` (the `_nocheckpoint` build prepends `-nocheckpoint "<list>"`), `make depend`, `make -j 8 tap_adj`, assert every generated hook call's argument count (`check_gen_call`), and — last, so it can only describe a verified executable — write `build_info.txt` into the build directory (script, `TAP_EXTRA`, the list, commit, and a `run_token` such as `tapAdj_ckpAll_adjViscBoost`). The DINO submit scripts refuse an executable that has no record or is newer than it, copy the record into the run directory, and take the run directory's name from `run_token` (see "Where the output lands").
+SOMA's `build_tapAdj.sh` / `submit_tapAdj.sh` are real files and still checkpoint every call — no SOMA profile exists yet — so the bare name means different things in the two setups. Optfiles come from `tools/machine_env.sh`, so nothing needs exporting. Every build script does the same steps in the same order, and none of them copies anything into `code/` or `code_tap/` (since 2026-09-02 a build leaves the working tree clean): `make CLEAN`, run **stock** `genmake2` with `-tap -adof=<root>/tools/adjoint_options/adjoint_tap -mods=../code_tap -tap_extra "-ext ../code_tap/flow_tap_local"` (the `_nocheckpoint` build prepends `-nocheckpoint "<list>"`; the `adjViscBoost` build passes `-mods="../code_tap/variants/adjViscBoost ../code_tap"` and afterwards asserts the compiled `autodiff_*.f` came from the variant), `make depend`, `make -j 8 tap_adj`, assert every generated hook call's argument count (`check_gen_call`), and — last, so it can only describe a verified executable — write `build_info.txt` into the build directory (script, `TAP_EXTRA`, the list, commit, and a `run_token` such as `tapAdj_ckpAll_adjViscBoost`). The DINO submit scripts refuse an executable that has no record or is newer than it, copy the record into the run directory, and take the run directory's name from `run_token` (see "Where the output lands").
 
-**Parallelism is a property of the setup, not a flag you pass.** Only the build scripts that exist are usable: DINO is MPI-only throughout; SOMA's adjoint is serial-only while its forward model (`build_frd.sh`/`submit_frd.sh`, restored 2026-08-31) is MPI over 4 ranks (`code/SIZE.h`, `nPx=nPy=2`). Both `SIZE.h` variants are nonetheless present in most `code_tap/` directories, so finding `SIZE.h_serial` in the c69m DINO setup does not mean a serial adjoint build is wired up there — no script stages it and no submit script expects it.
+**Parallelism is a property of the setup, not a flag you pass.** Only the build scripts that exist are usable: DINO is MPI-only throughout; SOMA's adjoint is serial-only while its forward model (`build_frd.sh`/`submit_frd.sh`, restored 2026-08-31) is MPI over 4 ranks (`code/SIZE.h`, `nPx=nPy=2`). Each source directory carries exactly one `SIZE.h` (since 2026-09-02; the unused `SIZE.h_mpi`/`SIZE.h_serial` siblings are gone and nothing selects a decomposition): DINO's `code/SIZE.h` and `code_tap/SIZE.h` are the 27-rank decomposition, SOMA's `code_tap/SIZE.h` is the single serial tile.
 
 Build directories (`build*/`) are gitignored and fully reproducible. They are **not relocatable**: `genmake2` bakes the setup's absolute path into the generated `Makefile` (~23 references), so renaming or moving a setup directory invalidates any build inside it. Re-run the build script rather than trying to patch the `Makefile`.
 
-### Variant staging — the most important gotcha
+### Variants are directories, not staged copies (since 2026-09-02)
 
-Build scripts **overwrite tracked files by copying variant siblings over them** before configuring, e.g.:
+**No build script copies anything into `code/` or `code_tap/`.** Until 2026-09-02 every build overwrote tracked files with suffixed siblings (`SIZE.h_mpi -> SIZE.h`, `AUTODIFF_PARAMS.h_OG -> AUTODIFF_PARAMS.h`, `_aste_90x150x60` / `_adapted_frm_aste_90x150x60` for the boost), so a build dirtied the tree, the bare file was whatever the last build staged, and building a second variant silently repointed every earlier build directory's symlinks. All of that is gone; git history holds the old layout. What replaced it:
 
-```
-code_tap/SIZE.h_mpi                  -> code_tap/SIZE.h
-code_tap/AUTODIFF_PARAMS.h_OG        -> code_tap/AUTODIFF_PARAMS.h
-code_tap/autodiff_readparms.F_OG     -> code_tap/autodiff_readparms.F
-```
+- `SIZE.h` is the one tracked decomposition per source directory. Nothing selects it.
+- `AUTODIFF_PARAMS.h` and `autodiff_readparms.F` are no longer in `code_tap/` at all: their `_OG` copies were byte-identical to the vendored `pkg/autodiff/` files, so the plain builds compile upstream directly.
+- The `TAP_INADMODE_SET_B`/`UNSET_B` wrappers (and `_D` no-ops) live in `code_tap/tap_inadmode.F` beside the forward no-ops, so the plain builds do not shadow `autodiff_inadmode_{set,unset}_ad.F` either.
+- **A variant is a second `-mods` directory.** `code_tap/variants/adjViscBoost/` holds the four ASTE-derived shadows under their real MITgcm names (`AUTODIFF_PARAMS.h`, `autodiff_readparms.F`, `autodiff_inadmode_set_ad.F`, `autodiff_inadmode_unset_ad.F`) plus a README; `build_tapAdj_adjViscBoost.sh` passes `-mods="../code_tap/variants/adjViscBoost ../code_tap"`. `genmake2` gives a file in an earlier `-mods` directory preference over a same-named file anywhere later (`genmake2:79-83`), and it enumerates only `*.F *.h *.c *.flow *.F90` directly inside each directory (`genmake2:2952`), so the plain builds never see `variants/`. The build script then asserts that the compiled `autodiff_*.f` really came from the variant. This mirrors `input_tap/variants/adjViscBoost/`, the namelist half of the same configuration, and is the pattern `build_tapAdj_tapProfile.sh` already used for `tools/tapenade_profiling/mods_profile/`. Inside the variant directory the files carry no suffix because the compiler, not a script, resolves them; the directory name is the tag.
 
-Both sides are tracked in git. So:
-
-- **Edit the suffixed variant, never the bare destination file** — `SIZE.h`, `AUTODIFF_PARAMS.h`, `autodiff_readparms.F`, `autodiff_inadmode_set_ad.F`, `autodiff_inadmode_unset_ad.F` are all regenerated and your edits will vanish on the next build.
-- Running any build script dirties the working tree even when nothing was authored. Check `git diff` before assuming a change is yours.
-
-Suffix meanings: `_mpi` / `_serial` (parallelism), `_OG` (original) vs `_aste_90x150x60` / `_adapted_frm_aste_90x150x60` (adapted from the ASTE regional setup — this is what the `adjViscBoost` variant selects), `_ForTapProfile` (the c69f-era Tapenade profiling main program; only in `00_archive/code_tap/` now — `code_tap/` carries no `the_model_main.F` at all since 2026-09-01, the vendored one is compiled, and the profiling build shadows it from `tools/tapenade_profiling/mods_profile/`).
+So: edit the file under its MITgcm name in the directory that owns it; a build never rewrites a tracked file; and if `git status` shows a change after a build, something regressed. The only suffixed source left anywhere is the archived `00_archive/code_tap/the_model_main.F_ForTapProfile` (the c69f-era profiling main program; the live profiling build shadows `the_model_main.F` from `tools/tapenade_profiling/mods_profile/` instead).
 
 ### Build directories symlink back into `code_tap/`
 
-`genmake2` symlinks most staged sources into the build directory
-(`build_x/AUTODIFF_PARAMS.h -> ../code_tap/AUTODIFF_PARAMS.h`) rather than copying
-them. Only files written into the build directory itself — Tapenade's generated
-`*_b.f` — are real files.
-**Building a second variant re-stages `code_tap/` and silently repoints
-every earlier build's symlinks.** After building `adjViscBoost` and then the plain
-`build_tapAdj.sh`, the adjViscBoost build directory's headers resolve to the `_OG`
-variants; running `make` there would recompile it as a plain build.
-
-The already-compiled `.o` and generated `.f` files are unaffected — those are real
-files frozen at compile time, and they are the reliable evidence of what a build
-actually used. To check which variant a build compiled against, diff its generated
-`.f` (e.g. `autodiff_readparms.f`), not its symlinked `.h`.
-
-Practical consequence: **build variants in the order you want `code_tap/` left in**,
-and never `make` in an older build directory after building a different variant —
-re-run its build script instead.
+`genmake2` symlinks the sources it takes from `-mods` directories into the build
+directory (`build_x/forward_step.F -> ../code_tap/forward_step.F`; for the boost,
+`build_tapAdj_adjViscBoost/AUTODIFF_PARAMS.h -> ../code_tap/variants/adjViscBoost/AUTODIFF_PARAMS.h`)
+rather than copying them. Only files written into the build directory itself —
+the preprocessed `.f` and Tapenade's generated `*_b.f` — are real files, frozen
+at compile time, and they are the reliable evidence of what a build actually
+used: to check what a build compiled against, diff its generated `.f` (e.g.
+`autodiff_readparms.f`), not its symlinked `.h`. Since no build rewrites
+`code_tap/`, building one variant leaves every other build directory's links
+valid; an edit to a source in `code_tap/` reaches every build directory through
+those links, so after editing re-run the build script of each build you intend
+to use rather than `make` in one of them.
 
 ### The ADJ* dump hook — Tapenade-native in both setups
 
@@ -161,7 +150,7 @@ The `ADJ*` sensitivity dumps exist because TAF's `.flow` directives (`ADNAME`/`R
 - `flow_tap_local` — Tapenade external library declaring each hook's field args active (read-then-written; 11 fields for the stepping dump, `etaN` for the etaN dump, `uVel` for the mode switches), passed via `-tap_extra "-ext ../code_tap/flow_tap_local"`. Because of it, Tapenade emits `CALL TAP_DUMMY_IN_STEPPING_B(theta, thetab, …)` in `forward_step_b.f` and `CALL TAP_DUMMY_FOR_ETAN_B(etaN, etaNb, …)` in `integr_continuity_b.f`, each at the reverse-sweep mirror of its forward call.
 - `addummy_in_stepping.F` — hand-written `TAP_DUMMY_IN_STEPPING_B`: ADEXCH-folds the adjoint arguments (the `stubs_tap_adj.F` implementations) and dumps them as `ADJ*`. The adjoint state arrives as arguments, so there is no `adcommon.h` mirror to keep in sync (the old one is archived in `00_archive/code_tap/`). **Layout (since 2026-08-31, second pass): the upstream file byte-for-byte with the `TAP_*` block appended under `#ifdef ALLOW_TAPENADE`** — the TAF `ADDUMMY_IN_STEPPING` above it still compiles under Tapenade, as dead code, exactly as in an upstream Tapenade verification build. Every shadow in `code_tap/` follows this additive convention (upstream content untouched; changes only as guarded call-site switches or appended blocks), and the option headers are the upstream c69m headers with only `#define`/`#undef` toggles changed — so `vimdiff` against the counterpart shows exactly the setup's additions.
 - `addummy_for_etan.F` — same layout for `ADJetan`: upstream byte-for-byte + appended hand-written `TAP_DUMMY_FOR_ETAN_B` that dumps `etaNb` (no ADEXCH fold, like upstream) using the separate `dumpAdRecEt` record counter.
-- `autodiff_inadmode_set_ad.F` and `autodiff_inadmode_unset_ad.F` (staged variants, `_OG` vs `_adapted_frm_aste_90x150x60`) — the TAF-named mode-switch bodies plus thin `TAP_INADMODE_SET_B`/`UNSET_B` wrappers that call them (and `_D` no-ops for TLM link safety). The `unset` pair is new with the hooks: ASTE's restore side (`outAd*`) was never ported because the whole mechanism was unreachable.
+- `tap_inadmode.F` also carries the thin `TAP_INADMODE_SET_B`/`UNSET_B` wrappers (and `_D` no-ops for TLM link safety), which only call the TAF-named bodies `ADAUTODIFF_INADMODE_SET`/`UNSET`. In a plain build those bodies are the vendored `pkg/autodiff/autodiff_inadmode_{set,unset}_ad.F`, unshadowed; `build_tapAdj_adjViscBoost.sh` takes them from `code_tap/variants/adjViscBoost/` instead (upstream + the ASTE `inAd*` apply block; upstream + the `outAd*` restore block — the restore side is new with the hooks: ASTE's was never ported because the whole mechanism was unreachable). Until 2026-09-02 the wrappers were appended to staged `_OG` / `_adapted_frm_aste_90x150x60` copies of those two files.
 
 Each `_B` signature is fixed (dump hook: 25 arguments = 11 value/adjoint pairs + 3 passives; etaN dump and mode-switch hooks: 5 each) and **must match what Tapenade generates** — F77 would silently misalign a mismatch, so both build scripts count each generated call's arguments after `make` (`check_gen_call`) and fail loudly on a mismatch. Changing a hook's field set therefore means touching the shadow call, `flow_tap_local`, both `_B`/`_D` bodies *and* the assertion. The `rawTapenade` control builds are retired in both setups — raw Tapenade output *is* the working configuration now, and no generated file is post-edited.
 
@@ -197,7 +186,7 @@ A submit script: selects a namelist via `test_cases`; rewrites time-stepping par
 
 Things to know before editing or submitting one:
 
-- **`-n` must match `SIZE.h`.** The MPI DINO adjoint requests 27 ranks because `SIZE.h_mpi` sets `nPx=3, nPy=9` over `sNx=17, sNy=22` tiles. Changing the decomposition means changing both.
+- **`-n` must match `SIZE.h`.** The MPI DINO adjoint requests 27 ranks because `code_tap/SIZE.h` sets `nPx=3, nPy=9` over `sNx=17, sNy=22` tiles. Changing the decomposition means changing both.
 - **Durations are written in days at the top of the script** (`simulation_duration_with_dT1800_days`, `monitorFreq_days`, `adjMonitorFreq_days`, `adjDumpFreq_days`; SOMA uses `endTime_days`). The names to patch are listed explicitly in a `time_params` array beside them. **Do not restore the old `compgen -v | grep '_days$'` auto-detection** — `compgen -v` also enumerates *exported environment variables*, and since sbatch forwards the environment by default, any `*_days` variable in the submitting shell would silently become a namelist key.
 - **Submitting a job no longer modifies the repo.** The `sed -i` runs *after* the namelist is staged and targets the copy in the run directory, so `git status` stays clean. This is a correctness fix, not just hygiene: the script body executes on the compute node when the job **starts**, not when you submit, so the old in-place `sed` was shared mutable state between every queued job — two jobs starting close together would each stage whichever value landed last while their run-directory names each claimed their own. It bit SOMA hardest, back when its five (now archived) per-duration scripts all patched the same `input_tap/data`. If a namelist diff ever appears after a run, something has regressed; `tools/pre_push_check.sh` watches for it.
 - **Per-run overrides go in the environment, not in an edit.** Every live submit script in both setups reads `IMPACTS_TEST_CASE`, `IMPACTS_DURATION_DAYS`, `IMPACTS_MONITOR_FREQ_DAYS` and (adjoint only) `IMPACTS_ADJ_MONITOR_FREQ_DAYS` / `IMPACTS_ADJ_DUMP_FREQ_DAYS`, defaulting to the committed values, so `IMPACTS_DURATION_DAYS=73200 ../../../tools/submit.sh submit_frd.sh` runs 200 years without touching a tracked file. `IMPACTS_TEST_CASE` uses `${VAR-default}` rather than `${VAR:-default}` so that an explicit empty value selects the live `input*/data`. In DINO the duration patches `nTimeSteps` (dT 1800); in SOMA it patches `endTime` (dT 1200). SOMA joined this scheme on 2026-08-31 — its five pre-made per-duration scripts are archived in `SOMA_1deg/00_archive/scripts/`; a duration is now a submission, not a script. The committed defaults are the cheap regression configurations, not the production ones (SOMA's adjoint default, 5 d with 1-d frequencies, reproduces validated baseline run 31031).

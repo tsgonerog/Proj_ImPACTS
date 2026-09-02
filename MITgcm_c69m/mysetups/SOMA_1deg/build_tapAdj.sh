@@ -11,7 +11,7 @@
 # DINO (see ../DINO_1deg/README.md, "How the Tapenade hooks work"); SOMA
 # carries only the dump hooks - it has no adjViscBoost machinery to switch.
 #
-# SOMA's adjoint is serial-only: code_tap/SIZE.h_serial is nPx=nPy=1 over
+# SOMA's adjoint is serial-only: code_tap/SIZE.h is nPx=nPy=1 over
 # sNx=sNy=62.
 #
 # Serial Tapenade-adjoint build for MITgcm
@@ -30,9 +30,6 @@ MITGCM_ROOT="$SCRIPT_DIR/../../MITgcm"
 # block to tools/machine_env.sh rather than editing this script.
 source "$SCRIPT_DIR/../../../tools/machine_env.sh"
 impacts_load_modules
-
-# Replace SIZE.h with serial version
-cp code_tap/SIZE.h_serial code_tap/SIZE.h
 
 # SERIAL_OPTFILE is defaulted by machine_env.sh; this catches a machine with none.
 if [ -z "$SERIAL_OPTFILE" ] || [ ! -f "$SERIAL_OPTFILE" ]; then

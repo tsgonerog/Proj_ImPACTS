@@ -3,7 +3,8 @@
 Idealised single-basin "DINO" ocean, pole to pole. **51 × 198 × 36**, curvilinear,
 `delX = 1°`, `delY = 0.77°`, `dT = 1800 s`, 366-day year.
 
-**MPI only.** `SIZE.h_serial` exists in `code_tap/` but no script stages it.
+**MPI only.** `code/SIZE.h` and `code_tap/SIZE.h` are the one decomposition
+(`nPx=3, nPy=9` over `sNx=17, sNy=22`, 27 ranks); there is no serial variant.
 
 ## Quick start
 
@@ -134,9 +135,11 @@ working configuration. (Since 2026-08-31 the same is true of SOMA, whose
 conversion also retired the patched `genmake2` override entirely — the
 vendored `MITgcm/` tree deviates from upstream in zero files.)
 
-Building a second variant re-stages `code_tap/`, and build directories symlink
-back into it. Never run bare `make` in an older build directory afterwards —
-re-run its build script.
+Build directories symlink back into `code_tap/` (the boost build's into
+`code_tap/variants/adjViscBoost/` as well). Since 2026-09-02 no build copies
+anything into `code_tap/`, so building one variant leaves every other build
+directory consistent; after editing a source, re-run the build script rather
+than running bare `make` in a build directory.
 
 ### Switching the default adjoint
 
@@ -216,8 +219,8 @@ build's `_FWD` check catches a name that vanished, not a list that stopped
 being the right list, so re-profile whenever the adjoint's package set,
 physics or decomposition changes.
 
-The profiling build is a diagnostic — same numbers, 2 % slower — and stages
-the plain (`_OG`) variants without the list.
+The profiling build is a diagnostic — same numbers, 2 % slower — and compiles
+the plain sources without the list.
 
 **The adjViscBoost build does not carry the default `-nocheckpoint` list, on purpose.** Tried 2026-09-02: run 31056 (boost + list, 30 d from rest) vs 31025 (boost, every call checkpointed) — `fc` and all 441 `%MON` lines byte-identical, but all 66 `ADJ*` dumps and all 8 real `adxx_*` gradients differ at order one (RMS ratio 0.3–0.9), whereas the plain pair is bitwise identical under the same list. In joint mode Tapenade re-runs each routine's primal inside the backward sweep *after* `TAP_INADMODE_SET_B` has boosted the viscosities, so the boost reaches every recomputed intermediate; in split mode those intermediates were taped during the forward sweep at forward viscosities and the boost reaches only what the `_BWD` code reads live — a weaker, different regularisation. So the boosted adjoint stays a `ckpAll` build (run token `tapAdj_ckpAll_adjViscBoost`, 13 min per 30 d instead of 9), and 31056 stays on scratch as the record; report in `analyses/DINO_1deg/03_adjoint/07_tapenade_profiling/compare_30d_adjViscBoost_run31025_vs_nocheckpoint_run31056.md`. Corollary: `-nocheckpoint` is a pure performance change only for an adjoint whose backward sweep leaves the primal's parameters alone.
 
@@ -288,14 +291,15 @@ forward `1.2E-4`, plus added `inAddiffKhT/S`; the `outAd*` values restore the
 forward settings on the way out. Values were adapted from the ASTE 90x150x60
 regional setup.
 
-It is a **build and a namelist variant**. The build stages the ASTE-derived
-`AUTODIFF_PARAMS.h` and friends, which is what provides the `inAd*`/`outAd*`
-parameters at all; the submit script swaps `data.autodiff_adjViscBoost` in at run
-time, which is what sets them. **The two must be used together** — pairing the
+It is a **build and a namelist variant**. The build compiles
+`code_tap/variants/adjViscBoost/` ahead of `code_tap/` (a second `-mods`
+directory, listed first — see the README there), which is what provides the
+`inAd*`/`outAd*` parameters at all; the submit script swaps
+`data.autodiff_adjViscBoost` in at run time, which is what sets them. **The two must be used together** — pairing the
 plain submit script with this build silently runs the ordinary configuration.
 
-**27 ranks**, fixed by `SIZE.h_mpi` (`nPx=3, nPy=9` over `sNx=17, sNy=22`).
-Changing the decomposition means changing `SIZE.h_mpi` *and* `#SBATCH -n`.
+**27 ranks**, fixed by `code_tap/SIZE.h` (`nPx=3, nPy=9` over `sNx=17, sNy=22`).
+Changing the decomposition means changing `code_tap/SIZE.h` *and* `#SBATCH -n`.
 
 Durations are set in **days** — either the committed defaults at the top of the
 submit script or the `IMPACTS_*_DAYS` overrides above — and converted to
@@ -502,20 +506,18 @@ the file it replaces. From this directory:
 | `code_tap/addummy_in_stepping.F` | `../../MITgcm/pkg/autodiff/addummy_in_stepping.F` | Upstream file **byte-for-byte** (the full TAF/OpenAD `ADDUMMY_IN_STEPPING`, MNC paths and all) + one appended `#ifdef ALLOW_TAPENADE` block: `TAP_DUMMY_IN_STEPPING_B` (dumps its adjoint *arguments*; ADEXCH-folds via `stubs_tap_adj.F`) plus a no-op `_D`. The TAP body mirrors upstream restricted to the 11 fields the hook carries |
 | `code_tap/integr_continuity.F` | `../../MITgcm/model/src/integr_continuity.F` | Only the guarded hook call site: `TAP_DUMMY_FOR_ETAN(etaN,…)` under `#ifdef ALLOW_TAPENADE`, the stock `DUMMY_FOR_ETAN` call in `#else`. This is where upstream prints `adEtaN`, because the free-surface adjoint is half a time step out of phase with the `forward_step` fields |
 | `code_tap/addummy_for_etan.F` | `../../MITgcm/pkg/autodiff/addummy_for_etan.F` | Upstream file byte-for-byte + the appended `TAP_DUMMY_FOR_ETAN_B`/`_D` block (dumps `etaNb` as `ADJetan`; like upstream, no ADEXCH fold before the dump) |
-| `code_tap/autodiff_inadmode_set_ad.F_OG` | `../../MITgcm/pkg/autodiff/autodiff_inadmode_set_ad.F` | Upstream body verbatim + an appended `#ifdef ALLOW_TAPENADE` block: thin `TAP_INADMODE_SET_B` wrapper calling the TAF-named body (so the parameter-switching logic is not duplicated) and a `_D` no-op |
-| `code_tap/autodiff_inadmode_set_ad.F_adapted_frm_aste_90x150x60` | same upstream file | The wrapper block **plus** the ASTE-derived `inAd*` overrides (`viscArNr`, `viscAhGrid`, `diffKh*`, … from `AUTODIFF_PARAMS.h_aste…`) — this is what adjViscBoost stages |
-| `code_tap/autodiff_inadmode_unset_ad.F_OG` | `../../MITgcm/pkg/autodiff/autodiff_inadmode_unset_ad.F` | Upstream body verbatim + the `TAP_INADMODE_UNSET_B`/`_D` wrapper block |
-| `code_tap/autodiff_inadmode_unset_ad.F_adapted_frm_aste_90x150x60` | same upstream file | Wrapper block **plus** the `outAd*` restore side of the ASTE overrides — this half never existed anywhere before (it was unreachable dead code territory), so expect no ASTE original to diff against |
+| `code_tap/variants/adjViscBoost/autodiff_inadmode_set_ad.F` | `../../MITgcm/pkg/autodiff/autodiff_inadmode_set_ad.F` | Upstream body + the ASTE-derived `inAd*` apply block (`viscArNr`, `viscAhGrid`, `diffKh*`, … declared in the `AUTODIFF_PARAMS.h` beside it). Compiled only by `build_tapAdj_adjViscBoost.sh`; a plain build uses the vendored file, unshadowed |
+| `code_tap/variants/adjViscBoost/autodiff_inadmode_unset_ad.F` | `../../MITgcm/pkg/autodiff/autodiff_inadmode_unset_ad.F` | Upstream body + the `outAd*` restore block — this half never existed anywhere before (it was unreachable dead code territory), so expect no ASTE original to diff against |
 | `code_tap/tap_dummy_in_stepping.F` | *(new file — nearest analog `../../MITgcm/pkg/autodiff/dummy_in_stepping.F`)* | The Tapenade twin of TAF's no-op hook; the diff against the analog is exactly the 11 field arguments the activity mechanism requires |
 | `code_tap/tap_dummy_for_etan.F` | *(new file — nearest analog `../../MITgcm/pkg/autodiff/dummy_for_etan.F`)* | Same again for the `ADJetan` hook; the diff against the analog is the one `etaN` argument |
-| `code_tap/tap_inadmode.F` | *(new file — analogs `../../MITgcm/pkg/autodiff/autodiff_inadmode_set.F` and `…unset.F`)* | Both mode-switch no-op forward bodies in one file, each with the `uVel` activity-vehicle argument added |
+| `code_tap/tap_inadmode.F` | *(new file — analogs `../../MITgcm/pkg/autodiff/autodiff_inadmode_set.F` and `…unset.F`)* | Both mode-switch no-op forward bodies, each with the `uVel` activity-vehicle argument added, plus the thin `TAP_INADMODE_SET_B`/`UNSET_B` wrappers that call the TAF-named bodies `ADAUTODIFF_INADMODE_SET`/`UNSET` (so the parameter-switching logic is not duplicated) and `_D` no-ops. Keeping the wrappers here is what lets a plain build leave `pkg/autodiff/autodiff_inadmode_{set,unset}_ad.F` unshadowed |
 | `code_tap/flow_tap_local` | *(supplement to `../../MITgcm/tools/TAP_support/flow_tap`, not a shadow)* | Four stanzas declaring the `tap_*` hooks' field arguments active. Compare with the `dummy_in_stepping` / `dummy_for_etan` stanzas in the stock file (all-passive) to see the one change of meaning |
 | `code_tap/stubs_tap_adj.F` | `../../MITgcm/pkg/tapenade/stubs_tap_adj.F` | Pre-dates the hook redesign: implements the five `ADEXCH_*` adjoint halo exchanges upstream ships as no-op stubs (see below) |
 
-Two reading rules: for staged trios, **vimdiff the suffixed variant** (`_OG`,
-`_adapted_frm_aste_90x150x60`), never the bare filename — the bare file is
-whatever the last build staged; and the artefacts of the pre-redesign
-mechanism are gone on purpose (`forward_step_b.f_modified*` deleted — no
+Two reading rules: every file carries its real MITgcm name and is the only
+copy of itself — the variant shadows sit in `code_tap/variants/adjViscBoost/`
+rather than as suffixed siblings (the staged-copy layout ended 2026-09-02);
+and the artefacts of the pre-redesign mechanism are gone on purpose (`forward_step_b.f_modified*` deleted — no
 generated file is post-edited any more; `adcommon.h` archived in
 `00_archive/code_tap/` — its upstream twin `pkg/autodiff/adcommon.h` still
 serves the TAF path). The whole arrangement is written up for upstream review
@@ -523,10 +525,13 @@ in `notes/references/tapenade_hooks/`.
 
 ### `code_tap/` — adjoint source overrides
 
-Files whose name ends in a suffix (`_OG`, `_mpi`, `_serial`, `_aste_90x150x60`,
-`_adapted_frm_aste_90x150x60`) are **staged variants**: a build script copies one
-over the bare filename before configuring. **Edit the suffixed file, never the
-bare one** — the bare one is regenerated on every build and your edits vanish.
+Every file here is compiled as-is under its real MITgcm name; no build script
+copies anything into this directory (since 2026-09-02), so a build leaves
+`git status` clean. `variants/adjViscBoost/` is a second `-mods` directory that
+`build_tapAdj_adjViscBoost.sh` lists ahead of `code_tap/`; its README explains.
+The 2026-09-02 relocation reproduces the previous layout's runs bit for bit
+(31069 vs 31054 for the default build, 31070 vs 31025 for the boost; see
+`TODO.md`).
 
 | File | Purpose |
 | --- | --- |
@@ -534,18 +539,14 @@ bare one** — the bare one is regenerated on every build and your edits vanish.
 | `cost_atlantic_heat.F` | the cost function |
 | `forward_step.F` | shadow of `model/src/forward_step.F`; its only changes are the three `TAP_*` hook calls under `ALLOW_TAPENADE` (dump hook in the `ALLOW_AUTODIFF_MONITOR` block, mode-switch hooks at step start/end) |
 | `integr_continuity.F` | shadow of `model/src/integr_continuity.F`; its only change is the guarded `TAP_DUMMY_FOR_ETAN(etaN,…)` call replacing `DUMMY_FOR_ETAN` under `ALLOW_TAPENADE` |
-| `tap_dummy_in_stepping.F`, `tap_dummy_for_etan.F`, `tap_inadmode.F` | the hooks' no-op forward bodies — must never appear in an `*_ad_diff.list` |
+| `tap_dummy_in_stepping.F`, `tap_dummy_for_etan.F`, `tap_inadmode.F` | the hooks' no-op forward bodies (`tap_inadmode.F` also carries the `TAP_INADMODE_*_B`/`_D` wrappers) — must never appear in an `*_ad_diff.list` |
 | `addummy_in_stepping.F` | the upstream file byte-for-byte with `TAP_DUMMY_IN_STEPPING_B`/`_D` (the adjoint dump body) appended under `ALLOW_TAPENADE` |
 | `addummy_for_etan.F` | same layout for `ADJetan`: upstream byte-for-byte + appended `TAP_DUMMY_FOR_ETAN_B`/`_D` |
-| `autodiff_inadmode_unset_ad.F` | leaves adjoint mode at each backward step's end (`_OG` / `_adapted_frm_aste_90x150x60` staged like its `set` sibling; the ASTE restore side is new — never ported while the mechanism was unreachable) |
 | `flow_tap_local` | Tapenade external library declaring the hooks' field arguments active; a second `-ext` alongside `tools/TAP_support/flow_tap` |
 | `tap_nocheckpoint.txt` | the routines `build_tapAdj_nocheckpoint.sh` (the default) passes to Tapenade's `-nocheckpoint` — `build_tapAdj_adjViscBoost.sh` deliberately does not (see "Profiling and checkpoint tuning") (split `_FWD`/`_BWD` mode instead of checkpointing), each annotated with the profiling-run gain that put it there — see "Profiling and checkpoint tuning" below |
-| `autodiff_readparms.F` | reads `data.autodiff` (`_OG` / `_aste_90x150x60` variants) |
-| `autodiff_inadmode_set_ad.F` | applies the `inAd*` parameters entering adjoint mode, at each backward step's start (reached via its `TAP_INADMODE_SET_B` wrapper) |
-| `AUTODIFF_PARAMS.h` | declares them (`_OG` has no `inAd*`; the ASTE variant adds them — this is what `build_tapAdj_adjViscBoost.sh` selects) |
+| `variants/adjViscBoost/` | the four ASTE-derived shadows of `pkg/autodiff` (`AUTODIFF_PARAMS.h`, `autodiff_readparms.F`, `autodiff_inadmode_set_ad.F`, `autodiff_inadmode_unset_ad.F`) that declare, read, apply and restore the `inAd*`/`outAd*` parameters; compiled only by `build_tapAdj_adjViscBoost.sh`, as its first `-mods` directory — see the README inside. A plain build compiles the vendored files |
 | `stubs_tap_adj.F` | override of `pkg/tapenade/stubs_tap_adj.F` implementing the five `ADEXCH_*` adjoint halo exchanges (see below) |
-| `ini_procs.F` | tile/process setup |
-| `SIZE.h` | grid and decomposition (`_mpi` staged; `_serial` present but unused) |
+| `SIZE.h` | grid and decomposition (`nPx=3, nPy=9` over `sNx=17, sNy=22`); the one and only copy |
 | `CTRL_SIZE.h` | control-vector dimensions |
 | `DIAGNOSTICS_SIZE.h` | diagnostics buffer sizes |
 | `packages.conf` | which packages compile — drops `cd_code`, adds `tapenade` and the `adjoint` group (`autodiff, ctrl, cost, grdchk`) |
@@ -584,13 +585,10 @@ for the `<start>_<viscosity>` vocabulary.
 
 ### `code/` and `input/` — the forward model
 
-Much smaller: `SIZE.h` (+ `_mpi`/`_serial`), `packages.conf`, `CPP_OPTIONS.h`,
-`DIAGNOSTICS_SIZE.h`, `GMREDI_OPTIONS.h`, `MOM_COMMON_OPTIONS.h`, `ini_procs.F`.
+Much smaller: `SIZE.h`, `packages.conf`, `CPP_OPTIONS.h`, `DIAGNOSTICS_SIZE.h`,
+`GMREDI_OPTIONS.h`, `MOM_COMMON_OPTIONS.h`.
 `input/` holds `data` and the standard `data.pkg`, `data.diagnostics`,
 `data.exch2`; its alternatives live in `input/variants/<group>/`.
-
-`code/pc` is a stray five-line fragment of a `packages.conf`, referenced by
-nothing — ignore it.
 
 ---
 

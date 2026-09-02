@@ -247,6 +247,7 @@ subroutine tap_dummy_in_stepping:
 </table></div>
 
 <p>Project-local housekeeping (not review-relevant): <code>tools/pre_push_check.sh</code> gained the new staged-variant path; <code>CLAUDE.md</code> and the READMEs document the mechanism.</p>
+<p><strong>Update 2026-09-02.</strong> The staged-variant layout the table above refers to (<code>_OG</code> / <code>_aste</code> siblings copied over the bare names by the build scripts) is gone. The <code>TAP_INADMODE_SET_B</code>/<code>UNSET_B</code> wrappers now live in <code>code_tap/tap_inadmode.F</code> beside the forward no-ops, so a plain build no longer shadows <code>autodiff_inadmode_{set,unset}_ad.F</code> at all (the <code>_OG</code> copies of <code>AUTODIFF_PARAMS.h</code> and <code>autodiff_readparms.F</code> were byte-identical to upstream and are deleted too); the ASTE-derived shadows live in <code>code_tap/variants/adjViscBoost/</code> under their real names and reach the boost build as a second <code>-mods</code> directory (<code>-mods="../code_tap/variants/adjViscBoost ../code_tap"</code>). No build copies anything into <code>code_tap/</code>, and <code>tools/pre_push_check.sh</code> lost its staged-variant clause. The hook mechanism and the validation below are unchanged.</p>
 
 <h2>4 · Validation</h2>
 <hr class="rule">

@@ -81,3 +81,26 @@
   saves about 47 min of 14 h. It also changes the reverse schedule of the whole
   run and can only be validated at full length. Details under "Other levers" in
   `tools/tapenade_profiling/README.md`.
+
+- [x] ~~**Retire the copy-staged source variants in `code/` and `code_tap/`**~~
+  (added and **done 2026-09-02**, branch `code_tap-variants-cleanup`). The
+  `_OG` / `_aste_90x150x60` / `_adapted_frm_aste_90x150x60` / `_mpi` /
+  `_serial` siblings, and the bare files the build scripts regenerated from
+  them, are gone (git history keeps them): `SIZE.h` is the one decomposition,
+  the plain builds compile the vendored `pkg/autodiff` files (the `_OG`
+  copies were byte-identical to them), the `TAP_INADMODE_*_B/_D` wrappers
+  live in `code_tap/tap_inadmode.F`, and the four ASTE-derived shadows live
+  in `code_tap/variants/adjViscBoost/` under their real names as a second
+  `-mods` directory (`-mods="../code_tap/variants/adjViscBoost ../code_tap"`,
+  asserted after `make`). Also removed: the debug-print `ini_procs.F` shadow
+  (both copies), `code/pc`, the ASTE CVS header in `packages.conf`, SOMA's
+  unused `SIZE.h_mpi`/`_serial`, and the staged-variants clause of
+  `tools/pre_push_check.sh` — a build now leaves `git status` clean.
+  Validation: all five builds rebuilt; against a pre-change snapshot their
+  generated `.f` differ only in the files the change touches (the wrapper
+  move, `ini_procs`, the build stamp). Run 31069 (default build, 30 d from
+  the 180-yr pickup) is bitwise identical to 31054 — `fc`, 32 `adxx_*`,
+  73 `ADJ*`, 441 `%MON` lines, 8:45 vs 8:47 — and run 31070 (boost, 30 d
+  from rest) to 31025 — `fc`, 32 `adxx_*`, 66 `ADJ*`, 441 `%MON`, 13:15 vs
+  13:19; its 14 `ADJetan` files are new only because 31025 predates that
+  hook. Reports: `comparison_vs_*.txt` in the two run directories.
