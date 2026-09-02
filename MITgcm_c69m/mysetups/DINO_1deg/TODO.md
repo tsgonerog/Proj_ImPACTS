@@ -28,10 +28,11 @@
   working configuration now, so DINO has no control build to keep current.
 
 - [ ] **Decide whether `build_tapAdj_nocheckpoint.sh` becomes the default
-  adjoint** (added 2026-09-01, branch `tapenade-profiling`). Its 30-day run
+  adjoint** (added 2026-09-01 on branch `tapenade-profiling`, merged into `main` 2026-09-02). Its 30-day run
   31054 is bitwise identical to the plain build's 31052 (`fc`, 32 `adxx_*`,
-  73 `ADJ*`) and 1.5× faster (8:47 vs 13:13); the 5-year comparison is run
-  31055 vs 31039 (14:05:45). If adopted: fold the `-tap_extra` list into
+  73 `ADJ*`) and 1.5× faster (8:47 vs 13:13); at 5 years (31055 vs 31039)
+  it is again bitwise identical (fc, 32 `adxx_*`, 4 393 `ADJ*`) in 9:35:58
+  against 14:05:45 (1.47×, 4.5 h saved). If adopted: fold the `-tap_extra` list into
   `build_tapAdj.sh` (and `build_tapAdj_adjViscBoost.sh` — the list is not
   specific to the `_OG` staging), retire the `_nocheckpoint` pair, and
   re-validate the adjViscBoost pairing once (31025 vs a tuned rerun). Port to

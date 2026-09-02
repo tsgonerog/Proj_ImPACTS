@@ -143,7 +143,8 @@ notebook: the Tapenade checkpointing profile of the adjoint (run 31053,
 `-nocheckpoint` list derived from it, and the validation of that build against
 the plain one — 30 days on the same node, run 31054 vs 31052: `fc` identical,
 all 32 `adxx_*` and 73 `ADJ*` files bitwise identical, 8:47 vs 13:13 wall time
-(1.5×). The 5-year comparison is run 31055 against 31039. Its `README.md`
+(1.5×); at 5 years (run 31055 vs 31039) again bitwise identical across fc,
+32 `adxx_*` and 4 393 `ADJ*` files, 9:36 vs 14:06 wall time (1.47×). Its `README.md`
 has the run table; the two scripts (`parse_tapenade_profile.py`,
 `compare_adjoint_runs.py`) are general enough to reuse on any pair of runs.
 

@@ -4,8 +4,9 @@ How to find out where the Tapenade adjoint spends its recomputation, and how to
 trade that recomputation for tape memory with `-nocheckpoint`. Both were carried
 in checkpoint69f as patched `genmake2` copies; on c69m they are plain Tapenade
 flags passed through `genmake2 -tap_extra`, and **both are wired into DINO's
-build scripts and verified end to end as of 2026-09-01** (branch
-`tapenade-profiling`). The numbers below are DINO's; the mechanics apply to any
+build scripts and verified end to end as of 2026-09-01** (developed on
+branch `tapenade-profiling`, merged into `main` on 2026-09-02; the pre-merge
+`main` is kept as the tag `archive/20260901_pre-tapenade-profiling`). The numbers below are DINO's; the mechanics apply to any
 setup.
 
 | Want | Script (DINO) | Tapenade flag it adds |
@@ -234,10 +235,15 @@ routines) with the four hook calls intact.
 bitwise identical, so the test has teeth. The 2 % profiler overhead (31053 ran
 13:29) confirms the profile itself did not distort the ranking.
 
-**5 years (31055 vs 31039, 14:05:45):** _running; result appended below when
-done. Expect a somewhat smaller relative saving: at 87 840 steps the binomial
-schedule re-runs each step up to three primal times (two at 1 440), and those
-re-runs are outside `-nocheckpoint`'s reach._
+**5 years (31055 vs 31039), the production length:** wall time **9:35:58 vs
+14:05:45 (1.468×, −31.9 %, 4.5 h saved)**; `fc` identical
+(0.330992121938681); **32/32 `adxx_*` and all 4 393 `ADJ*` dump files
+bitwise identical.** Split by phase from the dump write times: the forward
+sweep to the turn took 0.84 h against 0.86 h (unchanged, as it must be — same
+primal code, same binomial schedule) and the reverse sweep 8.76 h against
+13.24 h (1.51×, the same factor as at 30 days). The whole-run factor is lower
+than the reverse-sweep factor only because the binomial re-runs of plain
+forward steps inside the reverse sweep are untouched by `-nocheckpoint`.
 
 **Against the c69f list.** `nocheckpoint_routines.txt` (64 routines) shares
 8 with the new list (`calc_3d_diffusivity`, `exch_xy_rl`, `find_rho_2d`,

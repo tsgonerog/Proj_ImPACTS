@@ -144,8 +144,9 @@ unless every listed routine actually came out split. The time loop's binomial
 checkpointing (`C$AD BINOMIAL-CKP … 98 …` in `code_tap/the_main_loop.F`) is
 not involved. **Validated 2026-09-01: a 30-day run of this build (31054) is
 bitwise identical to the plain build's (31052) in `fc`, all 32 `adxx_*` and
-all 73 `ADJ*` files, and runs in 8:47 instead of 13:13 (1.5×).** The 5-year
-comparison against 31039 is run 31055. `tools/tapenade_profiling/README.md`
+all 73 `ADJ*` files, and runs in 8:47 instead of 13:13 (1.5×); at 5 years (31055 vs 31039) it is
+again bitwise identical — fc, 32 `adxx_*`, 4 393 `ADJ*` — in 9:35:58 instead
+of 14:05:45 (1.47×, 4.5 h saved).** `tools/tapenade_profiling/README.md`
 has the method and the numbers;
 `analyses/DINO_1deg/03_adjoint/07_tapenade_profiling/` the records and the
 two scripts (`parse_tapenade_profile.py`, `compare_adjoint_runs.py`).

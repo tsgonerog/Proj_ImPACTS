@@ -257,7 +257,10 @@ byte-identical to upstream, so both `code_tap/the_model_main.F` copies were
 deleted and the vendored `model/src/the_model_main.F` is compiled. The
 profiling main program `the_model_main.F_ForTapProfile` remains under each
 setup's `00_archive/code_tap/` as history. Profiling and `-nocheckpoint` are
-plain Tapenade flags on c69m, passed through `genmake2 -tap_extra` — see
+plain Tapenade flags on c69m, passed through `genmake2 -tap_extra`, and DINO
+wires both in: `build_tapAdj_tapProfile.sh` (the profiler) and
+`build_tapAdj_nocheckpoint.sh` (the tuned adjoint, bitwise identical to the
+plain one and 1.47× faster over 5 years) — see
 `tools/tapenade_profiling/README.md`.
 
 **Hand-adapted AD sources.** `code_tap/` carries several files in `_OG`
@@ -557,14 +560,15 @@ Python dependencies (no environment file is checked in): `numpy`, `xarray`,
 
 ## Verification status
 
-There are no unit tests. What has and has not been checked, as of 2026-09-01:
+There are no unit tests. What has and has not been checked, as of 2026-09-02:
 
 | Check | Status | What it showed |
 | --- | --- | --- |
 | Forward reproducibility | **verified** | A 10-year `from_rest_visc2x` run reproduces the first 10 years of production run 28463 **bit-identically** — 161 field comparisons, four diagnostic streams, 1334 monitor values, AMOC series, all exactly zero. Re-verified 2026-08-28: the new spin-up 30983 reproduces 28463 |
 | Builds | **verified** | All build directories compile clean. Both setups' adjoint builds generate their `TAP_*` hook calls natively from stock `genmake2` (argument counts asserted by every build script); no generated file is post-edited anywhere |
 | Adjoint runs end to end | **verified** | 30-day adjoint from the 180-year pickup writes `ADJ*` and `adxx*`, peak sensitivity on the cost section at `i=2, j=127, k=26`. The 5-yr reference chain 28486 ≡ 30995 ≡ 31039 reproduces `fc` and every `adxx_*` bit-identically (the 2026-09-01 rerun's `ADJ*` dumps are seam-corrected and add `ADJetan`) |
-| Adjoint **correctness** | **verified at gradient-check level, 2026-09-01** | The repaired check (`input_tap/variants/grdchk_repair/`) agrees with finite differences to **0.9 %** at the DINO sensitivity peak (run 31037), and SOMA's always-on check passes at 0.07–1.8 % on all five of its points. The committed `data.grdchk` still points at the historical dead spot and still fails — use the variant. A control build of the pre-hook mechanism reproduces every grdchk digit and all `adxx_*`/`ADJ*` bitwise (run 31038; that state is preserved as branch `archive/pre-tapenade-hooks`) |
+| `-nocheckpoint` tuned adjoint (DINO) | **verified 2026-09-02** | `build_tapAdj_nocheckpoint.sh` — the 33 routines Tapenade's own profiler ranked highest, differentiated in split mode instead of checkpointed — reproduces the plain build **bitwise** (fc, all `adxx_*`, all `ADJ*`) at 30 days (run 31054 vs 31052, 8:47 vs 13:13) and at 5 years (31055 vs 31039, 9:35:58 vs 14:05:45, **1.47×**). Method, numbers and the 45 % ceiling in `tools/tapenade_profiling/README.md`. |
+| Adjoint **correctness** | **verified at gradient-check level, 2026-09-01** | The repaired check (`input_tap/variants/grdchk_repair/`) agrees with finite differences to **0.9 %** at the DINO sensitivity peak (run 31037), and SOMA's always-on check passes at 0.07–1.8 % on all five of its points. The committed `data.grdchk` still points at the historical dead spot and still fails — use the variant. A control build of the pre-hook mechanism reproduces every grdchk digit and all `adxx_*`/`ADJ*` bitwise (run 31038; that state is preserved as tag `archive/20260831_pre-tapenade-hooks`) |
 | Adjoint vs finite differences (κ_v ensemble) | **executed 2026-08-29 (adjoints rerun seam-clean 2026-09-01), fails as a validation** | The linear gradient mispredicts every member's ΔJ (wrong sign for 4 of 7) — dominated by physical nonlinearity of the 10-yr state adjustment, so it neither confirms nor refutes the adjoint. Four member adjoints also blow up (linearisation instability). Full analysis: `analyses/DINO_1deg/03_adjoint/05_kappa_v_ensemble/` |
 
 ### The gradient check: the committed default measures nothing; the repaired variant passes
@@ -667,6 +671,32 @@ that overwrites a notebook in your working tree — `checkout`, `stash`, `merge`
 `reset --hard` — replaces it with the stripped version and the local outputs are
 gone. Re-run the cell, or keep an export outside the repo
 (`jupyter nbconvert --to html`).
+
+### Archive tags — historical states kept by name
+
+Reference states of the tree are kept as **annotated tags**, not branches:
+
+```
+archive/20260831_pre-tapenade-hooks       last commit before the TAP_* hook redesign (run 31038 control build)
+archive/20260901_pre-tapenade-profiling   main immediately before the tapenade-profiling merge
+```
+
+The name is `archive/<YYYYMMDD>_pre-<change>`, the date being the *commit date*
+of the state captured (`git log -1 --format=%cs <commit>`), so a plain listing
+is already in time order — the same `YYYYMMDD_<what>` form as the off-repo
+backups. Each tag's message says what it captures, why it is kept and when it is
+safe to delete; `git tag -n9 --sort=creatordate` prints all of them. They are
+tags rather than branches because every one points at a commit that is already
+on `main` — there is nothing to merge and nothing to fall behind — and a tag
+invites neither an accidental checkout-and-commit nor a "behind main by N" nag
+on GitHub. Checkout, diff and `git worktree add <dir> <tag>` work exactly as
+they did with the branches. To add one:
+
+```bash
+git tag -a archive/$(git log -1 --format=%cs <commit> | tr -d -)_pre-<change> <commit> \
+  -m "<what state this is>" -m "<why it is kept; when it is safe to delete>"
+git push origin archive/<YYYYMMDD>_pre-<change>
+```
 
 ---
 

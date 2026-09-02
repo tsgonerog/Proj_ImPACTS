@@ -17,7 +17,7 @@ All 27-rank MPI, `baseline/from180yrPk_visc2x`, `/scratch2/<user>/DINO_1deg_tapA
 | 31053 | `build_tapAdj_tapProfile` | 30 d | c2-3 | 0:13:29 | the profile (`tapenade_profile.0000`–`.0026.txt`) |
 | 31054 | `build_tapAdj_nocheckpoint` | 30 d | c2-1 | **0:08:47** | validation against 31052 |
 | 31039 | `build_tapAdj` (plain) | 5 yr | — | 14:05:45 | production-length reference (2026-09-01) |
-| 31055 | `build_tapAdj_nocheckpoint` | 5 yr | c2-1 | _running_ | production-length comparison against 31039 |
+| 31055 | `build_tapAdj_nocheckpoint` | 5 yr | c2-1 | **9:35:58** | production-length validation against 31039 |
 
 ## Files
 
@@ -28,6 +28,7 @@ All 27-rank MPI, `baseline/from180yrPk_visc2x`, `/scratch2/<user>/DINO_1deg_tapA
 | `tapenade_profile_run31053_rank0000.txt` | rank 0's raw table from run 31053 (the other 26 ranks agree to within 5 % on the total) |
 | `profile_run31053_ranked.md` | the parsed, ranked table (116 callees) |
 | `compare_30d_run31052_vs_nocheckpoint_run31054.md` | the 30-day validation report |
+| `compare_5yr_run31039_vs_nocheckpoint_run31055.md` | the 5-year validation report |
 
 ## What the profile showed (run 31053, rank 0)
 
@@ -86,10 +87,22 @@ also bitwise identical, which is what makes the test meaningful.)
 
 ## Validation — 5 years (31055 vs 31039)
 
-_Pending; job 31055 submitted 2026-09-01 19:26 CDT. The relative saving is
-expected to be a little smaller than at 30 days because the binomial schedule
-re-runs each step up to three times at 87 840 steps (twice at 1 440), and those
-re-runs are plain primal steps that `-nocheckpoint` does not touch._
+Report: `compare_5yr_run31039_vs_nocheckpoint_run31055.md`.
+
+| | plain (31039) | nocheckpoint (31055) |
+| --- | --- | --- |
+| wall time | 14:05:45 | **9:35:58** (1.468×, −31.9 %, 4.5 h) |
+| forward sweep to the turn | 0.86 h | 0.84 h |
+| reverse sweep | 13.24 h | 8.76 h (1.51×) |
+| `fc` | 0.330992121938681 | identical |
+| `adxx_*` (32 files, float64) | — | **32/32 bitwise identical** |
+| `ADJ*` dumps (4 393 files, float32) | — | **4 393/4 393 bitwise identical** |
+
+The reverse-sweep factor equals the 30-day one; the whole-run factor is a
+little lower because at 87 840 steps the binomial schedule re-runs each
+plain forward step up to three times (two at 1 440), and those re-runs are
+outside what `-nocheckpoint` changes. Phase times come from the write times
+of the `ADJtheta` dumps relative to each run's start.
 
 ## Re-running
 

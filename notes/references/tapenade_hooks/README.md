@@ -2,8 +2,8 @@
 
 *Change note for MITgcm review — Proj_ImPACTS `main` (initial commits
 `27e4ee5`, `e789533`; developed on the since-merged branch
-`tapenade-active-dump-hook`, whose pre-hook base survives as
-`archive/pre-tapenade-hooks`), MITgcm checkpoint69m, Tapenade 3.16,
+`tapenade-active-dump-hook`, whose pre-hook base survives as the tag
+`archive/20260831_pre-tapenade-hooks`), MITgcm checkpoint69m, Tapenade 3.16,
 2026-08-31. A styled copy of this note lives beside it as
 `tapenade_hook_note.html`.*
 
@@ -307,7 +307,7 @@ correctness*.
 
 *Prepared on branch `tapenade-active-dump-hook` of `tsgonerog/Proj_ImPACTS`
 (initial commits `27e4ee5`, `e789533`; merged to `main` 2026-09-01, the
-pre-hook base kept as `archive/pre-tapenade-hooks`); validation runs
-31022–31026 on sverdrup, 2026-08-31; §7 validated by runs 31032 (DINO),
+pre-hook base kept as tag `archive/20260831_pre-tapenade-hooks`); validation
+runs 31022–31026 on sverdrup, 2026-08-31; §7 validated by runs 31032 (DINO),
 31033/31034 (SOMA) and the gradient-check pair 31037/31038. Line references
 are to MITgcm checkpoint69m.*
