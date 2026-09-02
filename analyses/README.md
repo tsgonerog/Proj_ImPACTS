@@ -147,6 +147,13 @@ all 32 `adxx_*` and 73 `ADJ*` files bitwise identical, 8:47 vs 13:13 wall time
 32 `adxx_*` and 4 393 `ADJ*` files, 9:36 vs 14:06 wall time (1.47×). Its `README.md`
 has the run table; the two scripts (`parse_tapenade_profile.py`,
 `compare_adjoint_runs.py`) are general enough to reuse on any pair of runs.
+Since 2026-09-02 that tuned build is the DINO default (`build_tapAdj.sh` is a
+symlink to `build_tapAdj_nocheckpoint.sh`; the plain build lives on as
+`build_tapAdj_ckpAll.sh`), and the directory also records the one negative
+result, `compare_30d_adjViscBoost_run31025_vs_nocheckpoint_run31056.md`: under
+the adjoint-mode viscosity boost the same list leaves `fc` identical but
+changes every sensitivity field at order one, so that build stays
+checkpoint-everything.
 
 `00_archive/` holds four earlier serial exploratory runs at 180 and 360 days,
 named for their starting point and viscosity setting — `viscRef` from rest
@@ -190,7 +197,7 @@ Current locations:
 | Output | Lives in |
 | --- | --- |
 | 200-year spin-up figures, `moc.gif`, `moc_anim*/` | `DINO_1deg_frd_runs/runs_prod/DINO_1deg_frd_200yr_from_rest_visc2x_run28463/` |
-| `ADJ*` gif/html, `adj_*_z14/`, `poster_frames/` | `DINO_1deg_tapAdj_runs/DINO_1deg_tapAdj_5yr_from180yrPk_visc2x_run28486/` |
+| `ADJ*` gif/html, `adj_*_z14/`, `poster_frames/` | `DINO_1deg_tapAdj_runs/DINO_1deg_tapAdj_ckpAll_5yr_from180yrPk_visc2x_run28486/` |
 
 The `.gitignore` rules for `analyses/**/*.{png,jpg,gif,html}` are only a safety
 net against a cell being re-run with a repo-local output path.
@@ -219,7 +226,7 @@ Two runs were added on 2026-08-18 for verification rather than science:
 | Run | What it is |
 | --- | --- |
 | `DINO_1deg_frd_10yr_from_rest_visc2x_run30945` | 10-year forward, confirmed **bit-identical** to the first 10 years of run 28463. Carries `figures/` with the MOC, AMOC and reproduction-check plots |
-| `DINO_1deg_tapAdj_30d_from180yrPk_visc2x_run31032` | 30-day adjoint, confirms `ADJ*`/`adxx*` output (incl. `ADJetan`) and sensitivity on the cost section. Successor of the 2026-08-18 original (30948, superseded and removable): 31032 is the current-toolchain rerun of the same config, bitwise-validated back to it through the 31022 chain |
+| `DINO_1deg_tapAdj_ckpAll_30d_from180yrPk_visc2x_run31032` | 30-day adjoint, confirms `ADJ*`/`adxx*` output (incl. `ADJetan`) and sensitivity on the cost section. Successor of the 2026-08-18 original (30948, superseded and removable): 31032 is the current-toolchain rerun of the same config, bitwise-validated back to it through the 31022 chain |
 
 ## Notebook size discipline
 

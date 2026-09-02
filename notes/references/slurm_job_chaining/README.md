@@ -89,6 +89,18 @@ sed -i "s|DINO_1deg_frd_runs/${cur}/pickup.0003162240|DINO_1deg_frd_runs/${REFDI
 # -> 31003 31004 31005 31006 31007 31008 31009
 ```
 
+> **Since 2026-09-02 `submit_tapAdj.sh` is a symlink** to
+> `submit_tapAdj_nocheckpoint.sh`, and GNU `sed -i` without
+> `--follow-symlinks` replaces a symlink with a regular file — the loop above,
+> run verbatim today, would silently turn the default into a stale copy.
+> Either use `sed -i --follow-symlinks`, or name the target script. The
+> 2026-09-02 rerun of the same eight adjoints with the `-nocheckpoint` build
+> (jobs 31060–31067) did neither: it wrote each member's rewritten script to a
+> temporary copy in the setup directory, submitted that through
+> `tools/submit.sh`, and deleted it. `sbatch` spools the script at submission,
+> so the copy is not needed afterwards, and no tracked file is touched at any
+> point.
+
 Three things in there are worth separating out.
 
 **`--dependency=afterok:<jobid>` is the whole mechanism.** Everything else is

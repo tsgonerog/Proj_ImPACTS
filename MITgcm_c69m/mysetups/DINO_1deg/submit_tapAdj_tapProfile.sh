@@ -12,8 +12,10 @@
 #
 
 #SBATCH -J DINO_1deg_tapAdj_tapProfile   # Set main part of the job name once here
-#SBATCH -o %x.%j.out                             # %x = job name, %j = job ID
-#SBATCH -e %x.%j.err
+#SBATCH -o logs/%x.%j.out                             # %x = job name, %j = job ID
+# No -e: given only -o, sbatch sends both streams to that one file. The set -x
+# trace below is stderr, so it lands there. A separate .err was the only file
+# with content and the .out was empty on every job that ever ran.
 #SBATCH -N 1
 #SBATCH -n 27
 #SBATCH -t 24:00:00
@@ -23,7 +25,7 @@
 
 # Fail fast if anything is wrong in this script
 set -e
-# Enable command tracing for the entire script || all commands will be echoed (with variable expansions) into the .err file
+# Enable command tracing for the entire script || all commands will be echoed (with variable expansions) into the .out file
 set -x
 
 # ========== MACHINE SETTINGS & MODULES ==========
@@ -106,11 +108,59 @@ if [[ ! -f "$namelist_data" ]]; then
   exit 1
 fi
 
+# ---------- empty tag: name the run from the namelist itself ----------
+# The live input_tap/data has no tag of its own, so a run of it would be named
+# by duration alone. Derive the <start>_<viscosity> tokens from the namelist
+# the way the 2026-08-18 scratch rename did (vocabulary: root README, "Namelist
+# variants"): nIter0 -> from_rest / from<N>yrPk (366-day years at dT=1800);
+# viscAhDfile/viscAhZfile -> viscRef (dino_viscAhD.bin, both) / visc2x (_2p00,
+# both) / viscD2x_Zref (D doubled, Z at reference); a scalar viscAhGrid with no
+# files -> viscGrid<value> (1.8E-2 -> viscGrid1p8e-2). Anything unrecognised
+# gives liveData, so the name never claims a setting the script could not read.
+if [[ -z "$test_cases" ]]; then
+  suffix="_$(awk -F'[=, ]+' '
+    { sub(/^[[:space:]]+/, ""); k=tolower($1) }   # strip the indent, else $1 is empty
+    k=="niter0"      {n=$2+0}
+    k=="viscahdfile" {d=$2; gsub(/\047/,"",d)}
+    k=="viscahzfile" {z=$2; gsub(/\047/,"",z)}
+    k=="viscahgrid"  {g=$2}
+    END {
+      spd=48*366
+      s = (n==0) ? "from_rest" : ((n%spd==0) ? "from" n/spd "yrPk" : "liveData")
+      if      (d=="dino_viscAhD.bin"      && z=="dino_viscAhD.bin")      v="viscRef"
+      else if (d=="dino_viscAhD_2p00.bin" && z=="dino_viscAhD_2p00.bin") v="visc2x"
+      else if (d=="dino_viscAhD_2p00.bin" && z=="dino_viscAhD.bin")      v="viscD2x_Zref"
+      else if (d=="" && z=="" && g!="") { v=g; gsub(/\./,"p",v); gsub(/E/,"e",v); v="viscGrid" v }
+      else v="liveData"
+      print s "_" v
+    }' "$namelist_data")"
+  echo "empty IMPACTS_TEST_CASE: run named from the namelist as '${suffix#_}'"
+fi
+
 # ========== PATHS & NAMES ==========
 
-job_name="$SLURM_JOB_NAME"      # capture the job name set above
 base_dir="$SLURM_SUBMIT_DIR"    # directory from where the job was submitted
 build_dir="$base_dir/build_tapAdj_tapProfile"
+
+# ---------- build identity: the run directory is named from what was built ----------
+# build_info.txt is written by the build script after all its checks pass and
+# says what the executable is: run_token = tapAdj_<ckp>[_<variant>], with
+# <ckp> either ckpAll or nocheckpoint and <variant> adjViscBoost or tapProfile.
+# Taking the token from there rather than from this script means the run
+# directory cannot claim a build it did not get. An executable with no record,
+# or newer than its record (a by-hand make), is refused rather than run under
+# a guessed name.
+build_info="$build_dir/build_info.txt"
+if [[ ! -f "$build_info" ]]; then
+  echo "ERROR: $build_info not found -- rebuild with the build script"; exit 1
+fi
+if [[ "$build_dir/mitgcmuv_tap_adj" -nt "$build_info" ]]; then
+  echo "ERROR: $build_dir/mitgcmuv_tap_adj is newer than its build_info.txt -- rebuild with the build script"; exit 1
+fi
+run_token=$(sed -n 's/^run_token=//p' "$build_info")
+if [[ -z "$run_token" ]]; then
+  echo "ERROR: no run_token line in $build_info"; exit 1
+fi
 # Duration label: whole 366-day years as "<n>yr", otherwise "<n>d", so the run
 # directory matches the scratch naming convention.
 if (( simulation_duration_with_dT1800_days % 366 == 0 )); then
@@ -118,7 +168,7 @@ if (( simulation_duration_with_dT1800_days % 366 == 0 )); then
 else
     dur_label="${simulation_duration_with_dT1800_days}d"
 fi
-run_dir="$SCRATCH_ROOT/DINO_1deg_tapAdj_runs/${job_name}_${dur_label}${suffix}_run$SLURM_JOB_ID"  # unique per job
+run_dir="$SCRATCH_ROOT/DINO_1deg_tapAdj_runs/DINO_1deg_${run_token}_${dur_label}${suffix}_run$SLURM_JOB_ID"  # unique per job
 
 # ========== STAGE THE RUN DIRECTORY ==========
 
@@ -188,8 +238,10 @@ done
 #sed -i -E "s|(useGMRedi[[:space:]]*=[[:space:]]*)\.TRUE\.|\1.FALSE.|" data.pkg
 
 
-# copy MITgcm executable to run directory
+# copy MITgcm executable to run directory, with its build record so the run
+# directory itself says which build (script, -tap_extra, commit) it ran
 cp -p "$build_dir/mitgcmuv_tap_adj" .
+cp -p "$build_info" .
 
 #----- pickups ---------------
 ln -s $SCRATCH_ROOT/DINO_1deg_frd_runs/DINO_1deg_frd_200yr_from_rest_visc2x_run30983/pickup.0003162240.data pickup.0003162240.data

@@ -13,9 +13,19 @@ setup.
 | --- | --- | --- |
 | profile the adjoint's checkpoints | `build_tapAdj_tapProfile.sh` + `submit_tapAdj_tapProfile.sh` | `-profile`, plus the `mods_profile/` runtime |
 | stop checkpointing chosen routines | `build_tapAdj_nocheckpoint.sh` + `submit_tapAdj_nocheckpoint.sh` | `-nocheckpoint "<code_tap/tap_nocheckpoint.txt>"` |
+| the plain adjoint, every call checkpointed | `build_tapAdj_ckpAll.sh` + `submit_tapAdj_ckpAll.sh` | none (Tapenade's default; was `build_tapAdj.sh` until 2026-09-02) |
 
-Neither is needed for a plain adjoint build. The first is a diagnostic; the
-second is a production build whose adjoint is mathematically the plain one.
+The first is a diagnostic. The second is **DINO's default adjoint since
+2026-09-02** — `build_tapAdj.sh` / `submit_tapAdj.sh` are symlinks to that
+pair — and its adjoint is mathematically the plain one; the plain build lives
+on as the `ckpAll` pair, the profiler's base and the timing baseline.
+`build_tapAdj_adjViscBoost.sh` does **not** carry it: under the adjoint-mode
+viscosity boost, split mode is not equivalent to joint mode (run 31056 vs
+31025, 2026-09-02 — `fc` identical, every sensitivity field different at order
+one; see section 2), so the boosted adjoint stays a `ckpAll` build. Every
+build script records what it built in `build_info.txt`, and the submit
+scripts name the run directory from its `run_token` (`tapAdj_nocheckpoint`,
+`tapAdj_ckpAll`, `tapAdj_ckpAll_tapProfile`, `tapAdj_ckpAll_adjViscBoost`).
 
 ---
 
@@ -99,7 +109,7 @@ Two things c69m does not provide, hence `mods_profile/`:
 `-tap_extra "-profile -ext ../code_tap/flow_tap_local"` — one `-tap_extra`,
 because genmake2 overwrites it on repeat and the `-ext` is what generates the
 `ADJ*` dump-hook call. After `make` it asserts the hook argument counts (as
-`build_tapAdj.sh` does), that `forward_step_b.f` carries `ADPROFILEADJ_*`
+`build_tapAdj_ckpAll.sh` does), that `forward_step_b.f` carries `ADPROFILEADJ_*`
 calls, that the compiled `the_model_main.f` is the profiling variant, and that
 `adProfile.o` exists. The whole build takes about six minutes.
 
@@ -118,7 +128,7 @@ cd MITgcm_c69m/mysetups/DINO_1deg
 ../../../tools/submit.sh submit_tapAdj_tapProfile.sh      # 30 days by default
 ```
 
-The run directory (`DINO_1deg_tapAdj_tapProfile_30d_..._run<id>`) gets
+The run directory (`DINO_1deg_tapAdj_ckpAll_tapProfile_30d_..._run<id>`) gets
 `tapenade_profile.0000.txt` … `.0026.txt`; every process does the same work,
 so read rank 0's. `output_tap_adj.txt` additionally carries each process's
 `Peak stack size` and `Total push/pop traffic` lines. The table looks like
@@ -178,6 +188,18 @@ toy program and from the DINO build:
   ignored silently. `build_tapAdj_nocheckpoint.sh` therefore greps the
   generated `*_b.f` for a `SUBROUTINE <NAME>_FWD(` per listed routine and
   fails the build if any is missing.
+- **`-nocheckpoint` is a pure performance change only while the backward
+  sweep leaves the primal's parameters alone.** With the `adjViscBoost`
+  mode-switch hooks it is not: in joint mode every checkpointed routine
+  re-runs its primal inside the backward sweep *after* `TAP_INADMODE_SET_B`
+  has boosted the viscosities, so the boost reaches every recomputed
+  intermediate; in split mode those intermediates were taped in the forward
+  sweep at the forward viscosities. Run 31056 (boost + this list) vs 31025
+  (boost, every call checkpointed): `fc` and `%MON` byte-identical, all 66
+  `ADJ*` and all 8 real `adxx_*` fields different at order one (RMS ratio
+  0.3–0.9) — while 31054 vs 31052 and 31055 vs 31039, the plain pair, are
+  bitwise identical. Report:
+  `analyses/DINO_1deg/03_adjoint/07_tapenade_profiling/compare_30d_adjViscBoost_run31025_vs_nocheckpoint_run31056.md`.
 
 The list lives in `code_tap/tap_nocheckpoint.txt` (one lower-case name per
 line, `#` comments allowed) beside `flow_tap_local`, the setup's other

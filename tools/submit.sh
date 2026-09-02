@@ -35,6 +35,12 @@ impacts_check_env || echo "submit.sh: continuing despite warnings above." >&2
 # from the setup directory so those stay correct however this was invoked.
 cd "$(dirname "$script_abs")"
 
+# The submit scripts write their SLURM log to logs/%x.%j.out. sbatch does not
+# create that directory: if it is missing the job is accepted and then fails at
+# launch, usually with no log to say why. Creating it here rather than in a
+# README is what makes a fresh clone able to submit.
+mkdir -p logs
+
 echo "machine : $MACHINE"
 echo "extra   : ${SBATCH_EXTRA:-<none>}"
 echo "submit  : sbatch ${SBATCH_EXTRA} --export=ALL $* $(basename "$script_abs")"

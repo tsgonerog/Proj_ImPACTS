@@ -636,11 +636,17 @@ for. Three reductions, largest first:
         trustworthy at shorter lead times in any case
         (Section~\ref{sec:risks}). Keep a few five-year members to test
         lead-time extrapolation.
-  \item \textbf{Tapenade \code{-nocheckpoint} tuning.}
-        \code{tools/tapenade\_profiling/} already holds the 64-routine list
-        from the earlier profiling work, and c69m's \code{genmake2} takes
-        \code{-tap\_extra}, so this is a build flag now rather than a patched
-        script.
+  \item \textbf{Tapenade \code{-nocheckpoint} tuning.} Done, and the default
+        since 2026-09-02: a fresh profile of the c69m adjoint (run 31053)
+        replaced the c69f-era 64-routine list with 33 routines --- the two
+        share eight names and none of the top twelve --- and the tuned build
+        reproduces the checkpoint-everything one bitwise in \code{fc},
+        \code{adxx\_*} and \code{ADJ*} at 30 days and at 5 years while
+        running $1.47\times$ faster (9.6\,h against 14.1\,h for a five-year
+        window). \code{build\_tapAdj.sh} now points at it; the record is
+        \code{tools/tapenade\_profiling/README.md}. It does not apply to the
+        \code{adjViscBoost} build, where the same list changes the boosted
+        adjoint at order one (run 31056 vs 31025).
 \end{enumerate}
 
 \paragraph{What (2) does not save.}
@@ -673,7 +679,11 @@ the science allows.
 
 These are still extrapolations from two measured rates and want replacing with a
 real number. The first job in Phase~1 is to benchmark one one-year member with
-\code{useGrdchk=.FALSE.} and report both halves separately.
+\code{useGrdchk=.FALSE.} and report both halves separately. Two five-year
+numbers measured since: 14.1\,h with every call checkpointed (run 31039,
+2026-09-01) and 9.6\,h with the \code{-nocheckpoint} build that is now the
+default (run 31055), so the $8.9$\,h in the table was close for the tuned
+build and optimistic for the other.
 
 \paragraph{Storage.}
 A five-year run writes $8.3\,\mathrm{GB}$, mostly the $366$ dumps of eleven

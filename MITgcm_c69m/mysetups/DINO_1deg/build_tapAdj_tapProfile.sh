@@ -3,8 +3,8 @@
 #   sources : code_tap/ + input_tap/ + tools/tapenade_profiling/mods_profile/
 #          -> build_tapAdj_tapProfile/mitgcmuv_tap_adj
 #
-# Same stock genmake2 + flow_tap_local hook wiring as build_tapAdj.sh (see
-# there for how the ADJ* dump call is generated), plus two things:
+# Same stock genmake2 + flow_tap_local hook wiring as build_tapAdj_ckpAll.sh
+# (see there for how the ADJ* dump call is generated), plus two things:
 #
 #   * "-profile" on the Tapenade command line, sharing the one -tap_extra with
 #     the -ext hook library (genmake2 overwrites -tap_extra on repeat). Tapenade
@@ -20,12 +20,14 @@
 #     prints the tape peak and writes the per-process cost/benefit table
 #     (tapenade_profile.NNNN.txt in the run directory).
 #
-# This is a DIAGNOSTIC build. Its adjoint does exactly what build_tapAdj's
+# This is a DIAGNOSTIC build. Its adjoint does exactly what build_tapAdj_ckpAll's
 # does (same checkpointing, same numbers) with timing calls added, so it is
 # somewhat slower and must not be used for production runs or as a runtime
 # reference. Pair it with submit_tapAdj_tapProfile.sh (30-day default), and
 # read tools/tapenade_profiling/README.md for how to turn the table into a
-# -nocheckpoint list for build_tapAdj_nocheckpoint.sh.
+# -nocheckpoint list for build_tapAdj_nocheckpoint.sh. It deliberately does
+# NOT carry that list: a profile of the tuned build would only show the
+# residual cost, while the list is derived by seeing every checkpoint.
 #
 # MPI Tapenade-adjoint build for MITgcm
 
@@ -45,7 +47,7 @@ source "$SCRIPT_DIR/../../../tools/machine_env.sh"
 impacts_load_modules
 
 # Replace SIZE.h with mpi version; stage the same plain (_OG) variants as
-# build_tapAdj.sh so the profile describes the production configuration.
+# build_tapAdj_ckpAll.sh so the profile describes the production configuration.
 cp code_tap/SIZE.h_mpi code_tap/SIZE.h
 cp code_tap/AUTODIFF_PARAMS.h_OG code_tap/AUTODIFF_PARAMS.h
 cp code_tap/autodiff_readparms.F_OG code_tap/autodiff_readparms.F
@@ -88,7 +90,7 @@ make CLEAN || true
 # profiler directory first so its two files win over code_tap/ and upstream;
 # -tap_extra carries both the profiler switch and the setup-local external
 # library that makes Tapenade generate the ADJ* dump-hook call (see
-# build_tapAdj.sh).
+# build_tapAdj_ckpAll.sh).
 "$MITGCM_ROOT/tools/genmake2" -mpi -tap \
     -rd="$MITGCM_ROOT" \
     -of="$MPI_OPTFILE" \
@@ -102,7 +104,7 @@ make depend
 # Build the adjoint model using 8 threads
 make -j 8 tap_adj
 
-# Same generated-call checks as build_tapAdj.sh: each hook's _B argument
+# Same generated-call checks as build_tapAdj_ckpAll.sh: each hook's _B argument
 # list must match its hand-written routine; F77 would silently misalign a
 # mismatch, so fail loudly instead.
 check_gen_call() {
@@ -139,3 +141,28 @@ if ! grep -q 'ADPROFILEADJ_SHOWPROFILESFILE' the_model_main.f; then
 fi
 [ -f adProfile.o ] || { echo "ERROR: adProfile.o missing; adProfile.c was not compiled."; exit 1; }
 echo "OK: profiler instrumentation, main program and runtime are all in place."
+
+# ========== BUILD RECORD ==========
+# Written last, after every check above passed, so build_info.txt can only
+# describe an executable this script built and verified. The submit scripts
+# refuse an executable without it (or newer than it) and take run_token from
+# it, so a run directory is named from what was actually built, not from what
+# the submit script assumes:  DINO_1deg_<run_token>_<duration>[_<tag>]_run<jobid>
+dirty=$(git -C "$SCRIPT_DIR" diff --name-only HEAD -- . \
+          ':(exclude)code_tap/SIZE.h' ':(exclude)code_tap/AUTODIFF_PARAMS.h' \
+          ':(exclude)code_tap/autodiff_readparms.F' \
+          ':(exclude)code_tap/autodiff_inadmode_set_ad.F' \
+          ':(exclude)code_tap/autodiff_inadmode_unset_ad.F' 2>/dev/null | wc -l)
+{
+    echo "build_script=$(basename "$(readlink -f "$SCRIPT_DIR/$(basename "${BASH_SOURCE[0]}")")")"   # resolved from the setup dir: after the cd above, a relative BASH_SOURCE would not resolve the symlink
+    echo "invoked_as=$(basename "${BASH_SOURCE[0]}")"
+    echo "build_dir=$(basename "$PWD")"
+    echo "tapenade_checkpointing=ckpAll        # every call checkpointed, as the profile must see them"
+    echo "variant=tapProfile                   # -profile instrumentation + mods_profile/ main program; diagnostic only"
+    echo "run_token=tapAdj_ckpAll_tapProfile"
+    echo "tap_extra=$(sed -n 's/^TAP_EXTRA *= *//p' Makefile)"
+    echo "git_commit=$(git -C "$SCRIPT_DIR" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+    echo "git_modified_tracked_files=${dirty}   # in this setup, build-staged files excluded"
+    echo "built=$(date '+%Y-%m-%d %H:%M:%S %Z') on $(hostname)"
+} > build_info.txt
+echo "OK: wrote $(basename "$PWD")/build_info.txt (run_token=tapAdj_ckpAll_tapProfile)."

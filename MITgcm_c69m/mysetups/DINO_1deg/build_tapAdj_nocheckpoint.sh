@@ -2,8 +2,19 @@
 # Build the Tapenade ADJOINT with PROFILE-GUIDED -nocheckpoint tuning.
 #   sources : code_tap/ + input_tap/  ->  build_tapAdj_nocheckpoint/mitgcmuv_tap_adj
 #
-# Same stock genmake2 + flow_tap_local hook wiring as build_tapAdj.sh (see
-# there for how the ADJ* dump call is generated), with one Tapenade flag
+# THE DEFAULT adjoint build since 2026-09-02: ./build_tapAdj.sh is a symlink
+# to this file (and ./submit_tapAdj.sh to submit_tapAdj_nocheckpoint.sh).
+# The former default, with every call checkpointed, is build_tapAdj_ckpAll.sh;
+# this build is bitwise identical to it in fc, adxx_* and ADJ* at 30 d (run
+# 31054 vs 31052) and 5 yr (31055 vs 31039) and 1.5x faster. The routine list
+# below is a profile of ONE configuration (KPP/GM off, 27 ranks, this package
+# set): the _FWD check at the bottom catches a name that vanished, not a list
+# that stopped being the right list, so re-profile with
+# build_tapAdj_tapProfile.sh whenever the adjoint's package set, physics or
+# decomposition changes.
+#
+# Same stock genmake2 + flow_tap_local hook wiring as build_tapAdj_ckpAll.sh
+# (see there for how the ADJ* dump call is generated), with one Tapenade flag
 # added: -nocheckpoint "<routines>". By default Tapenade checkpoints every
 # call inside a time step ("joint" mode): the callee's primal is run once in
 # the enclosing forward sweep and run AGAIN, recording, inside its own _B
@@ -17,12 +28,13 @@
 # The routine list is code_tap/tap_nocheckpoint.txt (one name per line, '#'
 # comments allowed). It was derived from the cost/benefit table of the
 # build_tapAdj_tapProfile.sh run -- tools/tapenade_profiling/README.md records
-# how, and what the validation against build_tapAdj gave. Re-profile before
+# how, and what the validation against build_tapAdj_ckpAll gave. Re-profile before
 # editing it: a routine Tapenade never checkpoints is a no-op here and the
 # check at the bottom rejects it, so the list stays honest.
 #
-# Pair with submit_tapAdj_nocheckpoint.sh. The adjoint is mathematically the
-# same as build_tapAdj's (same values, stored instead of recomputed).
+# Pair with submit_tapAdj_nocheckpoint.sh (or its ./submit_tapAdj.sh symlink).
+# The adjoint is mathematically the same as build_tapAdj_ckpAll's (same
+# values, stored instead of recomputed).
 #
 # MPI Tapenade-adjoint build for MITgcm
 
@@ -41,7 +53,7 @@ MITGCM_ROOT="$SCRIPT_DIR/../../MITgcm"
 source "$SCRIPT_DIR/../../../tools/machine_env.sh"
 impacts_load_modules
 
-# Replace SIZE.h with mpi version; plain (_OG) variants, as in build_tapAdj.sh
+# Replace SIZE.h with mpi version; plain (_OG) variants, as in build_tapAdj_ckpAll.sh
 cp code_tap/SIZE.h_mpi code_tap/SIZE.h
 cp code_tap/AUTODIFF_PARAMS.h_OG code_tap/AUTODIFF_PARAMS.h
 cp code_tap/autodiff_readparms.F_OG code_tap/autodiff_readparms.F
@@ -62,7 +74,7 @@ NOCP_FILE="code_tap/tap_nocheckpoint.txt"
 [ -f "$NOCP_FILE" ] || { echo "ERROR: $NOCP_FILE not found"; exit 1; }
 mapfile -t NOCP_LIST < <(sed -e 's/#.*//' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' "$NOCP_FILE" | grep -v '^$' | tr 'A-Z' 'a-z')
 if [ "${#NOCP_LIST[@]}" -eq 0 ]; then
-    echo "ERROR: $NOCP_FILE names no routine; use build_tapAdj.sh for the plain adjoint."
+    echo "ERROR: $NOCP_FILE names no routine; use build_tapAdj_ckpAll.sh for the plain adjoint."
     exit 1
 fi
 NOCP="${NOCP_LIST[*]}"
@@ -83,7 +95,7 @@ make CLEAN || true
 # Configure the build (this creates the Makefile here). -tap_extra carries
 # both flags: the split-mode routine list and the setup-local external
 # library that makes Tapenade generate the ADJ* dump-hook call (see
-# build_tapAdj.sh). genmake2 writes the string verbatim into the Makefile's
+# build_tapAdj_ckpAll.sh). genmake2 writes the string verbatim into the Makefile's
 # TAP_EXTRA, so the inner quotes survive to the shell that runs Tapenade.
 "$MITGCM_ROOT/tools/genmake2" -mpi -tap \
     -rd="$MITGCM_ROOT" \
@@ -98,7 +110,7 @@ make depend
 # Build the adjoint model using 8 threads
 make -j 8 tap_adj
 
-# Same generated-call checks as build_tapAdj.sh: each hook's _B argument
+# Same generated-call checks as build_tapAdj_ckpAll.sh: each hook's _B argument
 # list must match its hand-written routine; F77 would silently misalign a
 # mismatch, so fail loudly instead.
 check_gen_call() {
@@ -139,3 +151,29 @@ if [ -n "$missing" ]; then
     exit 1
 fi
 echo "OK: all ${#NOCP_LIST[@]} listed routines were generated in split (_FWD/_BWD) mode."
+
+# ========== BUILD RECORD ==========
+# Written last, after every check above passed, so build_info.txt can only
+# describe an executable this script built and verified. The submit scripts
+# refuse an executable without it (or newer than it) and take run_token from
+# it, so a run directory is named from what was actually built, not from what
+# the submit script assumes:  DINO_1deg_<run_token>_<duration>[_<tag>]_run<jobid>
+dirty=$(git -C "$SCRIPT_DIR" diff --name-only HEAD -- . \
+          ':(exclude)code_tap/SIZE.h' ':(exclude)code_tap/AUTODIFF_PARAMS.h' \
+          ':(exclude)code_tap/autodiff_readparms.F' \
+          ':(exclude)code_tap/autodiff_inadmode_set_ad.F' \
+          ':(exclude)code_tap/autodiff_inadmode_unset_ad.F' 2>/dev/null | wc -l)
+{
+    echo "build_script=$(basename "$(readlink -f "$SCRIPT_DIR/$(basename "${BASH_SOURCE[0]}")")")"   # resolved from the setup dir: after the cd above, a relative BASH_SOURCE would not resolve the symlink
+    echo "invoked_as=$(basename "${BASH_SOURCE[0]}")"
+    echo "build_dir=$(basename "$PWD")"
+    echo "tapenade_checkpointing=nocheckpoint  # routines in nocheckpoint_list differentiated in split _FWD/_BWD mode"
+    echo "variant=OG                           # plain _OG staging, no profiler"
+    echo "run_token=tapAdj_nocheckpoint"
+    echo "tap_extra=$(sed -n 's/^TAP_EXTRA *= *//p' Makefile)"
+    echo "nocheckpoint_list=$NOCP"
+    echo "git_commit=$(git -C "$SCRIPT_DIR" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+    echo "git_modified_tracked_files=${dirty}   # in this setup, build-staged files excluded"
+    echo "built=$(date '+%Y-%m-%d %H:%M:%S %Z') on $(hostname)"
+} > build_info.txt
+echo "OK: wrote $(basename "$PWD")/build_info.txt (run_token=tapAdj_nocheckpoint)."

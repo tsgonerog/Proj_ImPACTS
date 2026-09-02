@@ -17,5 +17,13 @@ and the values were adapted from the ASTE 90×150×60 regional setup.
 Pairing the plain submit script with the adjViscBoost build, or the reverse,
 silently runs the ordinary configuration.
 
+The build checkpoints every call, like `build_tapAdj_ckpAll.sh`, and its run
+directories are named `DINO_1deg_tapAdj_ckpAll_adjViscBoost_…`. It deliberately
+does **not** carry the default build's `-nocheckpoint` list: tried on
+2026-09-02 (run 31056 vs 31025), the split-mode boost differs at order one in
+every sensitivity field, because joint-mode recomputation happens after the
+mode-switch hook has boosted the viscosities and split-mode tapes were taken
+before — see `../../README.md`, "Profiling and checkpoint tuning".
+
 This file is *not* selected through `IMPACTS_TEST_CASE`; the submit script
 copies it by name, independently of whichever `data` variant is chosen.

@@ -1,5 +1,5 @@
 # Adjoint run comparison
-- reference: `/scratch2/tshahriar/DINO_1deg_tapAdj_runs/DINO_1deg_tapAdj_5yr_from180yrPk_visc2x_run31039`
+- reference: `/scratch2/tshahriar/DINO_1deg_tapAdj_runs/DINO_1deg_tapAdj_ckpAll_5yr_from180yrPk_visc2x_run31039`
 - test:      `/scratch2/tshahriar/DINO_1deg_tapAdj_runs/DINO_1deg_tapAdj_nocheckpoint_5yr_from180yrPk_visc2x_run31055`
 
 ## Runtime

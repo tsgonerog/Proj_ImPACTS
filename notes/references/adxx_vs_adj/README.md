@@ -266,6 +266,6 @@ Three caveats when reading `ADJ*`:
 (`dumpAdRecEt`), `pkg/autodiff/active_file_control.F` (`ADD_PREFIX('ad',…)`),
 `pkg/autodiff/dump_adj_xyz.F` (`WRITE_REC_XYZ_RL`),
 `model/src/forward_step.F:927` (`INTEGR_CONTINUITY` call site),
-`build_tapAdj/the_main_loop_b.f` (`THE_MAIN_LOOP_B`). Correlations measured on
+`build_tapAdj_ckpAll/the_main_loop_b.f` (`THE_MAIN_LOOP_B`; the directory was `build_tapAdj/` until 2026-09-02). Correlations measured on
 run 31039, 2026-09-01 (the +0.999999 historical contrast on pre-fix run
 30995, since deleted).*

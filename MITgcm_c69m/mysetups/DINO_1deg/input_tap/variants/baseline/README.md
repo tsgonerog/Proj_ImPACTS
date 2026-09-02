@@ -1,6 +1,8 @@
 # `baseline/` — the reference adjoint configuration
 
-What `submit_tapAdj.sh` runs when you give it no `IMPACTS_TEST_CASE`:
+What `submit_tapAdj.sh` (a symlink to `submit_tapAdj_nocheckpoint.sh` since
+2026-09-02; the `_ckpAll` pair reads the same default) runs when you give it
+no `IMPACTS_TEST_CASE`:
 
 ```bash
 test_cases="${IMPACTS_TEST_CASE-baseline/from180yrPk_visc2x}"
@@ -13,5 +15,5 @@ is compared against, and the configuration of the reference chain 28486
 (May 2026) → 30995 → 31039 (2026-09-01, the current seam-clean reference).
 
 `nIter0=3162240` is year 2180 and is coupled by hand to a pickup symlink in
-`submit_tapAdj.sh`. Changing the duration is safe; changing the starting point
+each `submit_tapAdj*.sh`. Changing the duration is safe; changing the starting point
 means editing both.

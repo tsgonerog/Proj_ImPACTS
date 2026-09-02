@@ -86,21 +86,21 @@ KAPPA0 = 1.2e-5  # m^2/s, the unperturbed uniform background diffusivity
 
 RUNS = {
     "M1":  dict(factor=0.25, adj_job=31040, fwd_job=30996,
-                dir=SCRATCH / "DINO_1deg_tapAdj_5yr_M1_run31040"),
+                dir=SCRATCH / "DINO_1deg_tapAdj_ckpAll_5yr_M1_run31040"),
     "M2":  dict(factor=0.5,  adj_job=31041, fwd_job=30997,
-                dir=SCRATCH / "DINO_1deg_tapAdj_5yr_M2_run31041"),
+                dir=SCRATCH / "DINO_1deg_tapAdj_ckpAll_5yr_M2_run31041"),
     "REF": dict(factor=1.0,  adj_job=31039, fwd_job=30983,
-                dir=SCRATCH / "DINO_1deg_tapAdj_5yr_from180yrPk_visc2x_run31039"),
+                dir=SCRATCH / "DINO_1deg_tapAdj_ckpAll_5yr_from180yrPk_visc2x_run31039"),
     "M3":  dict(factor=2.0,  adj_job=31042, fwd_job=30998,
-                dir=SCRATCH / "DINO_1deg_tapAdj_5yr_M3_run31042"),
+                dir=SCRATCH / "DINO_1deg_tapAdj_ckpAll_5yr_M3_run31042"),
     "M4":  dict(factor=4.0,  adj_job=31043, fwd_job=30999,
-                dir=SCRATCH / "DINO_1deg_tapAdj_5yr_M4_run31043"),
+                dir=SCRATCH / "DINO_1deg_tapAdj_ckpAll_5yr_M4_run31043"),
     "M5":  dict(factor=8.0,  adj_job=31044, fwd_job=31000,
-                dir=SCRATCH / "DINO_1deg_tapAdj_5yr_M5_run31044"),
+                dir=SCRATCH / "DINO_1deg_tapAdj_ckpAll_5yr_M5_run31044"),
     "M6":  dict(factor=16.0, adj_job=31045, fwd_job=31001,
-                dir=SCRATCH / "DINO_1deg_tapAdj_5yr_M6_run31045"),
+                dir=SCRATCH / "DINO_1deg_tapAdj_ckpAll_5yr_M6_run31045"),
     "M7":  dict(factor=32.0, adj_job=31046, fwd_job=31002,
-                dir=SCRATCH / "DINO_1deg_tapAdj_5yr_M7_run31046"),
+                dir=SCRATCH / "DINO_1deg_tapAdj_ckpAll_5yr_M7_run31046"),
 }
 for k, r in RUNS.items():
     r["kappa"] = KAPPA0 * r["factor"]

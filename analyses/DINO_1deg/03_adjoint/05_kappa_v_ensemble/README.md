@@ -18,14 +18,14 @@ bit-identical between the campaigns at every dump.
 
 | run | κ factor | forward job | adjoint job (2026-09-01 rerun; original) | run directory (under `/scratch2/tshahriar/DINO_1deg_tapAdj_runs/`) |
 | --- | --- | --- | --- | --- |
-| REF | 1× | 30983 (spin-up) | 31039 (30995) | `DINO_1deg_tapAdj_5yr_from180yrPk_visc2x_run31039` |
-| M1 | 0.25× | 30996 | 31040 (31003) | `DINO_1deg_tapAdj_5yr_M1_run31040` |
-| M2 | 0.5× | 30997 | 31041 (31004) | `DINO_1deg_tapAdj_5yr_M2_run31041` |
-| M3 | 2× | 30998 | 31042 (31005) | `DINO_1deg_tapAdj_5yr_M3_run31042` |
-| M4 | 4× | 30999 | 31043 (31006) | `DINO_1deg_tapAdj_5yr_M4_run31043` |
-| M5 | 8× | 31000 | 31044 (31007) | `DINO_1deg_tapAdj_5yr_M5_run31044` |
-| M6 | 16× | 31001 | 31045 (31008) | `DINO_1deg_tapAdj_5yr_M6_run31045` |
-| M7 | 32× | 31002 | 31046 (31009) | `DINO_1deg_tapAdj_5yr_M7_run31046` |
+| REF | 1× | 30983 (spin-up) | 31039 (30995) | `DINO_1deg_tapAdj_ckpAll_5yr_from180yrPk_visc2x_run31039` |
+| M1 | 0.25× | 30996 | 31040 (31003) | `DINO_1deg_tapAdj_ckpAll_5yr_M1_run31040` |
+| M2 | 0.5× | 30997 | 31041 (31004) | `DINO_1deg_tapAdj_ckpAll_5yr_M2_run31041` |
+| M3 | 2× | 30998 | 31042 (31005) | `DINO_1deg_tapAdj_ckpAll_5yr_M3_run31042` |
+| M4 | 4× | 30999 | 31043 (31006) | `DINO_1deg_tapAdj_ckpAll_5yr_M4_run31043` |
+| M5 | 8× | 31000 | 31044 (31007) | `DINO_1deg_tapAdj_ckpAll_5yr_M5_run31044` |
+| M6 | 16× | 31001 | 31045 (31008) | `DINO_1deg_tapAdj_ckpAll_5yr_M6_run31045` |
+| M7 | 32× | 31002 | 31046 (31009) | `DINO_1deg_tapAdj_ckpAll_5yr_M7_run31046` |
 
 ## Reading order
 

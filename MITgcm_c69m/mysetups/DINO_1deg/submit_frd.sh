@@ -4,8 +4,10 @@
 #
 
 #SBATCH -J DINO_1deg_frd     # Set main part of the job name once here
-#SBATCH -o %x.%j.out                   # %x = job name, %j = job ID
-#SBATCH -e %x.%j.err
+#SBATCH -o logs/%x.%j.out                   # %x = job name, %j = job ID
+# No -e: given only -o, sbatch sends both streams to that one file. The set -x
+# trace below is stderr, so it lands there. A separate .err was the only file
+# with content and the .out was empty on every job that ever ran.
 #SBATCH -N 1
 #SBATCH -n 27
 #SBATCH -t 240:00:00
@@ -15,7 +17,7 @@
 
 # Fail fast if anything is wrong in this script
 set -e
-# Enable command tracing for the entire script || all commands will be echoed (with variable expansions) into the .err file
+# Enable command tracing for the entire script || all commands will be echoed (with variable expansions) into the .out file
 set -x
 
 # ========== MACHINE SETTINGS & MODULES ==========

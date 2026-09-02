@@ -10,14 +10,20 @@ this directory holds the evidence.
 ## Runs
 
 All 27-rank MPI, `baseline/from180yrPk_visc2x`, `/scratch2/<user>/DINO_1deg_tapAdj_runs/`.
+Run directories carry the build token since the 2026-09-02 rename:
+`DINO_1deg_tapAdj_ckpAll_…` for the plain runs, `…_ckpAll_tapProfile_…` for
+31053, `…_nocheckpoint_…` for 31054/31055. The `_nocheckpoint` pair is the
+default DINO adjoint since 2026-09-02 (`build_tapAdj.sh` is a symlink to it).
 
 | Run | Build | Length | Node | Wall time | Role |
 | --- | --- | --- | --- | --- | --- |
-| 31052 | `build_tapAdj` (plain) | 30 d | c2-1 | 0:13:13 | fresh plain reference; bitwise identical to 31032 (0:13:31) |
+| 31052 | `build_tapAdj_ckpAll` (plain; `build_tapAdj` until 2026-09-02) | 30 d | c2-1 | 0:13:13 | fresh plain reference; bitwise identical to 31032 (0:13:31) |
 | 31053 | `build_tapAdj_tapProfile` | 30 d | c2-3 | 0:13:29 | the profile (`tapenade_profile.0000`–`.0026.txt`) |
 | 31054 | `build_tapAdj_nocheckpoint` | 30 d | c2-1 | **0:08:47** | validation against 31052 |
-| 31039 | `build_tapAdj` (plain) | 5 yr | — | 14:05:45 | production-length reference (2026-09-01) |
+| 31039 | `build_tapAdj_ckpAll` (plain; `build_tapAdj` until 2026-09-02) | 5 yr | — | 14:05:45 | production-length reference (2026-09-01) |
 | 31055 | `build_tapAdj_nocheckpoint` | 5 yr | c2-1 | **9:35:58** | production-length validation against 31039 |
+| 31025 | `build_tapAdj_adjViscBoost` (ckpAll + boost) | 30 d | — | 0:13:19 | boosted reference (from rest, live `input_tap/data`) |
+| 31056 | `build_tapAdj_adjViscBoost` + the list (**rejected**) | 30 d | c2-1 | 0:08:48 | split mode under the boost is **not** equivalent: `fc` identical, every sensitivity field differs at order one — the list was removed from that build again |
 
 ## Files
 
@@ -29,6 +35,7 @@ All 27-rank MPI, `baseline/from180yrPk_visc2x`, `/scratch2/<user>/DINO_1deg_tapA
 | `profile_run31053_ranked.md` | the parsed, ranked table (116 callees) |
 | `compare_30d_run31052_vs_nocheckpoint_run31054.md` | the 30-day validation report |
 | `compare_5yr_run31039_vs_nocheckpoint_run31055.md` | the 5-year validation report |
+| `compare_30d_adjViscBoost_run31025_vs_nocheckpoint_run31056.md` | the **negative** result: the same script on the boosted pair, with a preamble giving the mechanism (joint-mode recomputation after the mode-switch hook vs split-mode tapes before it) |
 
 ## What the profile showed (run 31053, rank 0)
 
@@ -113,5 +120,7 @@ python3 analyses/DINO_1deg/03_adjoint/07_tapenade_profiling/parse_tapenade_profi
         /scratch2/$USER/DINO_1deg_tapAdj_runs/<profile run>/tapenade_profile.0000.txt --top 40
 # edit code_tap/tap_nocheckpoint.txt, then
 ./build_tapAdj_nocheckpoint.sh && IMPACTS_DURATION_DAYS=30 ../../../tools/submit.sh submit_tapAdj_nocheckpoint.sh
-python3 analyses/DINO_1deg/03_adjoint/07_tapenade_profiling/compare_adjoint_runs.py <plain run dir> <nocheckpoint run dir>
+#   (or ./build_tapAdj.sh and submit_tapAdj.sh -- symlinks to the same pair since 2026-09-02;
+#    the plain reference run comes from build_tapAdj_ckpAll.sh / submit_tapAdj_ckpAll.sh)
+python3 analyses/DINO_1deg/03_adjoint/07_tapenade_profiling/compare_adjoint_runs.py <ckpAll run dir> <nocheckpoint run dir>
 ```

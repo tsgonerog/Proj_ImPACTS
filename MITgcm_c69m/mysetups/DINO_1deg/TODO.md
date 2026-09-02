@@ -2,7 +2,7 @@
 
 - [x] ~~Rerun the kappa_v ensemble with the ADEXCH-fixed build~~ (added
   2026-08-31, **done 2026-09-01**). Reference 31039 + members 31040–31046,
-  fresh `build_tapAdj/` from `main`, member pickups repointed per
+  fresh `build_tapAdj/` (renamed `build_tapAdj_ckpAll/` on 2026-09-02) from `main`, member pickups repointed per
   `notes/references/slurm_job_chaining/` §2.2. Validated per run against the
   originals (30995, 31003–31009): `fc` + all 32 `adxx_*` bitwise identical;
   `ADJ*` differences seam-confined (0 cells outside the mask in all 4,026
@@ -26,17 +26,47 @@
   `TAP_*` hooks (validated end to end, run 31025) and
   `build_tapAdj_rawTapenade.sh` was retired — raw Tapenade output *is* the
   working configuration now, so DINO has no control build to keep current.
+  (Its leftover `build_tapAdj_rawTapenade/` directory was deleted 2026-09-02.)
 
-- [ ] **Decide whether `build_tapAdj_nocheckpoint.sh` becomes the default
-  adjoint** (added 2026-09-01 on branch `tapenade-profiling`, merged into `main` 2026-09-02). Its 30-day run
-  31054 is bitwise identical to the plain build's 31052 (`fc`, 32 `adxx_*`,
-  73 `ADJ*`) and 1.5× faster (8:47 vs 13:13); at 5 years (31055 vs 31039)
-  it is again bitwise identical (fc, 32 `adxx_*`, 4 393 `ADJ*`) in 9:35:58
-  against 14:05:45 (1.47×, 4.5 h saved). If adopted: fold the `-tap_extra` list into
-  `build_tapAdj.sh` (and `build_tapAdj_adjViscBoost.sh` — the list is not
-  specific to the `_OG` staging), retire the `_nocheckpoint` pair, and
-  re-validate the adjViscBoost pairing once (31025 vs a tuned rerun). Port to
-  SOMA needs its own profile (`mods_profile/` is setup-agnostic; drop `-mpi`).
+- [x] ~~**Decide whether `build_tapAdj_nocheckpoint.sh` becomes the default
+  adjoint**~~ (added 2026-09-01 on branch `tapenade-profiling`, merged into
+  `main` 2026-09-02; **decided and done 2026-09-02**). Its 30-day run 31054 is
+  bitwise identical to the plain build's 31052 (`fc`, 32 `adxx_*`, 73 `ADJ*`)
+  and 1.5× faster (8:47 vs 13:13); at 5 years (31055 vs 31039) it is again
+  bitwise identical (fc, 32 `adxx_*`, 4 393 `ADJ*`) in 9:35:58 against
+  14:05:45 (1.47×, 4.5 h saved). What was done: `build_tapAdj.sh` /
+  `submit_tapAdj.sh` are now symlinks to the `_nocheckpoint` pair (kept under
+  its explicit name rather than retired, so every report and run name stays
+  true); the plain pair was renamed `build_tapAdj_ckpAll.sh` /
+  `submit_tapAdj_ckpAll.sh` (build directory `build_tapAdj_ckpAll/`); the list
+  was tried in `build_tapAdj_adjViscBoost.sh` and reverted the same day (next
+  item); every build script writes
+  `build_info.txt` and the submit scripts name run directories from its
+  `run_token`; all adjoint run directories on scratch were renamed to carry
+  the build token. **Still open below: the SOMA port.**
+
+- [x] ~~**adjViscBoost revalidation after the list fold-in**~~ (added and
+  **done 2026-09-02 — and it failed, informatively**). Job 31056
+  (`DINO_1deg_tapAdj_nocheckpoint_adjViscBoost_30d_from_rest_viscRef_run31056`,
+  boost + the list, 8:48) vs 31025 (boost, every call checkpointed, 13:19):
+  `fc` and all 441 `%MON` lines byte-identical, but all 66 `ADJ*` dumps and
+  all 8 real `adxx_*` gradients differ at order one (RMS ratio 0.3–0.9) —
+  where the plain pair is bitwise identical under the same list. Joint-mode
+  recomputation runs *after* `TAP_INADMODE_SET_B` has boosted the viscosities;
+  split-mode tapes were taken in the forward sweep at forward viscosities, so
+  the boost only reaches what the `_BWD` code reads live. The list was
+  removed from `build_tapAdj_adjViscBoost.sh` again (run token
+  `tapAdj_ckpAll_adjViscBoost`); 31056 stays on scratch as the record, report in
+  `analyses/DINO_1deg/03_adjoint/07_tapenade_profiling/compare_30d_adjViscBoost_run31025_vs_nocheckpoint_run31056.md`.
+  A faster boosted adjoint would need the boost applied to the taped
+  intermediates too (i.e. boosting the *forward* sweep's recorded viscosities,
+  which changes the forward trajectory) or a list restricted to routines whose
+  taped values do not depend on the boosted parameters — a study, not a flag.
+
+- [ ] **SOMA `-nocheckpoint` port needs its own profile** (added 2026-09-02).
+  `mods_profile/` is setup-agnostic; a SOMA profiling build is the DINO one
+  without `-mpi`. Until then SOMA's `build_tapAdj.sh` is a real script that
+  checkpoints every call, so the bare name means different things per setup.
 
 - [ ] **More binomial snapshots for the 5-year adjoint — only with more
   nodes, and for a small gain** (added 2026-09-01, corrected the same day).

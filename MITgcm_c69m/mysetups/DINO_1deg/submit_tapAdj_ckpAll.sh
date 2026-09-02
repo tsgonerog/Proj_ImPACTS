@@ -1,20 +1,18 @@
 #!/bin/bash
-# Submit the adjoint with ADJOINT-MODE VISCOSITY INFLATION.
-#                                  build_tapAdj_adjViscBoost/mitgcmuv_tap_adj
+# Submit the REFERENCE Tapenade adjoint (every call checkpointed).
+#                                  build_tapAdj_ckpAll/mitgcmuv_tap_adj
 #
-# Besides pointing at that build, this script replaces data.autodiff with
-# data.autodiff_adjViscBoost in the staged run directory, which is what actually
-# turns the inAd*/outAd* parameters on. Build and submit script are a pair -
-# neither works as intended without the other. The build checkpoints every
-# call, like build_tapAdj_ckpAll.sh -- the default build's -nocheckpoint list
-# is NOT equivalent under the boost (2026-09-02, run 31056 vs 31025; see the
-# build script) -- so its run directories are named tapAdj_ckpAll_adjViscBoost_*.
-#
+# Not the default: since 2026-09-02 ./submit_tapAdj.sh is a symlink to
+# submit_tapAdj_nocheckpoint.sh, whose build is bitwise identical to this one
+# and 1.5x faster. Use this pair for a timing baseline, or when a configuration
+# change has invalidated the -nocheckpoint list (see build_tapAdj_ckpAll.sh).
+# Until 2026-09-02 this file WAS submit_tapAdj.sh. Build and submit script are
+# a pair.
 # Run it with ../../../tools/submit.sh so the per-machine sbatch flags are added.
 #
 
-#SBATCH -J DINO_1deg_tapAdj_adjViscBoost     # Set main part of the job name once here
-#SBATCH -o logs/%x.%j.out                               # %x = job name, %j = job ID
+#SBATCH -J DINO_1deg_tapAdj_ckpAll     # job name: names the .out file (the run directory is named from build_info.txt)
+#SBATCH -o logs/%x.%j.out                      # %x = job name, %j = job ID
 # No -e: given only -o, sbatch sends both streams to that one file. The set -x
 # trace below is stderr, so it lands there. A separate .err was the only file
 # with content and the .out was empty on every job that ever ran.
@@ -45,7 +43,7 @@ impacts_load_modules
 # Set to "" for default (i.e., use input_tap/data)
 # IMPACTS_TEST_CASE overrides this per run. The `-` (not `:-`) is deliberate:
 # IMPACTS_TEST_CASE= selects the live input_tap/data, which `:-` would swallow.
-test_cases="${IMPACTS_TEST_CASE-}"
+test_cases="${IMPACTS_TEST_CASE-baseline/from180yrPk_visc2x}"
 
 # Build optional suffix from the tag: "_<tag>" if non-empty, otherwise empty
 # (avoids a trailing underscore). Only the LAST component of the tag is used:
@@ -65,7 +63,7 @@ suffix=${test_cases:+_${test_cases##*/}}
 # file under input_tap/ is never modified. The values here are the committed
 # defaults; override per run on the command line, which leaves the tree clean:
 #
-#     IMPACTS_DURATION_DAYS=3660 ../../../tools/submit.sh submit_tapAdj_adjViscBoost.sh
+#     IMPACTS_DURATION_DAYS=3660 ../../../tools/submit.sh submit_tapAdj_ckpAll.sh
 #
 simulation_duration_with_dT1800_days="${IMPACTS_DURATION_DAYS:-1830}"
 monitorFreq_days="${IMPACTS_MONITOR_FREQ_DAYS:-5}"
@@ -90,8 +88,9 @@ fi
 # Empty test_cases uses the live input_tap/data. Otherwise the tag names a file
 # under input_tap/variants/, in one of two forms:
 #
-#   <tag>               -> variants/data_<tag>              a loose configuration
-#   <experiment>/<tag>  -> variants/<experiment>/data_<tag> one member of a group
+#   <tag>               -> variants/data_<tag>              a standalone config
+#   <experiment>/<tag>  -> variants/<experiment>/data_<tag> one member of an
+#                                                           experiment
 #
 # Every variant now lives in a group; the bare form is kept so that a tag from
 # before the grouping, or a queued job's spooled script, still resolves.
@@ -141,7 +140,7 @@ fi
 # ========== PATHS & NAMES ==========
 
 base_dir="$SLURM_SUBMIT_DIR"    # directory from where the job was submitted
-build_dir="$base_dir/build_tapAdj_adjViscBoost"
+build_dir="$base_dir/build_tapAdj_ckpAll"
 
 # ---------- build identity: the run directory is named from what was built ----------
 # build_info.txt is written by the build script after all its checks pass and
@@ -203,17 +202,13 @@ if [[ -n "$variant_tag" ]]; then
     echo "staged sibling override: $(basename "$extra") -> $target"
   done
 fi
-rm data.autodiff
-cp "$base_dir/input_tap/variants/adjViscBoost/data.autodiff_adjViscBoost" data.autodiff
 
 # ---------- time stepping: patch the STAGED copy, not the tracked namelist ----------
-# This runs here, after the whole staging block, so the repo is never written to.
-# It matters for more than tidiness: this script body executes on the compute
-# node when the job STARTS, so a sed against $namelist_data would race any other
-# job that happens to start around the same time, and each run would stage
-# whichever value landed last while its run-directory name claimed its own.
-# Note test_cases is "" here, so $namelist_data IS the live input_tap/data --
-# this script had the shortest race window and the worst blast radius.
+# This runs here, after staging, so the repo is never written to. It matters for
+# more than tidiness: this script body executes on the compute node when the job
+# STARTS, so a sed against $namelist_data would race any other job that happens
+# to start around the same time, and each run would stage whichever value landed
+# last while its run-directory name claimed its own.
 # Convert each <name>_days → seconds and patch only the RHS value (keep commas/spaces).
 for name in "${time_params[@]}"; do
   eval days_val="\$${name}_days"
@@ -249,8 +244,9 @@ cp -p "$build_dir/mitgcmuv_tap_adj" .
 cp -p "$build_info" .
 
 #----- pickups ---------------
-#ln -s $SCRATCH_ROOT/DINO_1deg_frd_runs/runs_prod/crashed_runs/DINO_1deg_frd_200yr_from_rest_viscD2x_Zref_crashed_126p3y_run19369/pickup.0000878400.data pickup.0000878400.data
-#ln -s $SCRATCH_ROOT/DINO_1deg_frd_runs/runs_prod/crashed_runs/DINO_1deg_frd_200yr_from_rest_viscD2x_Zref_crashed_126p3y_run19369/pickup.0000878400.meta pickup.0000878400.meta
+ln -s $SCRATCH_ROOT/DINO_1deg_frd_runs/DINO_1deg_frd_200yr_from_rest_visc2x_run30983/pickup.0003162240.data pickup.0003162240.data
+
+ln -s $SCRATCH_ROOT/DINO_1deg_frd_runs/DINO_1deg_frd_200yr_from_rest_visc2x_run30983/pickup.0003162240.meta pickup.0003162240.meta
 
 # ========== RUN & TIMING ==========
 

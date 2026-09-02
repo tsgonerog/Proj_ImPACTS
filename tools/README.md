@@ -193,7 +193,12 @@ live `input_tap/data` rather than the committed variant.
 Output lands in two places: `<job-name>.<job-id>.{out,err}` in the setup
 directory (the `.err` is a full `set -x` trace of staging, which is where
 staging failures appear), and the run itself under
-`$SCRATCH_ROOT/DINO_1deg_tapAdj_runs/DINO_1deg_tapAdj_<duration>[_<tag>]_run<jobid>/`.
+`$SCRATCH_ROOT/DINO_1deg_tapAdj_runs/DINO_1deg_<run_token>_<duration>[_<tag>]_run<jobid>/`,
+where `run_token` (`tapAdj_<ckp>[_<variant>]`, e.g. `tapAdj_nocheckpoint`,
+`tapAdj_ckpAll`, `tapAdj_ckpAll_adjViscBoost`, `tapAdj_ckpAll_tapProfile`)
+is read from the build directory's `build_info.txt` — written by the build
+script, copied into the run directory — so the name records the build as well
+as the namelist, and a submit script cannot claim a build it did not get.
 The duration label is whole 366-day years as `<n>yr` and anything else as
 `<n>d`, so the default 1830 days becomes `5yr` and `IMPACTS_DURATION_DAYS=30`
 becomes `30d`; the tag is the **last component only** of `IMPACTS_TEST_CASE`, so
@@ -270,7 +275,7 @@ R=/scratch2/$USER/DINO_1deg_tapAdj_runs
 #  validation reports sit in each 31039-31046 run directory as
 #  comparison_vs_*.txt, ADJ* differing seam-only there by design)
 tools/compare_adj_runs.sh \
-  "$R/DINO_1deg_tapAdj_5yr_from180yrPk_visc2x_run28486" \
+  "$R/DINO_1deg_tapAdj_ckpAll_5yr_from180yrPk_visc2x_run28486" \
   "$R/DINO_1deg_tapAdj_5yr_from180yrPk_visc2x_run30995"
 echo "verdict: $?"          # 0 = equivalent
 #   EQUIVALENT: all 8116 sensitivity fields bit-identical, fc identical to every
@@ -282,13 +287,15 @@ echo "verdict: $?"          # 0 = equivalent
 cd MITgcm_c69m/mysetups/DINO_1deg
 jid=$(IMPACTS_DURATION_DAYS=30 ../../../tools/submit.sh submit_tapAdj.sh --parsable | tail -1)
 nohup ../../../tools/compare_adj_runs.sh --wait "$jid" \
-  "$R/DINO_1deg_tapAdj_30d_from180yrPk_visc2x_run31022" \
-  "$R/DINO_1deg_tapAdj_30d_from180yrPk_visc2x_run$jid" &
+  "$R/DINO_1deg_tapAdj_ckpAll_30d_from180yrPk_visc2x_run31022" \
+  "$R/DINO_1deg_tapAdj_nocheckpoint_30d_from180yrPk_visc2x_run$jid" &
+#   (submit_tapAdj.sh is the nocheckpoint default since 2026-09-02; its output
+#    is bitwise identical to the ckpAll runs, so this comparison still holds)
 
 # print only, keep the listings for a closer look (still in the setup directory)
 ../../../tools/compare_adj_runs.sh --no-report --work /tmp/cmp_31032 \
-  "$R/DINO_1deg_tapAdj_30d_from180yrPk_visc2x_run31022" \
-  "$R/DINO_1deg_tapAdj_30d_from180yrPk_visc2x_run31032"
+  "$R/DINO_1deg_tapAdj_ckpAll_30d_from180yrPk_visc2x_run31022" \
+  "$R/DINO_1deg_tapAdj_ckpAll_30d_from180yrPk_visc2x_run31032"
 ```
 
 A cleaner way to arrange the second one, without a background process holding
@@ -340,7 +347,7 @@ DINO adjoint variants restages `code_tap/`, so:
 ```bash
 cd MITgcm_c69m/mysetups/DINO_1deg
 ./build_tapAdj_adjViscBoost.sh
-./build_tapAdj.sh                    # re-stages code_tap/ back to the _OG variants
+./build_tapAdj.sh                    # re-stages code_tap/ back to the _OG variants (symlink -> _nocheckpoint)
 
 cd ../../..
 ./tools/pre_push_check.sh            # says whether the diff you see is yours
@@ -544,12 +551,12 @@ command line, at submission time.** There is no config file for them. Every
 occurrence in a script is a *read with a default*, never an assignment:
 
 ```bash
-# MITgcm_c69m/mysetups/DINO_1deg/submit_tapAdj.sh
-test_cases="${IMPACTS_TEST_CASE-baseline/from180yrPk_visc2x}"           # :36
-simulation_duration_with_dT1800_days="${IMPACTS_DURATION_DAYS:-1830}"   # :58
-monitorFreq_days="${IMPACTS_MONITOR_FREQ_DAYS:-5}"                      # :59
-adjMonitorFreq_days="${IMPACTS_ADJ_MONITOR_FREQ_DAYS:-5}"               # :60
-adjDumpFreq_days="${IMPACTS_ADJ_DUMP_FREQ_DAYS:-5}"                     # :61
+# MITgcm_c69m/mysetups/DINO_1deg/submit_tapAdj.sh -> submit_tapAdj_nocheckpoint.sh
+test_cases="${IMPACTS_TEST_CASE-baseline/from180yrPk_visc2x}"           # :43
+simulation_duration_with_dT1800_days="${IMPACTS_DURATION_DAYS:-1830}"   # :65
+monitorFreq_days="${IMPACTS_MONITOR_FREQ_DAYS:-5}"                      # :66
+adjMonitorFreq_days="${IMPACTS_ADJ_MONITOR_FREQ_DAYS:-5}"               # :67
+adjDumpFreq_days="${IMPACTS_ADJ_DUMP_FREQ_DAYS:-5}"                     # :68
 ```
 
 Every `IMPACTS_X=value` you find elsewhere in the repository is a documentation
@@ -640,7 +647,7 @@ source tools/machine_env.sh && impacts_check_env
 
 # 1. build the adjoint (the build script sources machine_env.sh itself)
 cd MITgcm_c69m/mysetups/DINO_1deg
-./build_tapAdj.sh                       # -> build_tapAdj/mitgcmuv_tap_adj
+./build_tapAdj.sh                       # -> build_tapAdj_nocheckpoint/mitgcmuv_tap_adj (symlink to the default variant)
 
 # 2. submit a cheap 30-day regression adjoint from the 180-yr pickup
 jid=$(IMPACTS_DURATION_DAYS=30 ../../../tools/submit.sh submit_tapAdj.sh --parsable | tail -1)
@@ -649,9 +656,11 @@ echo "submitted $jid"
 # 3. when it lands, bit-compare it against a run you trust
 R=$SCRATCH_ROOT/DINO_1deg_tapAdj_runs
 ../../../tools/compare_adj_runs.sh --wait "$jid" \
-  "$R/DINO_1deg_tapAdj_30d_from180yrPk_visc2x_run31022" \
-  "$R/DINO_1deg_tapAdj_30d_from180yrPk_visc2x_run$jid"
+  "$R/DINO_1deg_tapAdj_ckpAll_30d_from180yrPk_visc2x_run31022" \
+  "$R/DINO_1deg_tapAdj_nocheckpoint_30d_from180yrPk_visc2x_run$jid"
 #   -> writes comparison_vs_..._run31022.txt into the new run directory
+#      (the run_token in the name comes from build_info.txt; the default
+#       build is nocheckpoint, bitwise identical to the ckpAll reference)
 #      exit 0 = every ADJ*/adxx* bit-identical, fc and %MON identical
 
 # 4. before pushing, check what in the tree is actually yours

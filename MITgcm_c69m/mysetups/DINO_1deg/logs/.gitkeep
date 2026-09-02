@@ -1,0 +1,5 @@
+# SLURM writes each job's merged stdout+stderr here as <job-name>.<job-id>.out.
+#
+# This directory must exist before a job starts: sbatch fails a job outright
+# when its -o path is unwritable, often without leaving a log that says so.
+# tools/submit.sh mkdir -p's it, and this file keeps it in a fresh clone.

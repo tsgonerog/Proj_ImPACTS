@@ -1,4 +1,4 @@
-# Tapenade checkpointing profile: `/scratch2/tshahriar/DINO_1deg_tapAdj_runs/DINO_1deg_tapAdj_tapProfile_30d_from180yrPk_visc2x_run31053/tapenade_profile.0000.txt`
+# Tapenade checkpointing profile: `/scratch2/tshahriar/DINO_1deg_tapAdj_runs/DINO_1deg_tapAdj_ckpAll_tapProfile_30d_from180yrPk_visc2x_run31053/tapenade_profile.0000.txt`
 - peak tape (this rank): **0.923 GB**
 - 156 checkpoint locations, 116 distinct callees
 - summed time gain if none were checkpointed: 363 s CPU on this rank
