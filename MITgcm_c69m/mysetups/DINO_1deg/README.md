@@ -93,6 +93,8 @@ changing the starting point means editing both by hand.
 | `build_frd.sh` | `build_frd/` | `mitgcmuv` (forward only) |
 | `build_tapAdj.sh` | `build_tapAdj/` | `mitgcmuv_tap_adj` |
 | `build_tapAdj_adjViscBoost.sh` | `build_tapAdj_adjViscBoost/` | `mitgcmuv_tap_adj` |
+| `build_tapAdj_nocheckpoint.sh` | `build_tapAdj_nocheckpoint/` | `mitgcmuv_tap_adj` (profile-guided `-nocheckpoint`; see below) |
+| `build_tapAdj_tapProfile.sh` | `build_tapAdj_tapProfile/` | `mitgcmuv_tap_adj` (diagnostic: Tapenade checkpointing profiler) |
 
 The **unmarked** script is the working configuration; only deviations carry a
 token. Both adjoint scripts use **stock** `genmake2`: since the 2026-08-31
@@ -122,6 +124,37 @@ Building a second variant re-stages `code_tap/`, and build directories symlink
 back into it. Never run bare `make` in an older build directory afterwards —
 re-run its build script.
 
+### Profiling and checkpoint tuning
+
+Tapenade checkpoints every call inside a time step by default (store a
+snapshot, run the primal, re-run it recording inside the `_B` routine), and
+the re-run compounds with nesting depth. `build_tapAdj_tapProfile.sh` adds
+Tapenade's `-profile` — plus the runtime and reporting main program it needs,
+from `tools/tapenade_profiling/mods_profile/` — and its 30-day run writes a
+per-call-site table of the CPU time each checkpoint costs and the peak tape it
+would cost not to have it. For DINO (run 31053) that came to **45 % of the
+adjoint's CPU time**, almost all of it in routines whose split mode is
+memory-neutral or a memory gain (`timestep`, `forward_step`, `grad_sigma`,
+`mom_vecinv`, `calc_phi_hyd`, `thermodynamics`, …).
+
+`build_tapAdj_nocheckpoint.sh` acts on that: it passes the 33 routines in
+`code_tap/tap_nocheckpoint.txt` to Tapenade's `-nocheckpoint`, which
+differentiates them in split `_FWD`/`_BWD` mode instead, and refuses to finish
+unless every listed routine actually came out split. The time loop's binomial
+checkpointing (`C$AD BINOMIAL-CKP … 98 …` in `code_tap/the_main_loop.F`) is
+not involved. **Validated 2026-09-01: a 30-day run of this build (31054) is
+bitwise identical to the plain build's (31052) in `fc`, all 32 `adxx_*` and
+all 73 `ADJ*` files, and runs in 8:47 instead of 13:13 (1.5×).** The 5-year
+comparison against 31039 is run 31055. `tools/tapenade_profiling/README.md`
+has the method and the numbers;
+`analyses/DINO_1deg/03_adjoint/07_tapenade_profiling/` the records and the
+two scripts (`parse_tapenade_profile.py`, `compare_adjoint_runs.py`).
+
+The profiling build is a diagnostic — same numbers, 2 % slower — and the two
+new builds stage the plain (`_OG`) variants, so neither is an `adjViscBoost`
+build. A tuned adjViscBoost would be the adjViscBoost staging plus the same
+`-tap_extra`; nothing in the list is specific to the `_OG` variants.
+
 ## Run
 
 Commands are in **Quick start** above; this section covers what the scripts do.
@@ -131,6 +164,8 @@ Commands are in **Quick start** above; this section covers what the scripts do.
 | `submit_frd.sh` | `build_frd/` |
 | `submit_tapAdj.sh` | `build_tapAdj/` |
 | `submit_tapAdj_adjViscBoost.sh` | `build_tapAdj_adjViscBoost/` |
+| `submit_tapAdj_nocheckpoint.sh` | `build_tapAdj_nocheckpoint/` |
+| `submit_tapAdj_tapProfile.sh` | `build_tapAdj_tapProfile/` (30-day default; writes `tapenade_profile.NNNN.txt`) |
 
 A job leaves `<job-name>.<job-id>.out` and `.err` beside the submit script, in
 the setup directory. They are gitignored, and the scripts run under `set -x`, so
@@ -395,6 +430,7 @@ bare one** — the bare one is regenerated on every build and your edits vanish.
 | `addummy_for_etan.F` | same layout for `ADJetan`: upstream byte-for-byte + appended `TAP_DUMMY_FOR_ETAN_B`/`_D` |
 | `autodiff_inadmode_unset_ad.F` | leaves adjoint mode at each backward step's end (`_OG` / `_adapted_frm_aste_90x150x60` staged like its `set` sibling; the ASTE restore side is new — never ported while the mechanism was unreachable) |
 | `flow_tap_local` | Tapenade external library declaring the hooks' field arguments active; a second `-ext` alongside `tools/TAP_support/flow_tap` |
+| `tap_nocheckpoint.txt` | the routines `build_tapAdj_nocheckpoint.sh` passes to Tapenade's `-nocheckpoint` (split `_FWD`/`_BWD` mode instead of checkpointing), each annotated with the profiling-run gain that put it there — see "Profiling and checkpoint tuning" below |
 | `autodiff_readparms.F` | reads `data.autodiff` (`_OG` / `_aste_90x150x60` variants) |
 | `autodiff_inadmode_set_ad.F` | applies the `inAd*` parameters entering adjoint mode, at each backward step's start (reached via its `TAP_INADMODE_SET_B` wrapper) |
 | `AUTODIFF_PARAMS.h` | declares them (`_OG` has no `inAd*`; the ASTE variant adds them — this is what `build_tapAdj_adjViscBoost.sh` selects) |

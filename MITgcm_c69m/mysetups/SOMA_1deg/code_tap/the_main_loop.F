@@ -631,19 +631,21 @@ c--         choice of the 3-tupel ( nchklev_1, nchklev_2, nchklev_3 ).
             if ( iloop .le. nTimeSteps ) then
 
 #  else /* ALLOW_TAMC_CHECKPOINTING  undefined */
-C TANVIR---The immediate next line isn't a comment, it is implementing
-C binomial checkpointing for tapenade; fortran compilers will treat it
-C as a comment and ignore (that's why putting "C" before is crucial) but
-C tapenade won't ignore it|| why +1 in the 1st arg? =>
-C ans is tapenade considers exiting the timeloop as another step || 2nd
-C arg refers to the num of timesteps/snapshots we are storing in memory,
-C the more the better until the code crashes; this limit will keep
-C changing depending on the grid size of simulation, i.e., for finer
-C grid you will be able to store small number of snapshots in memory.
-C However, the ultimate limit is 98, this is the maximum we can go and
-C it is hardcoded in tapenade|| 3rd arg is the starting number of
-C iteration, should usually be 1.
 
+C--   Tapenade binomial checkpointing of the time loop (Griewank and
+C     Walther revolve schedule). The BINOMIAL-CKP line below is a
+C     Tapenade directive, not a comment: the Fortran compiler ignores
+C     it, Tapenade does not, and it must immediately precede the DO
+C     statement. Its three arguments are
+C       1. the number of steps, counting the iteration in which the
+C          loop exits, hence nTimeSteps+1 (Tapenade FAQ, BINOMIAL-CKP);
+C       2. the maximum number of step snapshots held in memory at once.
+C          More snapshots mean fewer primal re-runs, at the cost of one
+C          snapshot of memory each. 98 is the hard cap accepted by
+C          pkg/tapenade/adBinomial.c; a larger value fails at run time;
+C       3. the index of the first step (an offset; keep at 1).
+C     Without this directive Tapenade keeps one snapshot per time step
+C     for the whole run, which exceeds memory after a few model days.
 C$AD BINOMIAL-CKP nTimeSteps+1 98 1
       DO iloop = 1, nTimeSteps
 
@@ -654,10 +656,9 @@ c++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 c++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 #ifndef ALLOW_AUTODIFF
-C SHAHRIAR---If binomial checkpointing is properly working, I should not
-C see the line after SHAHRIAR in "the_main_loop.f" in the build
-C directory
-
+C     Canary, compiled out of every adjoint build (ALLOW_AUTODIFF is
+C     defined there). If this directive shows up in the build directory
+C     the_main_loop.f, the build has lost ALLOW_AUTODIFF.
 C$AD BINOMIAL-CKP nTimeSteps+1 5 1
       DO iloop = 1, nTimeSteps
 #endif /* ALLOW_AUTODIFF */

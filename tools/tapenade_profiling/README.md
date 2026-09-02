@@ -1,151 +1,308 @@
 # Tapenade profiling and checkpoint tuning
 
-Two capabilities that were carried in checkpoint69f as patched `genmake2` copies
-and are **not currently wired into any build script here**. This directory holds
-what you need to use them on c69m, plus the c69f originals for reference.
+How to find out where the Tapenade adjoint spends its recomputation, and how to
+trade that recomputation for tape memory with `-nocheckpoint`. Both were carried
+in checkpoint69f as patched `genmake2` copies; on c69m they are plain Tapenade
+flags passed through `genmake2 -tap_extra`, and **both are wired into DINO's
+build scripts and verified end to end as of 2026-09-01** (branch
+`tapenade-profiling`). The numbers below are DINO's; the mechanics apply to any
+setup.
 
-Neither is needed for a normal adjoint build. Reach for them when the adjoint is
-too slow or uses too much memory.
-
-> **Untested on c69m.** The recipes below were derived by reading c69m's
-> `genmake2` and the c69f patches they replace — no profiling build has been run
-> against c69m. The `-tap_extra` option and the `adProfile.c` gap are verified by
-> inspection; the exact quoting of a `-nocheckpoint` list through `genmake2` into
-> the make rule is not. Expect to iterate on first use.
-
----
-
-## The short version
-
-On c69m you do **not** need a patched `genmake2` for either of these. c69m's
-`genmake2` accepts `-tap_extra`, whose contents are passed straight through to
-the Tapenade command line (`MITgcm/tools/genmake2:1568`, and the rule at `:3751`
-that expands `$(TAP_EXTRA)`). That option did not exist in c69f, which is why
-the capability had to be patched in back then.
-
-| Want | c69m | c69f did |
+| Want | Script (DINO) | Tapenade flag it adds |
 | --- | --- | --- |
-| profile the adjoint | `genmake2 … -tap_extra "-profile"` (+ see the `adProfile.c` gap below) | `patched_ForTapProfile_genmake2` |
-| skip checkpointing on chosen routines | `genmake2 … -tap_extra '-nocheckpoint "…"'` | `patched_AfterTapProfile_genmake2` |
+| profile the adjoint's checkpoints | `build_tapAdj_tapProfile.sh` + `submit_tapAdj_tapProfile.sh` | `-profile`, plus the `mods_profile/` runtime |
+| stop checkpointing chosen routines | `build_tapAdj_nocheckpoint.sh` + `submit_tapAdj_nocheckpoint.sh` | `-nocheckpoint "<code_tap/tap_nocheckpoint.txt>"` |
+
+Neither is needed for a plain adjoint build. The first is a diagnostic; the
+second is a production build whose adjoint is mathematically the plain one.
 
 ---
 
-## 1. Profiling — what costs what
+## What is being traded
 
-Tapenade's `-profile` instruments the generated adjoint so that at run time it
-reports, per routine, how much tape/stack it pushes and how often it is called.
-That tells you where the adjoint's memory actually goes, which is the input to
-step 2.
+Tapenade's reverse mode **checkpoints every procedure call by default** ("joint"
+mode). For `CALL F(...)` inside a differentiated routine it stores a snapshot of
+what `F` overwrites, runs the primal `F`, and in the backward sweep restores the
+snapshot and calls `F_B`, which re-runs `F`'s body *recording* before running
+its adjoint. So `F`'s primal executes twice — and the re-execution compounds
+with nesting: a routine three calls deep runs its primal four times. Memory
+stays small, because `F`'s tape exists only while `F_B` runs.
 
-Adapt the build script's `genmake2` line by hand:
+`-nocheckpoint "f g"` switches the named routines to "split" mode: Tapenade
+generates `F_FWD` (primal + recording, run once in the enclosing forward sweep)
+and `F_BWD` (the adjoint, run in the backward sweep). No re-execution, but
+`F`'s tape now lives from the forward sweep until the backward sweep reaches it.
+Within one MITgcm time step that is a bounded amount of memory; the peak grows
+by at most one step's worth of tape, however many inner routines are switched.
 
-```bash
-"$MITGCM_ROOT/tools/genmake2" -mpi -tap \
-    -tap_extra "-profile -ext ../code_tap/flow_tap_local" \
-    -rd="$MITGCM_ROOT" \
-    -of="$MPI_OPTFILE" \
-    -mods=../code_tap \
-    -adof="$MITGCM_ROOT/tools/adjoint_options/adjoint_tap"
-```
-
-Two things about these command lines since the 2026-08-31 dump-hook redesign:
-both setups use **stock** `genmake2` (`genmake2_override_forward_step_b` was
-deleted when SOMA converted), and genmake2's `-tap_extra` **overwrites**
-rather than appends on repeat, so the profiling flag and the setup's
-`-ext ../code_tap/flow_tap_local` (which generates the `ADJ*` dump call) must
-share a single `-tap_extra` as shown — in SOMA drop the `-mpi` and use
-`$SERIAL_OPTFILE`.
-
-### The one real gap: `adProfile.c`
-
-`-profile` makes Tapenade emit calls to `profileline_`, `printprofile_` and
-`halt_`. Those live in `tools/TAP_support/ADFirstAidKit/adProfile.c`, which c69m
-ships but **does not expose to the build**: `pkg/tapenade/` symlinks
-`adBinomial.c`, `adFixedPoint.c` and `adStack.c`, and not `adProfile.c`. Without
-it the link fails on undefined references to those symbols.
-
-Fix it the same way the other three are done:
-
-```bash
-cd MITgcm_c69m/MITgcm/pkg/tapenade
-ln -s ../../tools/TAP_support/ADFirstAidKit/adProfile.c adProfile.c
-```
-
-This is a change to the vendored tree — see "How the vendored tree deviates" in
-`CLAUDE.md`, and add it there if you make it permanent.
-
-### What the c69f patch did that you should NOT copy
-
-It also compiled the ADFirstAidKit with `-D_ADSTACKPROFILE -D_ADSTACKPREFETCH`.
-**Those macros appear nowhere in the ADFirstAidKit — not in c69m and not in c69f
-either.** They were inert then and are inert now. Ignore them.
+**The time loop is a separate mechanism and is not touched by any of this.**
+DINO's `code_tap/the_main_loop.F` carries `C$AD BINOMIAL-CKP nTimeSteps+1 98 1`
+in front of the time loop (`ALLOW_TAMC_CHECKPOINTING` is `#undef` in
+`AUTODIFF_OPTIONS.h`, so the TAF multi-level loops are compiled out). Tapenade
+turns that into Griewank–Walther binomial checkpointing over `MAIN_DO_LOOP`:
+at most 98 step snapshots in memory, each step re-run a bounded number of times
+(≤ 2 extra for a 30-day / 1440-step run, ≤ 3 for the 5-year / 87 840-step
+run). Every checkpoint *inside* a step — the 213 routines the generated code
+calls as `X_B` — is a joint-mode Tapenade checkpoint, and those are what the
+profile ranks and `-nocheckpoint` acts on.
 
 ---
 
-## 2. `-nocheckpoint` — trading recomputation for memory
+## 1. Profiling — `build_tapAdj_tapProfile.sh`
 
-Tapenade checkpoints by default: it stores intermediate state on the tape so the
-reverse sweep can read it back. For routines that are cheap to recompute but
-store a lot, that is the wrong trade. `-nocheckpoint` names those routines so
-Tapenade recomputes them instead.
+### What `-profile` does
 
-This is what you do *after* reading a profile — hence the old `AfterTapProfile`
-name. Applying it blind is guesswork.
+`-profile` is a hidden Tapenade option (`tapenade -help` does not list it;
+`Tapenade.java:hiddenHelp()` does, as "Adds memory and CPU profiling calls").
+Around every checkpointed call in the generated adjoint Tapenade emits
 
-`nocheckpoint_routines.txt` in this directory holds the **64 routines** the c69f
-work settled on, one per line. To use it:
-
-```bash
-NOCP=$(tr '\n' ' ' < ../../tools/tapenade_profiling/nocheckpoint_routines.txt)
-"$MITGCM_ROOT/tools/genmake2" -mpi -tap \
-    -tap_extra "-nocheckpoint \"$NOCP\" -ext ../code_tap/flow_tap_local" \
-    -rd="$MITGCM_ROOT" -of="$MPI_OPTFILE" -mods=../code_tap \
-    -adof="$MITGCM_ROOT/tools/adjoint_options/adjoint_tap"
+```
+CALL ADPROFILEADJ_SNPWRITE('thermodynamics'//CHAR(0), 'forward_step.f'//CHAR(0), 750)
+CALL PUSHREAL8ARRAY(...)                              <- the snapshot
+CALL ADPROFILEADJ_BEGINADVANCE(...)
+CALL THERMODYNAMICS(...)                              <- primal
+CALL ADPROFILEADJ_ENDADVANCE(...)
+...
+CALL ADPROFILEADJ_SNPREAD(...)
+CALL POPREAL8ARRAY(...)
+CALL ADPROFILEADJ_BEGINREVERSE(...)
+CALL THERMODYNAMICS_B(...)
+CALL ADPROFILEADJ_ENDREVERSE(...)
 ```
 
-**Treat that list as a starting point, not an answer.** It was derived from a
-profiling run of a *c69f* configuration — a different checkpoint, and not
-necessarily this grid or this control set. Re-profile before trusting it.
+plus `ADPROFILEADJ_TURN` at every `_B` routine's turn point (where its tape
+peaks). The runtime behind these calls is `ADFirstAidKit/adProfile.c` — the
+**2024 rewrite** shipped with the installed Tapenade (3.16 develop,
+2025-12-05). It keeps a tree of the checkpoints currently open and, as each
+`ENDREVERSE` closes one, folds its measurements upward so that at the end it
+knows, **per static call site**, how much CPU time the run would have saved by
+not checkpointing that site (`DeltaT`, summed over every dynamic occurrence)
+and how much the adjoint's *peak* tape would have grown (`DeltaPk`).
 
-The original embedded the list inline in the genmake2 copy and repeated three
-entries (`calc_3d_diffusivity` three times, `exch_xy_rl` and `gad_calc_rhs`
-twice); the file here is deduplicated and sorted, 68 entries down to 64.
-Duplicates were harmless, just noise.
+Two things c69m does not provide, hence `mods_profile/`:
+
+- c69m vendors a **2021** `adProfile.c` with a different API
+  (`profileline_`/`printprofile_`) and does not compile it anyway —
+  `pkg/tapenade/` symlinks only `adStack.c`, `adBinomial.c`, `adFixedPoint.c`.
+  The new runtime must link, so `mods_profile/` carries a verbatim copy of the
+  installed Tapenade's `adProfile.c`/`.h`. It needs only
+  `adStack_getCurrentStackSize()`, which the vendored `adStack.c` has.
+- Tapenade instruments the checkpoints but never emits the final report call.
+  `mods_profile/the_model_main.F` (upstream byte-for-byte plus an additive
+  `#ifdef ALLOW_TAPENADE` block) calls `ADSTACK_SHOWPEAKSIZE`,
+  `ADSTACK_SHOWTOTALTRAFFIC` and `ADPROFILEADJ_SHOWPROFILESFILE` after
+  `THE_MAIN_LOOP_B`, writing `tapenade_profile.NNNN.txt` per MPI process.
+
+`build_tapAdj_tapProfile.sh` lists `mods_profile/` **before** `../code_tap` in
+`-mods` so both files shadow, and passes
+`-tap_extra "-profile -ext ../code_tap/flow_tap_local"` — one `-tap_extra`,
+because genmake2 overwrites it on repeat and the `-ext` is what generates the
+`ADJ*` dump-hook call. After `make` it asserts the hook argument counts (as
+`build_tapAdj.sh` does), that `forward_step_b.f` carries `ADPROFILEADJ_*`
+calls, that the compiled `the_model_main.f` is the profiling variant, and that
+`adProfile.o` exists. The whole build takes about six minutes.
+
+`-profile` coexists with the binomial time loop: the generated
+`the_main_loop_b.f` wraps the `MAIN_DO_LOOP` snapshots in the same
+`SNPWRITE`/`SNPREAD` calls inside the revolve schedule, and a toy
+binomial-loop test ran to completion with the table written (asserts in
+`adProfile.c` are live, so a schedule the profiler could not follow would abort
+rather than mislead).
+
+### Running it and reading the table
+
+```bash
+cd MITgcm_c69m/mysetups/DINO_1deg
+./build_tapAdj_tapProfile.sh
+../../../tools/submit.sh submit_tapAdj_tapProfile.sh      # 30 days by default
+```
+
+The run directory (`DINO_1deg_tapAdj_tapProfile_30d_..._run<id>`) gets
+`tapenade_profile.0000.txt` … `.0026.txt`; every process does the same work,
+so read rank 0's. `output_tap_adj.txt` additionally carries each process's
+`Peak stack size` and `Total push/pop traffic` lines. The table looks like
+
+```
+PEAK STACK:<bytes>
+SUGGESTED NOCHECKPOINTs:
+ * Peak memory gain:
+  - Time gain -NN.000 s. and peak memory gain -<b>b for call <callee> (<n> times), at location#<k>: line <l> of file <f>
+ * Peak memory neutral:
+  - Time gain -NN.000 s. at peak memory cost zero for call ...
+ * Peak memory cost:
+  - Time gain -NN.000 s. at peak memory cost <MB> Mb for call ...
+```
+
+sorted, within the last section, by time gain per byte of peak-memory cost.
+Read it with these caveats:
+
+- **Time gains are truncated to whole seconds** (`showOneCostBenefit`
+  integer-divides by `CLOCKS_PER_SEC` before printing), so a call site has to
+  save more than 1 s over the run to register at all. That is why the default
+  profiling length is 30 days (~14 min of adjoint): a 5-day run prints mostly
+  zeros. 30 days is representative for the per-step routines, which is
+  everything `-nocheckpoint` can act on; the binomial schedule differs at 5
+  years but that is not what is being tuned.
+- `DeltaT` is `clock()` CPU time of **one process**; with 27 ranks doing the
+  same work the wall-clock saving is roughly the same number, not 27× it.
+- A `-nocheckpoint` decision is per **callee**, the table is per **call
+  site**. `analyses/DINO_1deg/03_adjoint/07_tapenade_profiling/parse_tapenade_profile.py`
+  aggregates the sites by callee, ranks them, and can propose a list under a
+  peak-memory budget (`--budget-mb`). Summing sites' `DeltaPk` is an upper
+  bound on the joint memory cost, since peaks need not coincide.
+- The profiled executable is **slower** than the plain one (a `clock()` call
+  per checkpoint event) and must not be used for runtime comparisons.
 
 ---
 
-## `c69f_originals/`
+## 2. `-nocheckpoint` — `build_tapAdj_nocheckpoint.sh`
 
-`patched_ForTapProfile_genmake2` and `patched_AfterTapProfile_genmake2`, copied
-verbatim from `Proj_ImPACTS_old/MITgcm_c69f/MITgcm/tools/` on 2026-08-20.
+Verified facts about this Tapenade build (3.16 develop, 2025-12-05), from a
+toy program and from the DINO build:
 
-**They do not work on c69m and must not be dropped into `MITgcm/tools/`.** They
-are full copies of the *c69f* `genmake2`, which differs from c69m's by ~200
-lines, so installing one silently regresses the build tool by a checkpoint. Two
-of their three patch sites no longer exist in c69m: the Tapenade command was
-hardcoded in c69f and is parameterised via `$(TAP_EXTRA)`/`$(TAPENADE_FLAGS)`
-now, and the explicit `${TAPTOOLS}/ADFirstAidKit/*.c` source list is gone.
+- `-nocheckpoint "a b c"` is accepted (also hidden from `-help`; the accepted
+  spellings are `-nocheckpoint`/`-split` and their inverse
+  `-checkpoint`/`-joint`, plus `-defaultnocheckpoint` to make split the
+  default). Tapenade confirms it on stderr as `@@ Options:  split(a b c)` and
+  generates `A_FWD`/`A_BWD` pairs.
+- The list passes through genmake2 intact: `-tap_extra` is written verbatim
+  into the Makefile's `TAP_EXTRA`, and the shell that runs the recipe hands
+  Tapenade the quoted list as one argument (checked with an argv-echo stub).
+- The directive form `C$AD NOCHECKPOINT` placed **before a call** works and is
+  per call site; placed before the callee's `SUBROUTINE` line, as the Tapenade
+  FAQ also allows, it had **no effect** in the toy test with this build. The
+  command-line option is the one to use here anyway: it needs no shadow copies
+  of upstream files.
+- A name Tapenade does not know, or a routine it never checkpoints, is
+  ignored silently. `build_tapAdj_nocheckpoint.sh` therefore greps the
+  generated `*_b.f` for a `SUBROUTINE <NAME>_FWD(` per listed routine and
+  fails the build if any is missing.
 
-They are kept because they are the record of what was actually tried — in
-particular the `-nocheckpoint` list, which is extracted above. Each differs from
-its c69f `genmake2` by only a handful of lines; to see exactly what a variant
-did:
+The list lives in `code_tap/tap_nocheckpoint.txt` (one lower-case name per
+line, `#` comments allowed) beside `flow_tap_local`, the setup's other
+Tapenade input. The build script joins it into
+`-tap_extra "-nocheckpoint \"<list>\" -ext ../code_tap/flow_tap_local"`.
+
+What a split routine must satisfy is the same as what a checkpointed one must:
+be re-entrant and free of hidden state (the Tapenade FAQ's warning about I/O
+inside checkpointed code cuts both ways). Everything inside a DINO time step
+already passes that test under joint mode, and the hand-written hook adjoints
+(`TAP_DUMMY_IN_STEPPING_B` and friends) are `-ext` externals, which
+`-nocheckpoint` does not touch.
+
+---
+
+## 3. What the DINO profile said, and what was done with it
+
+Runs of 2026-09-01, all 27-rank, `baseline/from180yrPk_visc2x`; records in
+`analyses/DINO_1deg/03_adjoint/07_tapenade_profiling/`.
+
+**Profile (run 31053, 30 days, rank 0; 809 s of adjoint).** Peak tape 923 MB
+per process. 156 checkpoint locations, 116 callees. Checkpointing costs
+**363 s of CPU per process — 45 % of the run**, and the top twelve callees
+carry 308 s of it:
+
+| callee | gain [s] | Δ peak tape | | callee | gain [s] | Δ peak tape |
+| --- | --- | --- | --- | --- | --- | --- |
+| `timestep` | 75 | −31.1 MB | | `do_oceanic_phys` | 17 | +28.9 MB |
+| `forward_step` | 71 | 0 | | `integrate_for_w` | 13 | 0 |
+| `grad_sigma` | 37 | 0 | | `dynamics` | 12 | +9.3 MB |
+| `mom_vecinv` | 22 | −0.2 MB | | `salt_integrate` | 9 | 0 |
+| `calc_phi_hyd` | 21 | −8.6 MB | | `temp_integrate` | 8 | +1.9 MB |
+| `thermodynamics` | 18 | 0 | | `do_fields_blocking_exchanges` | 5 | −1.1 MB |
+
+The per-level routines (`timestep`, `grad_sigma`, `calc_phi_hyd`,
+`integrate_for_w`, `mom_vecinv` — 36 calls per step each) dominate because in
+joint mode Tapenade snapshots the *whole* 3-D arrays they touch on every
+per-level call; split mode records only what each call overwrites, which is
+why their memory column is a gain. The step-level routines (`forward_step`,
+`thermodynamics`, `dynamics`, `do_oceanic_phys`, `temp/salt_integrate`) gain
+by not re-running their primal once more per nesting level. Everything that
+costs memory sums to ~54 MB per process, so memory never constrained the
+choice. `main_do_loop` shows up at a peak cost of 11.3 GB — the binomial level,
+the whole run's tape, correctly left alone.
+
+**The list** (`code_tap/tap_nocheckpoint.txt`): every callee with a measured
+gain ≥ 1 s except the externals `cg2d` and `exch2_rl1_cube` (declared in
+`flow_tap`; no source to split) — 33 routines, 357 of the 363 s. The
+build confirmed all 33 went split (`@@ Options: split(...)`, 33 `_FWD`
+routines) with the four hook calls intact.
+
+**Validation, 30 days on the same node (31054 vs plain 31052):** wall time
+**8:47 vs 13:13 (1.505×, −33.5 %)**; `fc` identical; **32/32 `adxx_*` and
+73/73 `ADJ*` files bitwise identical.** Two plain runs (31032, 31052) are also
+bitwise identical, so the test has teeth. The 2 % profiler overhead (31053 ran
+13:29) confirms the profile itself did not distort the ranking.
+
+**5 years (31055 vs 31039, 14:05:45):** _running; result appended below when
+done. Expect a somewhat smaller relative saving: at 87 840 steps the binomial
+schedule re-runs each step up to three primal times (two at 1 440), and those
+re-runs are outside `-nocheckpoint`'s reach._
+
+**Against the c69f list.** `nocheckpoint_routines.txt` (64 routines) shares
+8 with the new list (`calc_3d_diffusivity`, `exch_xy_rl`, `find_rho_2d`,
+`gad_calc_rhs`, `gmredi_calc_tensor_dummy`, `impldiff`, `mom_calc_visc`,
+`solve_pentadiagonal`) and none of the top twelve; under this profile it would
+have recovered 21 s of the 363 s. It was a memory-motivated list for a
+different configuration and checkpoint — keep it as history, not as input.
+
+---
+
+## Other levers, deliberately not pulled
+
+- **The binomial snapshot count.** `C$AD BINOMIAL-CKP nTimeSteps+1 98 1` caps
+  the time loop at 98 step snapshots, and **98 is a genuine hard limit**: the
+  vendored `pkg/tapenade/adBinomial.c` that every build compiles sizes its
+  bookkeeping for 99 entries (`stack2[297]`) and rejects `nbSnap > 98` in
+  `adBinomial_init` — it prints `Binomial-Checkpointing memory exceeded` and,
+  unlike the installed 3.16-v2 copy (which exits), carries on with an
+  uninitialised schedule, i.e. crashes. Raising it means shadowing
+  `adBinomial.c` through `-mods` with larger arrays, the way `mods_profile/`
+  shadows `adProfile.c`. A `MAIN_DO_LOOP` snapshot is the 107 arrays pushed
+  before the call in `the_main_loop_b.f` (39 3-D fields of 25×30×36 doubles,
+  66 2-D, two scalars): **8.98 MB per process**. 98 of them are 880 MB of the
+  923 MB `PEAK STACK`, and the schedule always holds all 98 at once. With 98
+  snapshots a 5-year run (87 841 steps) re-runs each step 2.94 times as a plain
+  primal on average, at most 3 (C(101,3) = 166 650 ≥ 87 842); getting the
+  maximum down to 2 needs C(s+2,2) ≥ 87 842, i.e. s = 418 snapshots — 3.8 GB
+  per process, ~109 GB for 27 ranks, so three nodes instead of one. The gain
+  would be small anyway: a primal step costs 0.034 s (forward runs 30996 and
+  30983) against 0.48 s per recorded-plus-adjoint step (0.30 s in the
+  `-nocheckpoint` build), so the binomial re-runs are 12 % of the 30-day and
+  17 % of the 5-year wall time; 418 snapshots would save about 47 min of the
+  14 h, and the largest count that fits on one node (~160) about 5 min.
+  (Numbers from replaying Tapenade's own `adBinomial.c` schedule for DINO's
+  step counts, 2026-09-01.) Not done here: it changes the reverse schedule of
+  the whole run, so it cannot be validated on a 30-day run the way a per-step
+  change can, and the per-step cost is the lever that matters.
+- **`-defaultnocheckpoint`** (split everything, then `-checkpoint` the
+  exceptions) is the TAF-like configuration: no recomputation inside a step at
+  all. It is the limit the profile-guided list approaches; the list form was
+  preferred because each entry is justified by a measured gain.
+
+---
+
+## `c69f_originals/` and `nocheckpoint_routines.txt`
+
+`patched_ForTapProfile_genmake2` and `patched_AfterTapProfile_genmake2`,
+copied verbatim from `Proj_ImPACTS_old/MITgcm_c69f/MITgcm/tools/` on
+2026-08-20, are the record of how checkpoint69f did this: full copies of the
+*c69f* `genmake2` with the Tapenade flags hard-wired into the make rule (and a
+`cp ../code_tap/forward_step_b.f_modified` post-edit that the 2026-08-31 hook
+redesign made unnecessary). **They do not work on c69m and must not be dropped
+into `MITgcm/tools/`** — c69m's `genmake2` differs by ~200 lines and
+parameterises the Tapenade command through `$(TAP_EXTRA)`. To see exactly what
+a variant did:
 
 ```bash
 OLD=/home/tshahriar/backups_and_resources/Proj_ImPACTS/02_20260817_Proj_ImPACTS_old_c69f_tree/MITgcm_c69f/MITgcm/tools
 diff "$OLD/genmake2" tools/tapenade_profiling/c69f_originals/patched_ForTapProfile_genmake2
 ```
 
-`Proj_ImPACTS_old` also holds `patched_AfterTapProfile_genmake2_old`, an earlier
-revision, not copied here.
+They also compiled the ADFirstAidKit with `-D_ADSTACKPROFILE -D_ADSTACKPREFETCH`;
+those macros appear nowhere in the kit, then or now, and were inert.
 
-## Reviving the build-script path
-
-`build_tapAdj.sh` and friends still carry a `use_TapProfile` switch with `NO` /
-`YES` / `AFTER` branches, where `YES` and `AFTER` name the two c69f files by
-their original names and fail. If you make profiling routine, that block is
-better replaced by a single `TAP_EXTRA` variable passed through to `genmake2`
-than by recreating the old three-way file selection. The `YES` branch also stages
-`code_tap/the_model_main.F_ForTapProfile`, which lives in each setup's
-`00_archive/code_tap/` (both DINO's and SOMA's copies were archived there)
-and would need copying back into `code_tap/` first.
+`nocheckpoint_routines.txt` is the 64-routine list the c69f work settled on
+(deduplicated from the 68 entries embedded in `patched_AfterTapProfile_genmake2`).
+It came from a *c69f* profile of a different configuration; section 3 records
+how it compares with what the c69m profile found.

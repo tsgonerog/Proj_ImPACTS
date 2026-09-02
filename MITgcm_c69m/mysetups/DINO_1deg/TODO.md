@@ -26,3 +26,27 @@
   `TAP_*` hooks (validated end to end, run 31025) and
   `build_tapAdj_rawTapenade.sh` was retired — raw Tapenade output *is* the
   working configuration now, so DINO has no control build to keep current.
+
+- [ ] **Decide whether `build_tapAdj_nocheckpoint.sh` becomes the default
+  adjoint** (added 2026-09-01, branch `tapenade-profiling`). Its 30-day run
+  31054 is bitwise identical to the plain build's 31052 (`fc`, 32 `adxx_*`,
+  73 `ADJ*`) and 1.5× faster (8:47 vs 13:13); the 5-year comparison is run
+  31055 vs 31039 (14:05:45). If adopted: fold the `-tap_extra` list into
+  `build_tapAdj.sh` (and `build_tapAdj_adjViscBoost.sh` — the list is not
+  specific to the `_OG` staging), retire the `_nocheckpoint` pair, and
+  re-validate the adjViscBoost pairing once (31025 vs a tuned rerun). Port to
+  SOMA needs its own profile (`mods_profile/` is setup-agnostic; drop `-mpi`).
+
+- [ ] **More binomial snapshots for the 5-year adjoint — only with more
+  nodes, and for a small gain** (added 2026-09-01, corrected the same day).
+  `C$AD BINOMIAL-CKP nTimeSteps+1 98 1` re-runs each step up to three times at
+  87 841 steps; 418 snapshots would bring that to two. But 98 is a hard cap in
+  the vendored `pkg/tapenade/adBinomial.c` (`nbSnap > 98` fails in
+  `adBinomial_init`), so going higher needs a `-mods` shadow of that file with
+  larger arrays; a `MAIN_DO_LOOP` snapshot is 8.98 MB per process (107
+  arrays), so 418 of them are 3.8 GB per rank, ~109 GB for 27 ranks — three
+  nodes, not one; and the binomial re-runs are only 17 % of the 5-year wall
+  time (primal step 0.034 s vs 0.48 s per adjoint turn), so the whole exercise
+  saves about 47 min of 14 h. It also changes the reverse schedule of the whole
+  run and can only be validated at full length. Details under "Other levers" in
+  `tools/tapenade_profiling/README.md`.

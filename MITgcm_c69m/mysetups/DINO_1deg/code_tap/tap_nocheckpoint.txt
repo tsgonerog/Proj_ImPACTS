@@ -1,0 +1,49 @@
+# Routines Tapenade must NOT checkpoint (differentiate in split _FWD/_BWD mode).
+# Read by build_tapAdj_nocheckpoint.sh and passed as  -nocheckpoint "<names>".
+# One name per line, lower case; '#' starts a comment.
+#
+# Selection rule: every callee whose measured time gain in the 30-day
+# profiling run 31053 (build_tapAdj_tapProfile.sh, rank 0, 809 s of adjoint)
+# was >= 1 s, except Tapenade externals (cg2d, exch2_rl1_cube and the
+# TAP_* hooks have no source to split). Gains below 1 s print as zero in the
+# profile and were left out. The annotations are that run's numbers per
+# process: time saved over the run, and change in the adjoint's PEAK tape
+# ("free" = neutral or a memory gain). Sum: ~357 s of the 363 s the profile
+# attributes to checkpointing, at a summed peak-memory cost bound of ~54 MB
+# against a 923 MB peak. Re-profile before editing; see
+# tools/tapenade_profiling/README.md.
+#
+# name                          gain [s]   peak-memory change
+timestep                      #   75      -31.1 MB (gain)
+forward_step                  #   71      neutral
+grad_sigma                    #   37      neutral
+mom_vecinv                    #   22      -0.2 MB (gain)
+calc_phi_hyd                  #   21      -8.6 MB (gain)
+thermodynamics                #   18      neutral
+do_oceanic_phys               #   17      +28.9 MB
+integrate_for_w               #   13      neutral
+dynamics                      #   12      +9.3 MB
+salt_integrate                #    9      neutral
+temp_integrate                #    8      +1.9 MB
+do_fields_blocking_exchanges  #    5      -1.1 MB (gain)
+calc_adv_flow                 #    4      -0.9 MB (gain)
+exch_xy_rl                    #    4      neutral
+update_surf_dr                #    4      -1.3 MB (gain)
+kpp_calc_dummy                #    4      neutral
+mom_calc_visc                 #    4      neutral
+impldiff                      #    4      +0.2 MB
+gad_advection                 #    4      +5.8 MB
+do_stagger_fields_exchanges   #    3      -1.1 MB (gain)
+solve_pentadiagonal           #    3      neutral
+gad_calc_rhs                  #    2      neutral
+find_rho_2d                   #    2      neutral
+solve_for_pressure            #    2      neutral
+ctrl_map_forcing              #    1      neutral
+load_fields_driver            #    1      -0.1 MB (gain)
+momentum_correction_step      #    1      neutral
+calc_3d_diffusivity           #    1      +0.2 MB
+gad_dst3fl_adv_x              #    1      neutral
+gad_dst3fl_adv_y              #    1      neutral
+gmredi_calc_tensor_dummy      #    1      neutral
+integr_continuity             #    1      +7.6 MB
+gad_dst3fl_impl_r             #    1      +0.4 MB

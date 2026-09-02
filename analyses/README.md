@@ -29,7 +29,9 @@ analyses/
 │       ├── 02_5yr_from_50yr_pickup_viscD2x_Zref.ipynb
 │       ├── 03_5yr_from_50yr_pickup_viscGrid1p8e-2_adjViscBoost.ipynb
 │       ├── 04_5yr_from_rest_viscGrid1p8e-2_adjViscBoost.ipynb
-│       └── 05_kappa_v_ensemble/            the kappa_v perturbation ensemble (7 notebooks)
+│       ├── 05_kappa_v_ensemble/            the kappa_v perturbation ensemble (7 notebooks)
+│       ├── 06_0p5yr_from_180yr_pickup_visc2x_vs_5yr_ref.ipynb
+│       └── 07_tapenade_profiling/          Tapenade checkpoint profile + nocheckpoint validation (scripts, no notebook)
 ├── SOMA_1deg/                        secondary configuration (62 x 62 x 31)
 ├── reference_notebooks/              collaborator material the above derives from
 │   ├── dinocean_package_usage_from_matt.ipynb
@@ -134,6 +136,16 @@ this suite spans nine runs, so everything it generates goes to the sibling
 scratch directory `/scratch2/<user>/DINO_1deg_tapAdj_runs/kappa_v_ensemble_analysis/`
 (`cache/`, `figures/`, `animations/`, `stats/`) rather than into any one run
 directory.
+
+`07_tapenade_profiling/` (2026-09-01) is scripts and records rather than a
+notebook: the Tapenade checkpointing profile of the adjoint (run 31053,
+`-profile` build) parsed into a per-routine ranking, the 33-routine
+`-nocheckpoint` list derived from it, and the validation of that build against
+the plain one — 30 days on the same node, run 31054 vs 31052: `fc` identical,
+all 32 `adxx_*` and 73 `ADJ*` files bitwise identical, 8:47 vs 13:13 wall time
+(1.5×). The 5-year comparison is run 31055 against 31039. Its `README.md`
+has the run table; the two scripts (`parse_tapenade_profile.py`,
+`compare_adjoint_runs.py`) are general enough to reuse on any pair of runs.
 
 `00_archive/` holds four earlier serial exploratory runs at 180 and 360 days,
 named for their starting point and viscosity setting — `viscRef` from rest
