@@ -168,6 +168,7 @@ dirty=$(git -C "$SCRIPT_DIR" diff --name-only HEAD -- . 2>/dev/null | wc -l)
     echo "build_script=$(basename "$(readlink -f "$SCRIPT_DIR/$(basename "${BASH_SOURCE[0]}")")")"   # resolved from the setup dir: after the cd above, a relative BASH_SOURCE would not resolve the symlink
     echo "invoked_as=$(basename "${BASH_SOURCE[0]}")"
     echo "build_dir=$(basename "$PWD")"
+    echo "exe_md5=$(md5sum mitgcmuv_tap_adj | cut -d' ' -f1)"   # identity of the binary this record describes; the submit scripts verify it
     echo "tapenade_checkpointing=nocheckpoint  # routines in nocheckpoint_list differentiated in split _FWD/_BWD mode"
     echo "variant=plain                        # code_tap/ alone: no variant directory, no profiler"
     echo "run_token=tapAdj_nocheckpoint"

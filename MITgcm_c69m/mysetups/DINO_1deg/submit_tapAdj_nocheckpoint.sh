@@ -153,7 +153,22 @@ build_info="$build_dir/build_info.txt"
 if [[ ! -f "$build_info" ]]; then
   echo "ERROR: $build_info not found -- rebuild with the build script"; exit 1
 fi
-if [[ "$build_dir/mitgcmuv_tap_adj" -nt "$build_info" ]]; then
+# The executable must be the one build_info.txt describes. Compare checksums,
+# not mtimes: /home is NFS, and a large executable's mtime is stamped when its
+# writeback completes, which can land AFTER the small build_info.txt the build
+# script writes moments later. That inversion is permanent and refuses a
+# perfectly good build -- it cost jobs 31085 and 31086 on 2026-09-03, where the
+# executable came out 13 s "newer" than its own record. The checksum is also
+# strictly stronger: it catches an executable edited or relinked in place, which
+# an mtime test only catches by accident. Builds predating exe_md5= (no such
+# line in their build_info.txt) fall back to the old mtime test.
+exe_md5_rec=$(sed -n 's/^exe_md5=//p' "$build_info")
+if [[ -n "$exe_md5_rec" ]]; then
+  exe_md5_now=$(md5sum "$build_dir/mitgcmuv_tap_adj" | cut -d' ' -f1)
+  if [[ "$exe_md5_now" != "$exe_md5_rec" ]]; then
+    echo "ERROR: $build_dir/mitgcmuv_tap_adj does not match the exe_md5 in build_info.txt -- rebuild with the build script"; exit 1
+  fi
+elif [[ "$build_dir/mitgcmuv_tap_adj" -nt "$build_info" ]]; then
   echo "ERROR: $build_dir/mitgcmuv_tap_adj is newer than its build_info.txt -- rebuild with the build script"; exit 1
 fi
 run_token=$(sed -n 's/^run_token=//p' "$build_info")
