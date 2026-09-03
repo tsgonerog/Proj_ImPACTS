@@ -65,8 +65,8 @@ build path and the `genmake2` patch, `tools/machine_env.sh`, `tools/submit.sh`,
 the `code_tap/` + `input_tap/` split, the namelist-variant convention, and the
 DINO analysis notebooks, which take their shape from the run directory through
 `xmitgcm.open_mdsdataset(read_grid=True)` rather than hardcoding one. Two things
-would need editing by hand: the SOMA notebooks carry `sNx/sNy/OLx/OLy/Nr` as
-literals, and `analyses/DINO_1deg/02_forward/01_viscosity_study/00_build_viscAhD_binaries.ipynb`
+would need editing by hand: the SOMA notebook carries `sNx/sNy/OLx/OLy/Nr` as
+literals, and `analyses/DINO_1deg/forward/viscosity_binaries_construction.ipynb`
 hardcodes `Nx, Ny, Nr = 51, 198, 36`.
 
 ## What has to be worked out

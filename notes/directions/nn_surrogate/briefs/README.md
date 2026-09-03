@@ -68,7 +68,7 @@ which:
   be committed for the Overleaf zip (`git archive`) to carry them. The four
   interactive HTML animations it cites cannot ride in a PDF and are sent
   alongside it from cluster storage
-  (`kappa_v_ensemble_analysis/animations/`).
+  (`analysis/kappa_v_ensemble/animations/`).
 
 ## Building
 

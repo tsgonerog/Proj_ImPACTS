@@ -1,0 +1,182 @@
+# tapenade_profiling — where the adjoint recomputes, and what `-nocheckpoint` bought
+
+> **Runs named in these reports that no longer exist.** The 2026-09-03 scratch
+> consolidation deleted 31055 and the `-nocheckpoint` ensemble reruns
+> 31060–31067 — every one of them was bitwise identical to the `ckpAll` run it
+> was compared against, so the reports below are the record and the duplicates
+> were redundant. The `ckpAll` half of every pair survives under
+> `/scratch2/<user>/DINO_1deg_outputs/runs/adjoint/`, as do 31052, 31053, 31054 and
+> 31056. Re-running `compare_adjoint_runs.py` on a deleted pair is not possible;
+> re-establishing the result means re-running the adjoint.
+
+Scripts and records, no notebook. The question was: which of the routines the
+Tapenade adjoint checkpoints inside a time step are worth switching to split
+(`_FWD`/`_BWD`) mode, and does doing so change the sensitivities? The
+mechanics (what `-profile` measures, what `-nocheckpoint` changes, why the
+binomial time loop is untouched) are in `tools/tapenade_profiling/README.md`;
+this directory holds the evidence.
+
+## Runs
+
+All 27-rank MPI, `baseline/from180yrPk_visc2x` (the ensemble members: `kappa_v_ensemble/M1`–`M7`), `/scratch2/<user>/DINO_1deg_outputs/runs/adjoint/`.
+Run directories carry the build token since the 2026-09-02 rename:
+`DINO_1deg_tapAdj_ckpAll_…` for the plain runs, `…_ckpAll_tapProfile_…` for
+31053, `…_nocheckpoint_…` for 31054/31055. The `_nocheckpoint` pair is the
+default DINO adjoint since 2026-09-02 (`build_tapAdj.sh` is a symlink to it).
+
+| Run | Build | Length | Node | Wall time | Role |
+| --- | --- | --- | --- | --- | --- |
+| 31052 | `build_tapAdj_ckpAll` (plain; `build_tapAdj` until 2026-09-02) | 30 d | c2-1 | 0:13:13 | fresh plain reference; bitwise identical to 31032 (0:13:31) |
+| 31053 | `build_tapAdj_tapProfile` | 30 d | c2-3 | 0:13:29 | the profile (`tapenade_profile.0000`–`.0026.txt`) |
+| 31054 | `build_tapAdj_nocheckpoint` | 30 d | c2-1 | **0:08:47** | validation against 31052 |
+| 31039 | `build_tapAdj_ckpAll` (plain; `build_tapAdj` until 2026-09-02) | 5 yr | — | 14:05:45 | production-length reference (2026-09-01) |
+| 31055 | `build_tapAdj_nocheckpoint` | 5 yr | c2-1 | **9:35:58** | production-length validation against 31039 |
+| 31060–31067 | `build_tapAdj_nocheckpoint` | 5 yr × 8 | c2-4, c3-1, c7-4, c8-1–c8-4, c9-1 | **9:30:47–9:44:50** | the κ_v ensemble (REF + M1–M7) rerun on 2026-09-02, validation against its 2026-09-01 `ckpAll` runs 31039–31046 (14:02:37–15:39:13) |
+| 31025 | `build_tapAdj_adjViscBoost` (ckpAll + boost) | 30 d | — | 0:13:19 | boosted reference (from rest, live `input_tap/data`) |
+| 31056 | `build_tapAdj_adjViscBoost` + the list (**rejected**) | 30 d | c2-1 | 0:08:48 | split mode under the boost is **not** equivalent: `fc` identical, every sensitivity field differs at order one — the list was removed from that build again |
+
+## Files
+
+| File | What |
+| --- | --- |
+| `parse_tapenade_profile.py` | parses a `tapenade_profile.NNNN.txt`, aggregates the per-call-site cost/benefit table by callee, ranks by time gain; `--budget-mb` proposes a list under a peak-memory budget |
+| `compare_adjoint_runs.py` | compares two run directories: `fc`, every `adxx_*` (float64) and every `ADJ*` dump (float32) with a true bitwise test plus max abs/relative differences, and the `run_timing.txt` speed-up |
+| `tapenade_profile_run31053_rank0000.txt` | rank 0's raw table from run 31053 (the other 26 ranks agree to within 5 % on the total) |
+| `profile_run31053_ranked.md` | the parsed, ranked table (116 callees) |
+| `compare_30d_run31052_vs_nocheckpoint_run31054.md` | the 30-day validation report |
+| `compare_5yr_run31039_vs_nocheckpoint_run31055.md` | the 5-year validation report |
+| `compare_ensemble_ckpAll_vs_nocheckpoint.py` | drives the same comparison over the eight κ_v-ensemble pairs (31039–31046 vs 31060–31067) plus two reference cross-checks; adds the forward/reverse sweep split from the `ADJtheta` write times, a blow-up reproduction check (non-finite counts, onset dump) and the verdict of `tools/compare_adj_runs.sh` |
+| `compare_5yr_kappa_ensemble_ckpAll_vs_nocheckpoint.md` and the directory of the same name | the ensemble validation: summary table, one report per pair |
+| `compare_30d_adjViscBoost_run31025_vs_nocheckpoint_run31056.md` | the **negative** result: the same script on the boosted pair, with a preamble giving the mechanism (joint-mode recomputation after the mode-switch hook vs split-mode tapes before it) |
+
+## What the profile showed (run 31053, rank 0)
+
+- Peak tape **923 MB per process** (27 processes → ~25 GB of a 64 GB node).
+- 156 checkpoint locations, 116 distinct callees. Not checkpointing all of
+  them would save **363 s of CPU per process out of an 809 s run — 45 %**.
+- The gain is concentrated: the top 12 callees carry 308 s. Their split mode is
+  memory-neutral or a memory *gain* in 9 of 12 cases:
+
+| callee | gain [s] | Δ peak tape | why |
+| --- | --- | --- | --- |
+| `timestep` | 75 | −31.1 MB | called per level (36×/step); joint mode snapshots whole 3-D arrays each call |
+| `forward_step` | 71 | 0 | the step body: its primal ran once more per step than necessary |
+| `grad_sigma` | 37 | 0 | per level |
+| `mom_vecinv` | 22 | −0.2 MB | per level |
+| `calc_phi_hyd` | 21 | −8.6 MB | per level |
+| `thermodynamics` | 18 | 0 | step-level |
+| `do_oceanic_phys` | 17 | +28.9 MB | step-level |
+| `integrate_for_w` | 13 | 0 | per level |
+| `dynamics` | 12 | +9.3 MB | step-level |
+| `salt_integrate` | 9 | 0 | step-level |
+| `temp_integrate` | 8 | +1.9 MB | step-level |
+| `do_fields_blocking_exchanges` | 5 | −1.1 MB | step-level |
+
+- Everything that costs memory sums to ~54 MB per process — irrelevant next to
+  the 923 MB peak — so the memory budget never constrained the choice.
+- `main_do_loop` appears with a peak-memory cost of 11.3 GB: that is the
+  binomial time-loop level, i.e. the whole run's tape, and is exactly what must
+  stay checkpointed.
+- The profiler truncates gains to whole seconds; 80 callees print 0 s. A
+  30-day run (14 min) is the shortest that resolves the ranking.
+
+## The list
+
+`code_tap/tap_nocheckpoint.txt`: every callee with a measured gain ≥ 1 s that is
+not a Tapenade external (`cg2d` and `exch2_rl1_cube` are declared in
+`tools/TAP_support/flow_tap`, the dump and mode-switch hooks in `flow_tap_local` —
+`TAP_*`-named in the profiled build, upstream-named since 2026-09-02; externals
+have no source to split). 33 routines, 357 of the 363 s. Compared with the
+c69f-era 64-routine list (`tools/tapenade_profiling/nocheckpoint_routines.txt`):
+8 routines in common, none of the top twelve, and that list would have
+recovered 21 s under this profile.
+
+## Validation — 30 days, same node (31054 vs 31052)
+
+| | plain | nocheckpoint |
+| --- | --- | --- |
+| wall time | 0:13:13 | **0:08:47** (1.505×, −33.5 %) |
+| `fc` | 0.348990284064362 | identical |
+| `adxx_*` (32 files, float64) | — | **32/32 bitwise identical** |
+| `ADJ*` (73 files, float32) | — | **73/73 bitwise identical** |
+
+Bitwise identity is the expected outcome, not a happy accident: split mode
+stores values the joint mode recomputed with the same statements, so the
+adjoint sees the same numbers. (Two plain-build runs, 31032 and 31052, are
+also bitwise identical, which is what makes the test meaningful.)
+
+## Validation — 5 years (31055 vs 31039)
+
+Report: `compare_5yr_run31039_vs_nocheckpoint_run31055.md`.
+
+| | plain (31039) | nocheckpoint (31055) |
+| --- | --- | --- |
+| wall time | 14:05:45 | **9:35:58** (1.468×, −31.9 %, 4.5 h) |
+| forward sweep to the turn | 0.86 h | 0.84 h |
+| reverse sweep | 13.24 h | 8.76 h (1.51×) |
+| `fc` | 0.330992121938681 | identical |
+| `adxx_*` (32 files, float64) | — | **32/32 bitwise identical** |
+| `ADJ*` dumps (4 393 files, float32) | — | **4 393/4 393 bitwise identical** |
+
+The reverse-sweep factor equals the 30-day one; the whole-run factor is a
+little lower because at 87 840 steps the binomial schedule re-runs each
+plain forward step up to three times (two at 1 440), and those re-runs are
+outside what `-nocheckpoint` changes. Phase times come from the write times
+of the `ADJtheta` dumps relative to each run's start.
+
+## Validation — the κ_v ensemble, 5 years × 8 (31060–31067 vs 31039–31046)
+
+Report: `compare_5yr_kappa_ensemble_ckpAll_vs_nocheckpoint.md`, one file per
+pair in the directory of the same name. The eight adjoints of
+`../kappa_v_ensemble/` — the reference and the seven κ_v members, four of
+which blow up — were rerun on 2026-09-02 with the `-nocheckpoint` build: same
+namelists, same pickups, eight jobs at once on eight separate nodes, as on
+2026-09-01. Members went in through temporary copies of
+`submit_tapAdj_nocheckpoint.sh` with the pickup repointed
+(`notes/references/slurm_job_chaining/` §2.2).
+
+| member | κ | `ckpAll` (2026-09-01) | `nocheckpoint` (2026-09-02) | speed-up | reverse sweep |
+| --- | --- | --- | --- | --- | --- |
+| REF | 1× | 31039, 14:05:45 | 31060, 9:44:50 | 1.446× | 1.49× |
+| M1 | 0.25× | 31040, 14:07:33 | 31061, 9:39:26 | 1.463× | 1.50× |
+| M2 | 0.5× | 31041, 14:18:39 | 31062, 9:38:14 | 1.485× | 1.53× |
+| M3 | 2× | 31042, 15:39:13 | 31063, 9:30:57 | 1.645× | 1.71× |
+| M4 | 4× | 31043, 14:04:21 | 31064, 9:30:47 | 1.479× | 1.52× |
+| M5 | 8× | 31044, 14:09:52 | 31065, 9:31:20 | 1.488× | 1.53× |
+| M6 | 16× | 31045, 14:02:37 | 31066, 9:38:31 | 1.457× | 1.50× |
+| M7 | 32× | 31046, 14:08:27 | 31067, 9:33:58 | 1.478× | 1.52× |
+
+Every pair: `fc` identical, 32/32 `adxx_*` and 4 393/4 393 `ADJ*` bitwise
+identical, `%MON` stream byte-identical, `tools/compare_adj_runs.sh`
+EQUIVALENT (8 850 sensitivity files and 898 other files per pair). The four
+blown-up members blow up identically, being bitwise identical like everything
+else: only M4 overflows the float32 dumps (first at lead 2.95 yr, 123 660
+non-finite cells at lead 5 yr, in both builds); M1, M5 and M7 stay finite but
+huge (max |`ADJtheta`| at lead 5 yr 8.2e5, 1.9e13 and 3.1e6, against
+6e-4–1.3e-3 for the reference and the healthy members). Over the eight runs
+the wall time went from 114.6 h to 76.8 h (−33.0 %, 37.8 h), 1.45–1.65× per
+run; the reverse sweep alone 1.49–1.71× (mean 1.54×), the forward sweep
+50–52 min in both builds. M3's 1.65× is the *old* run's slow node, not the new
+one: its reverse sweep took 14.8 h against 13.2–13.5 h for the other seven on
+2026-09-01, while the eight new runs spread only 9:31–9:45.
+
+Two cross-checks sit in the same report: 31039 vs 31055 recomputed (the table
+above), and 31055 vs 31060 — the executable rebuilt on 2026-09-02 after the
+`build_info.txt` change (same source; a 32-byte `.rodata` shift, every function
+the same size) reproduces the 2026-09-01 one bitwise, at 9:35:58 on c2-1 vs
+9:44:50 on c2-4. The ensemble analysis keeps reading 31039–31046; the two sets
+are interchangeable.
+
+## Re-running
+
+```bash
+cd MITgcm_c69m/mysetups/DINO_1deg
+./build_tapAdj_tapProfile.sh && ../../../tools/submit.sh submit_tapAdj_tapProfile.sh
+python3 analyses/DINO_1deg/adjoint/tapenade_profiling/parse_tapenade_profile.py \
+        /scratch2/$USER/DINO_1deg_outputs/runs/adjoint/<profile run>/tapenade_profile.0000.txt --top 40
+# edit code_tap/tap_nocheckpoint.txt, then
+./build_tapAdj_nocheckpoint.sh && IMPACTS_DURATION_DAYS=30 ../../../tools/submit.sh submit_tapAdj_nocheckpoint.sh
+#   (or ./build_tapAdj.sh and submit_tapAdj.sh -- symlinks to the same pair since 2026-09-02;
+#    the plain reference run comes from build_tapAdj_ckpAll.sh / submit_tapAdj_ckpAll.sh)
+python3 analyses/DINO_1deg/adjoint/tapenade_profiling/compare_adjoint_runs.py <ckpAll run dir> <nocheckpoint run dir>
+```

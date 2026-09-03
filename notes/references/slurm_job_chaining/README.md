@@ -66,15 +66,17 @@ bare `M$n`. The job ids and results are unchanged; only the tag spelling moved.)
 ```bash
 cd MITgcm_c69m/mysetups/DINO_1deg
 declare -A FWD=( [1]=30996 [2]=30997 [3]=30998 [4]=30999 [5]=31000 [6]=31001 [7]=31002 )
-REFDIR='DINO_1deg_frd_200yr_from_rest_visc2x_run30983'
+# paths carry the campaign directory, which differs between the spin-up and the
+# members -- keep it inside the variable so one sed pattern covers both
+REFDIR='spinup_200yr_visc2x/DINO_1deg_frd_200yr_from_rest_visc2x_run30983'
 cur="$REFDIR"
 for n in 1 2 3 4 5 6 7; do
-  mdir="DINO_1deg_frd_10yr_M${n}_run${FWD[$n]}"
+  mdir="kappa_v_ensemble/DINO_1deg_frd_10yr_M${n}_run${FWD[$n]}"
 
   # point the hardcoded pickup symlink at THIS member's forward run
-  sed -i "s|DINO_1deg_frd_runs/${cur}/pickup.0003162240|DINO_1deg_frd_runs/${mdir}/pickup.0003162240|g" \
+  sed -i "s|DINO_1deg_outputs/runs/forward/${cur}/pickup.0003162240|DINO_1deg_outputs/runs/forward/${mdir}/pickup.0003162240|g" \
       submit_tapAdj.sh
-  grep -c "DINO_1deg_frd_runs/${mdir}/pickup.0003162240" submit_tapAdj.sh | grep -qx 2 \
+  grep -c "DINO_1deg_outputs/runs/forward/${mdir}/pickup.0003162240" submit_tapAdj.sh | grep -qx 2 \
       || { echo "EDIT FAILED for M$n"; exit 1; }
 
   out=$(IMPACTS_TEST_CASE=kappa_v_ensemble/M$n ../../../tools/submit.sh submit_tapAdj.sh \
@@ -84,7 +86,7 @@ for n in 1 2 3 4 5 6 7; do
 done
 
 # restore the committed default: reference adjoint reads the spin-up pickup
-sed -i "s|DINO_1deg_frd_runs/${cur}/pickup.0003162240|DINO_1deg_frd_runs/${REFDIR}/pickup.0003162240|g" \
+sed -i "s|DINO_1deg_outputs/runs/forward/${cur}/pickup.0003162240|DINO_1deg_outputs/runs/forward/${REFDIR}/pickup.0003162240|g" \
     submit_tapAdj.sh
 # -> 31003 31004 31005 31006 31007 31008 31009
 ```
@@ -272,8 +274,8 @@ Write a thin batch wrapper, e.g. `run_comparison.sh`:
 #SBATCH -t 00:30:00
 set -x
     /home/tshahriar/Proj_ImPACTS/tools/compare_adj_runs.sh \
-        /scratch2/$USER/DINO_1deg_tapAdj_runs/<reference-run> \
-        /scratch2/$USER/DINO_1deg_tapAdj_runs/<new-run>
+        /scratch2/$USER/DINO_1deg_outputs/runs/adjoint/<reference-run> \
+        /scratch2/$USER/DINO_1deg_outputs/runs/adjoint/<new-run>
 ```
 
 No `--wait` here: the dependency already guarantees the job has finished, so

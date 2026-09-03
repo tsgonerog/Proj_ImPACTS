@@ -27,7 +27,7 @@ documents relate.
 
 | Direction | The question | Status |
 | --- | --- | --- |
-| [`nn_surrogate/`](directions/nn_surrogate/) | Can a neural network predict DINO adjoint sensitivity fields instead of computing them? Includes the vertical-mixing ensemble that has to run first to decide what the surrogate should be | Part I complete and analysed (2026-08-30): strong κ_v response — mixing is a required surrogate input, and four of seven member adjoints blow up. Results in the master's Part I §Results and the `kappa_ensemble_results` brief; evidence in `analyses/DINO_1deg/03_adjoint/05_kappa_v_ensemble/`. The surrogate itself is proposed, nothing built |
+| [`nn_surrogate/`](directions/nn_surrogate/) | Can a neural network predict DINO adjoint sensitivity fields instead of computing them? Includes the vertical-mixing ensemble that has to run first to decide what the surrogate should be | Part I complete and analysed (2026-08-30): strong κ_v response — mixing is a required surrogate input, and four of seven member adjoints blow up. Results in the master's Part I §Results and the `kappa_ensemble_results` brief; evidence in `analyses/DINO_1deg/adjoint/kappa_v_ensemble/`. The surrogate itself is proposed, nothing built |
 | [`dino_quarter_degree/`](directions/dino_quarter_degree/) | What does moving DINO from 1° to 1/4° — from parameterised eddies to partly resolved ones — change about the adjoint, and what would it cost? | Placeholder — a three-page scoping note, nothing configured |
 
 ## Adding a direction

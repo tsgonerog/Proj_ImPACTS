@@ -111,7 +111,7 @@ if (( simulation_duration_with_dT1800_days % 366 == 0 )); then
 else
     dur_label="${simulation_duration_with_dT1800_days}d"
 fi
-run_dir="$SCRATCH_ROOT/DINO_1deg_frd_runs/${job_name}_${dur_label}${suffix}_run$SLURM_JOB_ID"  # unique per job
+run_dir="$SCRATCH_ROOT/DINO_1deg_outputs/runs/forward/${job_name}_${dur_label}${suffix}_run$SLURM_JOB_ID"  # unique per job
 
 # ========== STAGE THE RUN DIRECTORY ==========
 
@@ -186,8 +186,8 @@ cp -p "$build_dir/mitgcmuv" .
 # Year-2170 state of the 200-yr spin-up: the start of every kappa_v ensemble
 # member's re-equilibration leg (variants/kappa_v_ensemble/data_M<n> bakes the
 # matching nIter0=2986560).
-ln -s $SCRATCH_ROOT/DINO_1deg_frd_runs/DINO_1deg_frd_200yr_from_rest_visc2x_run30983/pickup.0002986560.data pickup.0002986560.data
-ln -s $SCRATCH_ROOT/DINO_1deg_frd_runs/DINO_1deg_frd_200yr_from_rest_visc2x_run30983/pickup.0002986560.meta pickup.0002986560.meta
+ln -s $SCRATCH_ROOT/DINO_1deg_outputs/runs/forward/spinup_200yr_visc2x/DINO_1deg_frd_200yr_from_rest_visc2x_run30983/pickup.0002986560.data pickup.0002986560.data
+ln -s $SCRATCH_ROOT/DINO_1deg_outputs/runs/forward/spinup_200yr_visc2x/DINO_1deg_frd_200yr_from_rest_visc2x_run30983/pickup.0002986560.meta pickup.0002986560.meta
 
 # ========== RUN & TIMING ==========
 

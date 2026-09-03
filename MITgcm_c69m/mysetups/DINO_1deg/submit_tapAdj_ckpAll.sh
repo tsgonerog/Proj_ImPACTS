@@ -168,7 +168,7 @@ if (( simulation_duration_with_dT1800_days % 366 == 0 )); then
 else
     dur_label="${simulation_duration_with_dT1800_days}d"
 fi
-run_dir="$SCRATCH_ROOT/DINO_1deg_tapAdj_runs/DINO_1deg_${run_token}_${dur_label}${suffix}_run$SLURM_JOB_ID"  # unique per job
+run_dir="$SCRATCH_ROOT/DINO_1deg_outputs/runs/adjoint/DINO_1deg_${run_token}_${dur_label}${suffix}_run$SLURM_JOB_ID"  # unique per job
 
 # ========== STAGE THE RUN DIRECTORY ==========
 
@@ -244,9 +244,9 @@ cp -p "$build_dir/mitgcmuv_tap_adj" .
 cp -p "$build_info" .
 
 #----- pickups ---------------
-ln -s $SCRATCH_ROOT/DINO_1deg_frd_runs/DINO_1deg_frd_200yr_from_rest_visc2x_run30983/pickup.0003162240.data pickup.0003162240.data
+ln -s $SCRATCH_ROOT/DINO_1deg_outputs/runs/forward/spinup_200yr_visc2x/DINO_1deg_frd_200yr_from_rest_visc2x_run30983/pickup.0003162240.data pickup.0003162240.data
 
-ln -s $SCRATCH_ROOT/DINO_1deg_frd_runs/DINO_1deg_frd_200yr_from_rest_visc2x_run30983/pickup.0003162240.meta pickup.0003162240.meta
+ln -s $SCRATCH_ROOT/DINO_1deg_outputs/runs/forward/spinup_200yr_visc2x/DINO_1deg_frd_200yr_from_rest_visc2x_run30983/pickup.0003162240.meta pickup.0003162240.meta
 
 # ========== RUN & TIMING ==========
 

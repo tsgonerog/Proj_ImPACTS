@@ -188,7 +188,7 @@ at four of the seven κ settings, non-monotonically in κ, which bounds how
 training data can be generated at strongly perturbed mixing; and the adjoint's
 linear ΔJ prediction fails already at the factor-2 members, so the response is
 nonlinear from the smallest step tested. The full evidence lives in the
-analysis suite at `analyses/DINO_1deg/03_adjoint/05_kappa_v_ensemble/`.
+analysis suite at `analyses/DINO_1deg/adjoint/kappa_v_ensemble/`.
 
 Eight κ values, the seven members plus the reference, are ample for the first
 question and thin for the second. Part II therefore calls for a 200–400 member
@@ -225,26 +225,26 @@ scratch rather than estimated. The planning numbers, measured 2026-08-21:
 | `ADJdiffkr` RMS grows 656× across a 5-year sweep — accumulation, not instability | `ADJdiffkr.*.data`, iterations 3249840 → 3162240 |
 | `ADJtheta` *decays* ~5× and `ADJtaux` ~40× over the same sweep; the three classes differ in magnitude by ~10⁵ | `ADJ{theta,taux,diffkr}.*.data`, run 28486 |
 | \|∂J/∂κ\| spans ~15 decades; sign split 48.6 / 48.5 % | `adxx_diffkr.0000000000.data`, wet points only |
-| Forward 0.0332 s/step; adjoint 0.945 s/step on 27 ranks | `run_timing.txt` of runs 28463 and 28486 |
+| Forward 0.0332 s/step; adjoint 0.945 s/step on 27 ranks | `run_timing.txt` of runs 28463 and 28486 (28463 deleted 2026-09-03; its byte-identical twin 30983 survives) |
 | 5-year adjoint = 23 h ≈ 622 core-hours, 8.3 GB | run 28486 |
-| `useGrdchk` costs 18,622 `FORWARD_STEP` calls for 1,440 timesteps | `STDOUT.0000` timer section, run 30948 |
-| All 2,400 spin-up restarts retained, 47 GB (the whole run directory is 85 GB) | run 28463, `du -ch pickup*` |
+| `useGrdchk` costs 18,622 `FORWARD_STEP` calls for 1,440 timesteps | `STDOUT.0000` timer section, run 30948 (deleted; superseded by 31032) |
+| All 2,400 spin-up restarts retained, 47 GB (the whole run directory is 85 GB) | run 30983 (was measured on its twin 28463), `du -ch pickup*` |
 | Reference κ uniform at 1.2 × 10⁻⁵ m² s⁻¹ | `input_binaries/dino_diffKr.bin`, single unique value |
 | Cost section at 26.05 °N, upper 982.4 m | `YC.data` row 127 and `DRF.data`, run 28486 |
 
 The results numbers (master Part I §Results, and the results brief) were
 measured on 2026-08-30 by the executed analysis suite at
-`analyses/DINO_1deg/03_adjoint/05_kappa_v_ensemble/` — its notebooks are the
+`analyses/DINO_1deg/adjoint/kappa_v_ensemble/` — its notebooks are the
 per-number source, and its `stats/*.csv` tables on scratch are the
 machine-readable copies:
 
 | Claim | Source |
 | --- | --- |
-| Member fc values 0.214–0.510, monotonic; REF 0.3310 | `costfunction.0000` of runs 31039–31046 (2026-09-01 hook-build rerun; fc bitwise identical to the original 30995, 31003–31009, and to the 2026-09-02 `-nocheckpoint` rerun 31060–31067); `stats/01_*.csv`; notebook 01 |
+| Member fc values 0.214–0.510, monotonic; REF 0.3310 | `costfunction.0000` of runs 31039–31046 (2026-09-01 hook-build rerun; fc bitwise identical to the original 30995, 31003–31009, and to the 2026-09-02 `-nocheckpoint` rerun 31060–31067); `stats/*.csv`; notebook 01 |
 | Reference chain 28486 ≡ 30995 ≡ 31039 (fc/adxx bitwise; the rerun's ADJ* seam-corrected, ADJetan new); `useGrdchk` off saves 8.2 h/run | md5 comparisons + `run_timing.txt`, notebooks 01/02 |
 | Noise floor σ = 0.007 (annual) / 0.012 (instantaneous) | J-proxy over 2,402 spin-up-30983 pickups (`build_jproxy.py`), notebook 01 |
 | Stable-member metrics (corr 0.82/0.85, amp ×1.37/×0.77; ADJdiffkr corr 0.21 at 2×; ∂J/∂κ sums −251/−436/−78/+673) | `cache/member_metrics_time.nc`, `cache/adxx_fields_3d.nc`; notebooks 04/07 |
-| Blow-up departure leads 0.36/0.70/1.28/2.55 yr; burst e-folds 1–3 d; Southern Ocean seeds; 62 % usable dumps | `stats/06_blowup_departure_table.csv`, `stats/07_training_data_budget.csv`; notebook 06 |
+| Blow-up departure leads 0.36/0.70/1.28/2.55 yr; burst e-folds 1–3 d; Southern Ocean seeds; 62 % usable dumps | `stats/blowup_departure_table.csv`, `stats/training_data_budget.csv`; notebook 06 |
 | Linear ΔJ prediction: wrong sign 4/7, none within 30 % | `cache/dJ_decomposition.csv`; notebook 01 |
 | fc is a terminal-30-day mean; per-MPI-tile normalisation (decomposition-dependent) | `pkg/cost` source + proxy validation (fc reproduced within 3–19 %), notebook 01 |
 | Six control gradients identically zero (`xx_uvel/vvel`, four wind controls) | `cache/adxx_fields_*.nc`, notebook 02 |
@@ -269,6 +269,6 @@ Worth doing whether or not the surrogate is ever built:
 
 - **Model configuration and source** — this repository, at
   `MITgcm_c69m/mysetups/DINO_1deg/`
-- **Model output** — cluster scratch, `/scratch2/<user>/DINO_1deg_{frd,tapAdj}_runs/`
+- **Model output** — cluster scratch, `/scratch2/<user>/DINO_1deg_outputs/runs/{forward,adjoint}/`
 - **Input binaries** — `input_binaries/` is untracked and produced outside this
   repository; see the root `README.md`

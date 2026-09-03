@@ -208,7 +208,7 @@ ensemble — all eight 5-yr adjoints (31060–31067 vs the `ckpAll` runs
 31039–31046) bitwise identical, the four blow-ups included, 1.45–1.65× per run,
 37.8 h saved of 114.6 h.** `tools/tapenade_profiling/README.md`
 has the method and the numbers;
-`analyses/DINO_1deg/03_adjoint/07_tapenade_profiling/` the records and the
+`analyses/DINO_1deg/adjoint/tapenade_profiling/` the records and the
 three scripts (`parse_tapenade_profile.py`, `compare_adjoint_runs.py`,
 `compare_ensemble_ckpAll_vs_nocheckpoint.py`).
 
@@ -228,7 +228,7 @@ physics or decomposition changes.
 The profiling build is a diagnostic — same numbers, 2 % slower — and compiles
 the plain sources without the list.
 
-**The adjViscBoost build does not carry the default `-nocheckpoint` list, on purpose.** Tried 2026-09-02: run 31056 (boost + list, 30 d from rest) vs 31025 (boost, every call checkpointed) — `fc` and all 441 `%MON` lines byte-identical, but all 66 `ADJ*` dumps and all 8 real `adxx_*` gradients differ at order one (RMS ratio 0.3–0.9), whereas the plain pair is bitwise identical under the same list. In joint mode Tapenade re-runs each routine's primal inside the backward sweep *after* `AUTODIFF_INADMODE_SET_B` has boosted the viscosities, so the boost reaches every recomputed intermediate; in split mode those intermediates were taped during the forward sweep at forward viscosities and the boost reaches only what the `_BWD` code reads live — a weaker, different regularisation. So the boosted adjoint stays a `ckpAll` build (run token `tapAdj_ckpAll_adjViscBoost`, 13 min per 30 d instead of 9), and 31056 stays on scratch as the record; report in `analyses/DINO_1deg/03_adjoint/07_tapenade_profiling/compare_30d_adjViscBoost_run31025_vs_nocheckpoint_run31056.md`. Corollary: `-nocheckpoint` is a pure performance change only for an adjoint whose backward sweep leaves the primal's parameters alone.
+**The adjViscBoost build does not carry the default `-nocheckpoint` list, on purpose.** Tried 2026-09-02: run 31056 (boost + list, 30 d from rest) vs 31025 (boost, every call checkpointed) — `fc` and all 441 `%MON` lines byte-identical, but all 66 `ADJ*` dumps and all 8 real `adxx_*` gradients differ at order one (RMS ratio 0.3–0.9), whereas the plain pair is bitwise identical under the same list. In joint mode Tapenade re-runs each routine's primal inside the backward sweep *after* `AUTODIFF_INADMODE_SET_B` has boosted the viscosities, so the boost reaches every recomputed intermediate; in split mode those intermediates were taped during the forward sweep at forward viscosities and the boost reaches only what the `_BWD` code reads live — a weaker, different regularisation. So the boosted adjoint stays a `ckpAll` build (run token `tapAdj_ckpAll_adjViscBoost`, 13 min per 30 d instead of 9), and 31056 stays on scratch as the record; report in `analyses/DINO_1deg/adjoint/tapenade_profiling/compare_30d_adjViscBoost_run31025_vs_nocheckpoint_run31056.md`. Corollary: `-nocheckpoint` is a pure performance change only for an adjoint whose backward sweep leaves the primal's parameters alone.
 
 ## Run
 
@@ -251,8 +251,20 @@ check passed), refuses an executable that has no record or is newer than it
 run
 
 ```
-DINO_1deg_<run_token>_<duration>[_<tag>]_run<jobid>      run_token = tapAdj_<ckp>[_<variant>]
+$SCRATCH_ROOT/DINO_1deg_outputs/runs/adjoint/
+└── DINO_1deg_<run_token>_<duration>[_<tag>]_run<jobid>  run_token = tapAdj_<ckp>[_<variant>]
 ```
+
+**A new run lands directly in `runs/adjoint/`, unfiled.** Since 2026-09-03 that
+directory also holds campaign subdirectories — `kappa_v_ensemble/`,
+`checkpointing_study/`, `adjViscBoost/`, `toolchain_validation/`,
+`gradient_check/`, `sensitivity/` — and the forward side has
+`spinup_200yr_visc2x/` and `kappa_v_ensemble/`. The submit script does not
+choose one: it cannot know which campaign a run belongs to, and often that is
+not decided until the run finishes. Move the directory into a campaign when it
+joins one (a plain `mv`; the campaign is the parent directory, never part of
+the name) and update the notebook that reads it. The scratch tree's own
+`README.md` has the campaign map and the filing rules.
 
 with `<ckp>` = `nocheckpoint` | `ckpAll` and `<variant>` = `adjViscBoost` |
 `tapProfile` when present. So the default gives
@@ -528,7 +540,7 @@ two call sites, four hook interfaces, the `flow_tap` stanzas, and bodies for
 the stubs in `pkg/tapenade/dummy_tap.F`. The rename was validated bitwise
 against the previous layout at 30 days, 5 days (SOMA) and 5 years (see
 `TODO.md` for the runs) and merged to `main` on 2026-09-03; the last `TAP_*`
-state is tag `archive/20260903_pre-tapenade-hooks-upstream-shape`.
+state is tag `archive/20260903_pre-hook-upstream-rename`.
 
 **Reviewing with vimdiff.** Every shadow is meant to be read as a diff against
 the file it replaces. From this directory:
@@ -629,11 +641,11 @@ The cost function is `code_tap/cost_atlantic_heat.F`, with its section indices
 compiled in as `parameter` statements (`isecbeg=1, isecend=51, jsec=127`,
 `kmaxdepth=25`). Moving the section means editing that file and rebuilding — it is
 not a namelist setting. Indices are located with
-`analyses/DINO_1deg/00_grid_and_cost_sections.ipynb`.
+`analyses/DINO_1deg/grid_and_cost_sections.ipynb`.
 
 Two verified subtleties of what `fc` actually measures (2026-08-30; full
 statement in the root `CLAUDE.md` and in
-`analyses/DINO_1deg/03_adjoint/05_kappa_v_ensemble/ensemble_common.py`):
+`analyses/DINO_1deg/adjoint/kappa_v_ensemble/ensemble_common.py`):
 `pkg/cost` averages only the **final 30 days** of the run (`lastinterval`
 default, not overridden in `data.cost`), and the per-level wet-count
 normalisation is computed **per MPI tile**, so `fc` depends on the domain

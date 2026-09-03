@@ -56,4 +56,9 @@ Two rules:
 **Validated 2026-09-02.** Run 31070 (this layout, 30 d from rest) reproduces
 run 31025 (the same sources while they were still copy-staged) bit for bit:
 `fc`, all 32 `adxx_*`, all 66 common `ADJ*` dumps and the 441-line `%MON`
-stream (`comparison_vs_…run31025.txt` in the 31070 run directory on scratch).
+stream. Its report went with the 31070 directory, deleted in the 2026-09-03
+scratch cleanup; the surviving link in the chain is **31075**
+(`runs/adjoint/toolchain_validation/…run31075/`), whose
+`comparison_vs_…run31070.txt` records 31075 ≡ 31070, and 31025 is still on
+scratch under `runs/adjoint/adjViscBoost/`. So 31025 ≡ 31070 ≡ 31075 is
+reconstructible from what is left.

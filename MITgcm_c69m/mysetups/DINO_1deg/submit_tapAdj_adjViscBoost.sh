@@ -169,7 +169,7 @@ if (( simulation_duration_with_dT1800_days % 366 == 0 )); then
 else
     dur_label="${simulation_duration_with_dT1800_days}d"
 fi
-run_dir="$SCRATCH_ROOT/DINO_1deg_tapAdj_runs/DINO_1deg_${run_token}_${dur_label}${suffix}_run$SLURM_JOB_ID"  # unique per job
+run_dir="$SCRATCH_ROOT/DINO_1deg_outputs/runs/adjoint/DINO_1deg_${run_token}_${dur_label}${suffix}_run$SLURM_JOB_ID"  # unique per job
 
 # ========== STAGE THE RUN DIRECTORY ==========
 
@@ -249,8 +249,17 @@ cp -p "$build_dir/mitgcmuv_tap_adj" .
 cp -p "$build_info" .
 
 #----- pickups ---------------
-#ln -s $SCRATCH_ROOT/DINO_1deg_frd_runs/runs_prod/crashed_runs/DINO_1deg_frd_200yr_from_rest_viscD2x_Zref_crashed_126p3y_run19369/pickup.0000878400.data pickup.0000878400.data
-#ln -s $SCRATCH_ROOT/DINO_1deg_frd_runs/runs_prod/crashed_runs/DINO_1deg_frd_200yr_from_rest_viscD2x_Zref_crashed_126p3y_run19369/pickup.0000878400.meta pickup.0000878400.meta
+# from_rest needs none. Uncomment for a from50yrPk / from70yrPk / from180yrPk
+# start, matching the nIter0 baked into whichever data_<tag> test_cases selects.
+#
+# NOTE (2026-09-03): these used to come from crashed run 19369
+# (viscD2x_Zref, the 50 yr anchor) and crashed run 18277 (the 70 yr one).
+# Both runs were deleted in the scratch consolidation. The 200-yr visc2x
+# spin-up 30983 carries all 2 402 pickups and is now the only source, so a
+# 50 yr or 70 yr start is a *visc2x* state, not the viscD2x_Zref state the
+# earlier runs used. That changes the experiment, not just the path.
+#ln -s $SCRATCH_ROOT/DINO_1deg_outputs/runs/forward/spinup_200yr_visc2x/DINO_1deg_frd_200yr_from_rest_visc2x_run30983/pickup.0000878400.data pickup.0000878400.data
+#ln -s $SCRATCH_ROOT/DINO_1deg_outputs/runs/forward/spinup_200yr_visc2x/DINO_1deg_frd_200yr_from_rest_visc2x_run30983/pickup.0000878400.meta pickup.0000878400.meta
 
 # ========== RUN & TIMING ==========
 

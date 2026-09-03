@@ -194,7 +194,7 @@ still bitwise correct but writes no `ADJ*` files (runs 31071–31073), so every
 adjoint build script now asserts after `make` that the compiled `dummy_tap.f`
 carries the ten `DUMP_ADJ_*` calls. Merged to `main` on 2026-09-03
 (fast-forward; `main` = ea6f75f); the pre-merge state, the last with the
-`TAP_*` names, is tag `archive/20260903_pre-tapenade-hooks-upstream-shape`.
+`TAP_*` names, is tag `archive/20260903_pre-hook-upstream-rename`.
 
 ## 4 · Validation
 
@@ -359,5 +359,5 @@ runs 31022–31026 on sverdrup, 2026-08-31; §7 validated by runs 31032 (DINO),
 rename to the upstream hook names was prepared on branch
 `tapenade-hooks-upstream-shape` (commits `473ac6e`, `ea6f75f`; merged
 2026-09-03; pre-merge base kept as tag
-`archive/20260903_pre-tapenade-hooks-upstream-shape`) and validated by runs
+`archive/20260903_pre-hook-upstream-rename`) and validated by runs
 31074–31077. Line references are to MITgcm checkpoint69m.*

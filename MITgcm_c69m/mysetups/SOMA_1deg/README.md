@@ -38,7 +38,10 @@ IMPACTS_DURATION_DAYS=360 IMPACTS_ADJ_DUMP_FREQ_DAYS=30 \
 | `IMPACTS_TEST_CASE` | which variant is staged (machinery shared with DINO; SOMA has no `variants/` yet, so leave unset) | *(empty)* |
 
 The committed defaults are the cheap regression configurations: the adjoint
-default reproduces validated baseline run 31031 (5 d, all frequencies 1 d).
+default is the 5 d / all-frequencies-1 d configuration validated as run 31031
+and re-run since as 31033 and 31076. 31031 itself was deleted in the 2026-09-03
+scratch consolidation; **31033 is the surviving reference** — it was verified
+bitwise against 31031 before the deletion, so a fresh run should match it.
 
 ## Build
 
@@ -107,10 +110,15 @@ DINO (the five pre-made per-duration scripts this replaced are archived in
 `00_archive/scripts/`; running two durations at once is now two submissions of
 the same script with different overrides). Job names are `SOMA_1deg_frd` /
 `SOMA_1deg_tapAdj`, and run directories follow DINO's convention:
-`$SCRATCH_ROOT/SOMA_1deg_{frd,tapAdj}_runs/SOMA_1deg_<mode>_<duration>[_<tag>]_run<jobid>`,
+`$SCRATCH_ROOT/SOMA_1deg_outputs/runs/{forward,adjoint}/SOMA_1deg_<mode>_<duration>[_<tag>]_run<jobid>`
+(no campaign subdirectory yet — three runs do not need one; add campaigns under
+`runs/adjoint/` the way DINO did once there are more),
 with whole 360-day years labelled `<n>yr` and everything else `<n>d`. Runs
-31029–31031 predate the renaming and keep their old `pd_StP_srl_no-kpp-GM_*`
-/ `test_*` directory names.
+31029–31031 predated the renaming and kept their old
+`pd_StP_srl_no-kpp-GM_*` / `test_*` directory names; all three were deleted in
+the 2026-09-03 consolidation, so every SOMA run directory on scratch now
+follows the convention above. The c69f-era `v4_soma_tapAdj_runs/` tree is gone
+with them.
 
 Each script patches the **staged** `data` in its own run directory, never the
 tracked `input_tap/data`, so submitting leaves the working tree clean and two

@@ -158,10 +158,12 @@ with the existing campaigns, or fix the per-tile normalisation first.
 
 Known and deliberate, listed so they are not a surprise:
 
-- **Notebook scratch paths** are absolute `/scratch2/tshahriar/...`. The analysis
+- **Notebook scratch paths** are absolute
+  `/scratch2/tshahriar/<setup>_1deg_outputs/{frd,tapAdj}/...`. The analysis
   notebooks are not part of the run path, so they were left pointing at sverdrup.
   Repoint them if you move the analysis too — `./tools/pre_push_check.sh` reports
-  every path that no longer resolves.
+  every path that no longer resolves. Expect it to report the SOMA notebook: it
+  reads a c69f-era campaign deleted on 2026-09-03 and is kept as a record.
 - **`--mail-user`** is a `#SBATCH` directive in each submit script. Override per
   job with `sbatch --mail-user=...`, or edit the scripts.
 - **`00_archive/` scripts** were not ported. They are history and reference dead

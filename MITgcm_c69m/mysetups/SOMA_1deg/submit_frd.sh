@@ -104,7 +104,7 @@ if (( endTime_days % 360 == 0 )); then
 else
     dur_label="${endTime_days}d"
 fi
-run_dir="$SCRATCH_ROOT/SOMA_1deg_frd_runs/${job_name}_${dur_label}${suffix}_run$SLURM_JOB_ID"  # unique per job
+run_dir="$SCRATCH_ROOT/SOMA_1deg_outputs/runs/forward/${job_name}_${dur_label}${suffix}_run$SLURM_JOB_ID"  # unique per job
 
 # ========== STAGE THE RUN DIRECTORY ==========
 

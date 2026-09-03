@@ -157,7 +157,7 @@ Read it with these caveats:
 - `DeltaT` is `clock()` CPU time of **one process**; with 27 ranks doing the
   same work the wall-clock saving is roughly the same number, not 27× it.
 - A `-nocheckpoint` decision is per **callee**, the table is per **call
-  site**. `analyses/DINO_1deg/03_adjoint/07_tapenade_profiling/parse_tapenade_profile.py`
+  site**. `analyses/DINO_1deg/adjoint/tapenade_profiling/parse_tapenade_profile.py`
   aggregates the sites by callee, ranks them, and can propose a list under a
   peak-memory budget (`--budget-mb`). Summing sites' `DeltaPk` is an upper
   bound on the joint memory cost, since peaks need not coincide.
@@ -199,7 +199,7 @@ toy program and from the DINO build:
   `ADJ*` and all 8 real `adxx_*` fields different at order one (RMS ratio
   0.3–0.9) — while 31054 vs 31052 and 31055 vs 31039, the plain pair, are
   bitwise identical. Report:
-  `analyses/DINO_1deg/03_adjoint/07_tapenade_profiling/compare_30d_adjViscBoost_run31025_vs_nocheckpoint_run31056.md`.
+  `analyses/DINO_1deg/adjoint/tapenade_profiling/compare_30d_adjViscBoost_run31025_vs_nocheckpoint_run31056.md`.
 
 The list lives in `code_tap/tap_nocheckpoint.txt` (one lower-case name per
 line, `#` comments allowed) beside `flow_tap_local` and `adjoint_tap_local`,
@@ -218,7 +218,7 @@ already passes that test under joint mode, and the hand-written hook adjoints
 ## 3. What the DINO profile said, and what was done with it
 
 Runs of 2026-09-01, all 27-rank, `baseline/from180yrPk_visc2x`; records in
-`analyses/DINO_1deg/03_adjoint/07_tapenade_profiling/`.
+`analyses/DINO_1deg/adjoint/tapenade_profiling/`.
 
 **Profile (run 31053, 30 days, rank 0; 809 s of adjoint).** Peak tape 923 MB
 per process. 156 checkpoint locations, 116 callees. Checkpointing costs
@@ -269,13 +269,13 @@ forward steps inside the reverse sweep are untouched by `-nocheckpoint`.
 
 **The whole κ_v ensemble, 5 years × 8 (31060–31067 vs 31039–31046,
 2026-09-02/03):** the reference and the seven members of
-`analyses/DINO_1deg/03_adjoint/05_kappa_v_ensemble/`, four of which blow up,
+`analyses/DINO_1deg/adjoint/kappa_v_ensemble/`, four of which blow up,
 rerun with the tuned build, eight jobs at once on separate nodes as before.
 Every pair bitwise identical (`fc`; 32/32 `adxx_*`; 4 393/4 393 `ADJ*`; the
 `%MON` stream byte-identical; `tools/compare_adj_runs.sh` EQUIVALENT), the
 blow-ups reproduced exactly; wall time **114.6 h → 76.8 h** (1.45–1.65× per
 run, the reverse sweep 1.49–1.71×, the forward sweep unchanged at 50–52 min).
-Report: `analyses/DINO_1deg/03_adjoint/07_tapenade_profiling/compare_5yr_kappa_ensemble_ckpAll_vs_nocheckpoint.md`.
+Report: `analyses/DINO_1deg/adjoint/tapenade_profiling/compare_5yr_kappa_ensemble_ckpAll_vs_nocheckpoint.md`.
 
 **Against the c69f list.** `nocheckpoint_routines.txt` (64 routines) shares
 8 with the new list (`calc_3d_diffusivity`, `exch_xy_rl`, `find_rho_2d`,

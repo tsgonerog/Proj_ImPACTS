@@ -10,6 +10,15 @@ ways to set it. These variants explore both, all from rest.
 | `..._C4Leith1p5` | as above plus Leith |
 | `..._CDscheme` | as above plus the C-D scheme |
 
-Read `p` as the decimal point: `1p8e-2` is `1.8E-2`. The analysis side is
-`analyses/DINO_1deg/02_forward/01_viscosity_study/`, and `analyses/README.md`
+Read `p` as the decimal point: `1p8e-2` is `1.8E-2`. `analyses/README.md`
 carries the token vocabulary.
+
+**The analysis side is thinner than it was.** The three notebooks that compared
+`viscAhGrid` against the `PARM05` files were retired on 2026-09-03 with the
+1-year runs they read (28402, 28447, 28448, 28451); their result — that
+`viscAhGrid = 1.135E-2` matches the reference field's *domain mean* to 0.01 %
+but overshoots it by 30 % at mid-domain, which is why production uses the files
+— now lives in
+`analyses/DINO_1deg/forward/viscosity_binaries_construction.ipynb`, together
+with the recipe for `dino_viscAhD*.bin` itself. The retired notebooks are in
+`~/trash/Proj_ImPACTS/analyses/DINO_1deg/02_forward/01_viscosity_study/`.

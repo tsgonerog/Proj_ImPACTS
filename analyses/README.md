@@ -5,67 +5,115 @@ Jupyter notebooks that read MITgcm run output from cluster scratch
 project. Nothing here reads from the repository itself — the model output lives
 outside git.
 
-Directory and notebook names carry a leading number giving the order the work is
-meant to be read in. `00_archive/` holds superseded, crashed, or replaced
-notebooks; it is kept for provenance and nothing live depends on it. Each
-archive also carries its own `README.md` giving what every file in it is and
-why it is not live — read that before assuming anything there is revivable.
+**Names are descriptive, not numbered** (since 2026-09-03). A notebook is named
+for what it shows and, where it matters, the configuration it shows it for;
+directories are named for the part of the workflow they belong to. Reading order
+is stated in this file and, for the multi-notebook suites, in that suite's own
+`README.md` — it is not encoded in the file names, because a numbered name goes
+stale the moment anything is inserted, removed or reordered.
 
 ## Layout
 
 ```
 analyses/
 ├── DINO_1deg/                        primary configuration (51 x 198 x 36)
-│   ├── 00_grid_and_cost_sections.ipynb   locates the cost-function section indices
-│   ├── 01_first_look_at_output.ipynb     entry point for reading a DINO run
-│   ├── 02_forward/
-│   │   ├── 00_archive/                     crashed 200-year attempts
-│   │   ├── 01_viscosity_study/             PARM05 viscAh*file vs PARM01 viscAhGrid
-│   │   ├── 02_spinup_200yr_visc2x.ipynb
-│   │   └── 03_moc_amoc_animation_visc2x.ipynb
-│   └── 03_adjoint/
-│       ├── 00_archive/                     earlier serial runs + the SciDAC poster
-│       ├── 01_5yr_from_180yr_pickup_visc2x.ipynb
-│       ├── 02_5yr_from_50yr_pickup_viscD2x_Zref.ipynb
-│       ├── 03_5yr_from_50yr_pickup_viscGrid1p8e-2_adjViscBoost.ipynb
-│       ├── 04_5yr_from_rest_viscGrid1p8e-2_adjViscBoost.ipynb
-│       ├── 05_kappa_v_ensemble/            the kappa_v perturbation ensemble (7 notebooks)
-│       ├── 06_0p5yr_from_180yr_pickup_visc2x_vs_5yr_ref.ipynb
-│       └── 07_tapenade_profiling/          Tapenade checkpoint profile + nocheckpoint validation (scripts, no notebook)
+│   ├── grid_and_cost_sections.ipynb      locates the cost-function section indices
+│   ├── first_look_at_output.ipynb        entry point for reading a DINO run
+│   ├── forward/
+│   │   ├── viscosity_binaries_construction.ipynb   how dino_viscAhD*.bin is built
+│   │   ├── spinup_200yr_from_rest_visc2x.ipynb     the 200-year spin-up
+│   │   └── moc_amoc_animation_200yr_visc2x.ipynb   MOC + AMOC frames from it
+│   └── adjoint/
+│       ├── sensitivity_5yr_from180yrPk_visc2x.ipynb          one 5-year adjoint
+│       ├── sensitivity_180d_vs_5yr_from180yrPk_visc2x.ipynb  matched-lead comparison
+│       ├── kappa_v_ensemble/            the κ_v perturbation ensemble (7 notebooks)
+│       ├── tapenade_profiling/          checkpoint profile + -nocheckpoint validation
+│       └── scidac_poster_aug2026/       the SciDAC PI meeting poster
 ├── SOMA_1deg/                        secondary configuration (62 x 62 x 31)
+│   └── adjoint_sensitivity_control_set.ipynb
 ├── reference_notebooks/              collaborator material the above derives from
 │   ├── dinocean_package_usage_from_matt.ipynb
 │   ├── dino_output_walkthrough_from_matt.ipynb
 │   └── moc_amoc_animation_reference.ipynb
 └── tools/
+    ├── install_git_filters.sh
     └── strip_animation_outputs.py    keeps notebooks under GitHub's size limit
 ```
 
+Three directories carry their own `README.md` — `adjoint/kappa_v_ensemble/`,
+`adjoint/tapenade_profiling/` and `adjoint/scidac_poster_aug2026/`. Read those
+for the run tables and the reading order inside each.
+
 ## Scratch layout
 
-Runs live in two campaign directories, named to match the setups:
+Each setup has one output tree, split into what a thing *is* rather than which
+job produced it:
 
 ```
-/scratch2/<user>/DINO_1deg_frd_runs/      forward
-/scratch2/<user>/DINO_1deg_tapAdj_runs/   adjoint
+/scratch2/<user>/DINO_1deg_outputs/
+├── runs/            model output — one directory per job, grouped by campaign
+│   ├── forward/
+│   │   ├── spinup_200yr_visc2x/     the 200-year spin-up (30983)
+│   │   └── kappa_v_ensemble/        the seven 10-yr forward legs (30996–31002)
+│   └── adjoint/
+│       ├── kappa_v_ensemble/        reference + M1–M7, 5 yr (31039–31046)
+│       ├── checkpointing_study/     ckpAll / -nocheckpoint / -profile (31052–31054, 31056)
+│       ├── adjViscBoost/            boosted run and its plain control (31025, 31026)
+│       ├── toolchain_validation/    hook and stub-fix reruns (31022, 31032, 31074, 31075, 31077)
+│       ├── gradient_check/          the repaired grdchk run (31037)
+│       └── sensitivity/             the science runs the notebooks read (28486, 31028)
+├── analysis/        multi-run analysis products, one directory per campaign
+│   └── kappa_v_ensemble/  cache/ figures/ animations/ stats/ + the ckpAll-vs-nocheckpoint workspace
+├── executables/     adjoint binaries kept for provenance, named for their commit
+└── logs/            SLURM logs kept out of the run directories
+
+/scratch2/<user>/SOMA_1deg_outputs/
+├── runs/{forward,adjoint}/          three runs, no campaign level yet
+└── executables/
 ```
 
-Run directories follow
-`DINO_1deg_<mode>[_srl]_<duration>_<start>_<settings>_run<jobid>`, with the same
-configuration tokens the notebooks use. The job ID is the durable key: it is
-what ties a notebook to its run, and it never changes.
+**The rules that make this scale.**
+
+- A **run directory** keeps the name the submit script gave it,
+  `<setup>_<mode>[_<run_token>]_<duration>[_<tag>]_run<jobid>` — machine-made,
+  self-describing, and never edited by hand. The job ID is the durable key.
+  For DINO adjoints `<run_token>` is `tapAdj_<ckp>[_<variant>]` and comes from
+  the build's `build_info.txt`, so a run directory cannot claim a build it did
+  not get.
+- A **campaign** is the directory it sits in. Submit scripts write into
+  `runs/forward/` or `runs/adjoint/` directly, so a new run lands unfiled at
+  that level; move it into a campaign when it becomes part of one, or add a
+  campaign directory if it starts a new line of work. SOMA has no campaign
+  level yet — add one when it has more than a handful of runs.
+- **Single-run output stays with its run.** A notebook that reads one run
+  writes its `figures/` and `animations/` inside that run directory, so
+  deleting a run takes its figures with it and nothing is orphaned.
+- **Multi-run output goes to `analysis/<campaign>/`**, which is why the κ_v
+  suite writes there rather than into any one of its nine runs.
+- `executables/` and `logs/` hold things that are neither, and are named for
+  what they are rather than for a job.
 
 Durations are quoted in years where the run tag used days: DINO runs on a
 366-day year at `dT=1800`, so `73200d` is 200 years, `1830d` is 5 years, and
 `366d` is 1 year.
+
+**This layout dates from 2026-09-03**, and replaced two earlier ones the same
+day: four flat campaign directories (`DINO_1deg_{frd,tapAdj}_runs/`,
+`SOMA_1deg_{frd,tapAdj}_runs/`, `v4_soma_tapAdj_runs/`) with `runs_prod/`,
+`runs_exploratory/` and `runs_from_*_pickup/` inside them, then a brief
+`<setup>_outputs/{frd,tapAdj}/`. Every path in this tree was rewritten with each
+move. Notebook **outputs** were not rewritten — a recorded output showing an old
+path is the honest record of the run that produced it, and where a run was
+renamed rather than replaced (28463 → 30983) the data behind it is
+byte-identical.
 
 ## Configuration tokens in file names
 
 DINO notebook names end in the viscosity setting the run used, because that is
 the axis most of these experiments vary. The reference field is
 `dino_viscAhD.bin`, built as `dxC * 0.27 / 2` by
-`02_forward/01_viscosity_study/00_build_viscAhD_binaries.ipynb`; the `_2p00`
-file is that field doubled.
+`DINO_1deg/forward/viscosity_binaries_construction.ipynb`; the `_2p00` file is
+that field doubled.
 
 | Token | Meaning |
 | --- | --- |
@@ -74,6 +122,7 @@ file is that field doubled.
 | `viscRef` | both files at the unscaled reference |
 | `viscGrid<v>` | scalar `viscAhGrid` in `PARM01` instead, `PARM05` files commented out; `viscGrid1p8e-2` is `viscAhGrid=1.8E-2` |
 | `adjViscBoost` | adjoint-mode viscosity inflation: `viscFacInAd = 10.` against `viscFacInFw = 1.`, from `data.autodiff_adjViscBoost`. Needs the matching build *and* submit script |
+| `ckpAll` / `nocheckpoint` | which Tapenade checkpointing the adjoint was built with; `nocheckpoint` is the DINO default since 2026-09-02 and is bitwise identical to `ckpAll` except under `adjViscBoost` |
 
 Reading `p` as the decimal point keeps the tokens shell-safe: `1p135e-2` is
 `1.135E-2`. Every notebook repeats its setting in full in a banner directly
@@ -82,64 +131,62 @@ under the title, with the run number, so nothing depends on decoding the name.
 The distinction `visc2x` vs `viscD2x_Zref` is not cosmetic. The 200-year
 spin-up first ran as `viscD2x_Zref` and **crashed at 126.3 years** (run 19369);
 raising `viscAhZ` to 2× as well is what produced the run that completed
-(run 28463). Both notebooks are kept, the crashed one in `00_archive/`.
+(run 30983). Both that crash and the `viscGrid1p8e-2` one at 13 years (28452)
+are recorded in `forward/spinup_200yr_from_rest_visc2x.ipynb`; the runs and the
+notebooks that read them are gone.
 
 ## DINO_1deg
 
-`00_grid_and_cost_sections.ipynb` is the one other parts of the repo point at —
-it is how `isecbeg/isecend/jsec` in `code_tap/cost_atlantic_heat.F` were chosen,
-and both `README.md` and `CLAUDE.md` cite it by name.
+`grid_and_cost_sections.ipynb` is the one other parts of the repo point at — it
+is how `isecbeg/isecend/jsec` in `code_tap/cost_atlantic_heat.F` were chosen,
+and both `README.md` and `CLAUDE.md` cite it by name. It reads grid only, from
+the 30-day adjoint 31022.
 
-### 02_forward
+`first_look_at_output.ipynb` is the entry point for reading any DINO run:
+`dynDiag` through `xmitgcm`, nothing configuration-specific. It reads the
+200-year spin-up 30983.
+
+### forward/
 
 | Notebook | Run | What it shows |
 | --- | --- | --- |
-| `01_viscosity_study/00_build_viscAhD_binaries.ipynb` | 28402 | builds and verifies `dino_viscAhD.bin` against `dxC * 0.27 / 2`, and scales it to the `_2p50`/`_3p00`/`_5p00` variants |
-| `01_viscosity_study/01_viscRef_vs_viscGrid1p0e-2.ipynb` | 28402 vs 28447 | reference `PARM05` files against `viscAhGrid=1.0E-2` |
-| `01_viscosity_study/02_viscGrid1p135e-2_increased.ipynb` | 28402 vs 28448 | same comparison, `viscAhGrid` raised to `1.135E-2` |
-| `01_viscosity_study/03_viscGrid9p0e-3_decreased.ipynb` | 28402 vs 28451 | same comparison, `viscAhGrid` lowered to `9.0E-3` |
-| `02_spinup_200yr_visc2x.ipynb` | 28463 | the 200-year spin-up that completed: MOC in depth and density space, barotropic streamfunction, AMOC timeseries. Writes everything in `figures/` |
-| `03_moc_amoc_animation_visc2x.ipynb` | 28463 | renders the MOC + AMOC-timeseries frames into `moc_anim/` and `moc_anim_jpg_std2/` |
+| `viscosity_binaries_construction.ipynb` | 30983 | builds and verifies `dino_viscAhD.bin` against `dxC * 0.27 / 2` (exact: `max\|diff\| = 0`), and scales it to the `_2p50`/`_3p00`/`_5p00` variants. Also carries the retired `viscAhGrid` comparison results |
+| `spinup_200yr_from_rest_visc2x.ipynb` | 30983 | the 200-year spin-up that completed: MOC in depth and density space, barotropic streamfunction, AMOC timeseries. Writes everything into `figures/` |
+| `moc_amoc_animation_200yr_visc2x.ipynb` | 30983 | renders the MOC + AMOC-timeseries frames into `moc_anim/` and `moc_anim_jpg_std2/` |
 
-`00_archive/` holds the two 200-year attempts that crashed:
-`200yr_from_rest_viscD2x_Zref_crashed_126y.ipynb` (run 19369) and
-`200yr_from_rest_viscGrid1p8e-2_crashed_13y.ipynb` (run 28452).
+### adjoint/
 
-### 03_adjoint
-
-All read `/scratch2/<user>/DINO_1deg_tapAdj_runs/`. Notebooks 01–04 each
-read one 5-year (1830-day) MPI adjoint; they differ in where they start and how
-viscosity is set. 06 compares a half-year adjoint against the 5-yr reference.
+All read `/scratch2/<user>/DINO_1deg_outputs/runs/adjoint/`.
 
 | Notebook | Run | Start (`nIter0`) | Viscosity / mods |
 | --- | --- | --- | --- |
-| `01_5yr_from_180yr_pickup_visc2x.ipynb` | 28486 | 180-year pickup (3162240) | `viscAhD` = `viscAhZ` = 2× reference |
-| `02_5yr_from_50yr_pickup_viscD2x_Zref.ipynb` | 24493 | 50-year pickup (878400) | `viscAhD` 2×, `viscAhZ` at reference |
-| `03_5yr_from_50yr_pickup_viscGrid1p8e-2_adjViscBoost.ipynb` | 28461 | 50-year pickup (878400) | `viscAhGrid=1.8E-2`, adjoint-mode visc boost |
-| `04_5yr_from_rest_viscGrid1p8e-2_adjViscBoost.ipynb` | 28453 | rest (0) | `viscAhGrid=1.8E-2`, adjoint-mode visc boost |
-| `06_0p5yr_from_180yr_pickup_visc2x_vs_5yr_ref.ipynb` | 31028 vs 31039 | 180-year pickup (3162240) | `visc2x`, Tapenade-native-hook builds; matched-lead comparison against the 5-yr reference 31039 (the 2026-09-01 seam-clean rerun of 30995; seam mask retained for metric continuity). Figures/animations go to 31028's run directory |
+| `sensitivity_5yr_from180yrPk_visc2x.ipynb` | 28486 | 180-year pickup (3162240) | `viscAhD` = `viscAhZ` = 2× reference. Also carries the results of the three retired companion 5-year adjoints |
+| `sensitivity_180d_vs_5yr_from180yrPk_visc2x.ipynb` | 31028 vs 31039 | 180-year pickup (3162240) | `visc2x`, Tapenade-native-hook builds; matched-lead comparison against the 5-yr reference 31039 (the 2026-09-01 seam-clean rerun of 30995; seam mask retained for metric continuity). Figures/animations go to 31028's run directory |
 
 Settings in this table were read back from each run's own staged `data`
-namelist on scratch, not from the run-directory tag.
+namelist, not from the run-directory tag.
 
-`05_kappa_v_ensemble/` is a seven-notebook suite (2026-08-30; re-executed
+`kappa_v_ensemble/` is a seven-notebook suite (2026-08-30; re-executed
 2026-09-01 on the hook-build adjoint rerun) analysing the vertical-diffusivity
 perturbation ensemble of the `notes/directions/nn_surrogate` master plan,
 Part I: the reference adjoint 31039 (fc/adxx bit-identical to 30995 and 28486;
 seam-clean `ADJ*` + new `ADJetan`) against members M1–M7 (runs 31040–31046,
 reruns of 31003–31009, κ_v scaled 0.25×–32×), plus the internal-variability
-noise floor reconstructed from spin-up 30983's 2,402 pickups. It has its own `README.md` (run table, reading order, conventions);
-shared code lives in `ensemble_common.py`, and `build_cache.py` /
-`build_jproxy.py` must be run once before re-executing the notebooks — they
-write the intermediates the notebooks read. Unlike the single-run notebooks,
-this suite spans nine runs, so everything it generates goes to the sibling
-scratch directory `/scratch2/<user>/DINO_1deg_tapAdj_runs/kappa_v_ensemble_analysis/`
+noise floor reconstructed from spin-up 30983's 2,402 pickups. It has its own
+`README.md` (run table, reading order, conventions); shared code lives in
+`ensemble_common.py`, and `build_cache.py` / `build_jproxy.py` must be run once
+before re-executing the notebooks — they write the intermediates the notebooks
+read. Unlike the single-run notebooks, this suite spans nine runs, so everything
+it generates goes to the sibling scratch directory
+`/scratch2/<user>/DINO_1deg_outputs/runs/adjoint/analysis/kappa_v_ensemble/`
 (`cache/`, `figures/`, `animations/`, `stats/`) rather than into any one run
-directory. All eight adjoints ran a third time on 2026-09-02 with the `-nocheckpoint`
-build (31060–31067): bitwise identical to 31039–31046 in `fc`, `adxx_*` and
-`ADJ*`, so the suite still reads the 2026-09-01 set.
+directory. All eight adjoints ran a third time on 2026-09-02 with the
+`-nocheckpoint` build (31060–31067): bitwise identical to 31039–31046 in `fc`,
+`adxx_*` and `ADJ*`, so the suite still reads the 2026-09-01 set. Those
+`-nocheckpoint` reruns were themselves deleted in the 2026-09-03 consolidation
+once the comparison reports had recorded the result.
 
-`07_tapenade_profiling/` (2026-09-01) is scripts and records rather than a
+`tapenade_profiling/` (2026-09-01) is scripts and records rather than a
 notebook: the Tapenade checkpointing profile of the adjoint (run 31053,
 `-profile` build) parsed into a per-routine ranking, the 33-routine
 `-nocheckpoint` list derived from it, and the validation of that build against
@@ -149,30 +196,29 @@ all 32 `adxx_*` and 73 `ADJ*` files bitwise identical, 8:47 vs 13:13 wall time
 32 `adxx_*` and 4 393 `ADJ*` files, 9:36 vs 14:06 wall time (1.47×); and on
 2026-09-02/03 across the whole κ_v ensemble (31060–31067 vs 31039–31046), all
 eight 5-yr pairs bitwise identical, the four blow-ups included, 1.45–1.65× per
-run and 37.8 h saved of 114.6 h. Its `README.md`
-has the run table; two of its scripts (`parse_tapenade_profile.py`,
-`compare_adjoint_runs.py`) are general enough to reuse on any pair of runs, and
+run and 37.8 h saved of 114.6 h. Its `README.md` has the run table; two of its
+scripts (`parse_tapenade_profile.py`, `compare_adjoint_runs.py`) are general
+enough to reuse on any pair of runs, and
 `compare_ensemble_ckpAll_vs_nocheckpoint.py` drives the pairwise comparison over
-the ensemble.
-Since 2026-09-02 that tuned build is the DINO default (`build_tapAdj.sh` is a
-symlink to `build_tapAdj_nocheckpoint.sh`; the plain build lives on as
-`build_tapAdj_ckpAll.sh`), and the directory also records the one negative
-result, `compare_30d_adjViscBoost_run31025_vs_nocheckpoint_run31056.md`: under
-the adjoint-mode viscosity boost the same list leaves `fc` identical but
-changes every sensitivity field at order one, so that build stays
+the ensemble. Since 2026-09-02 that tuned build is the DINO default
+(`build_tapAdj.sh` is a symlink to `build_tapAdj_nocheckpoint.sh`; the plain
+build lives on as `build_tapAdj_ckpAll.sh`), and the directory also records the
+one negative result,
+`compare_30d_adjViscBoost_run31025_vs_nocheckpoint_run31056.md`: under the
+adjoint-mode viscosity boost the same list leaves `fc` identical but changes
+every sensitivity field at order one, so that build stays
 checkpoint-everything.
 
-`00_archive/` holds four earlier serial exploratory runs at 180 and 360 days,
-named for their starting point and viscosity setting — `viscRef` from rest
-(runs 18232, 18222), `viscD2x_Zref` from the 80 yr pickup (runs 22038, 22039).
-A fifth, `serial_180d_from_50yr_pickup_after_profile.ipynb`, keeps no setting
-in its name: run 24020 is gone from scratch, so its namelist cannot be read
-back. Alongside them is
-`poster_scidac_pi_meeting_aug2026/` — the poster prepared for the SciDAC PI
-meeting in August 2026. Both of its notebooks read run 28486:
-`01_adj_field_animations.ipynb` animates the 3-D and 2-D `ADJ*` fields, and
-`02_poster_panel_frames.ipynb` is the trimmed version that writes the nine
-`poster_frames/*.png` panels of the 3 x 3 sensitivity grid.
+Several runs named in those comparison reports (31055, 31060–31067) were
+deleted in the 2026-09-03 consolidation. The reports are the record; the
+`ckpAll` half of every pair survives.
+
+`scidac_poster_aug2026/` is the poster prepared for the SciDAC PI meeting in
+August 2026 — `adj_field_animations.ipynb` animates the 3-D and 2-D `ADJ*`
+fields of run 28486, `poster_panel_frames.ipynb` is the trimmed version that
+writes the nine `poster_frames/*.png` panels of the 3 × 3 sensitivity grid. It
+has its own `README.md`, including the seam caveat that applies to 28486's
+dumps.
 
 ### Where the outputs go
 
@@ -191,20 +237,21 @@ Notebooks derive those paths from the `run_dir` they already define
 so the output follows the run automatically if it is ever moved again. Nothing
 needs editing in two places.
 
-The one deliberate exception is `05_kappa_v_ensemble/`, which reads nine runs
-and therefore writes everything to the sibling directory
-`/scratch2/<user>/DINO_1deg_tapAdj_runs/kappa_v_ensemble_analysis/` instead of
-into any one run (details in that suite's own `README.md`). Its two
+The one deliberate exception is `kappa_v_ensemble/`, which reads nine runs and
+therefore writes everything to the sibling directory
+`/scratch2/<user>/DINO_1deg_outputs/runs/adjoint/analysis/kappa_v_ensemble/` instead
+of into any one run (details in that suite's own `README.md`). Its two
 publication figures are additionally committed under
-`notes/directions/nn_surrogate/briefs/kappa_ensemble_results/figures/` — they are LaTeX
-sources for that brief, and the only images tracked in this repository.
+`notes/directions/nn_surrogate/briefs/kappa_ensemble_results/figures/` — they
+are LaTeX sources for that brief, and the only images tracked in this
+repository.
 
 Current locations:
 
 | Output | Lives in |
 | --- | --- |
-| 200-year spin-up figures, `moc.gif`, `moc_anim*/` | `DINO_1deg_frd_runs/runs_prod/DINO_1deg_frd_200yr_from_rest_visc2x_run28463/` |
-| `ADJ*` gif/html, `adj_*_z14/`, `poster_frames/` | `DINO_1deg_tapAdj_runs/DINO_1deg_tapAdj_ckpAll_5yr_from180yrPk_visc2x_run28486/` |
+| 200-year spin-up figures, `moc.gif`, `moc_anim*/` | `DINO_1deg_outputs/runs/forward/spinup_200yr_visc2x/DINO_1deg_frd_200yr_from_rest_visc2x_run30983/` |
+| `ADJ*` gif/html, `adj_*_z14/`, `poster_frames/` | `DINO_1deg_outputs/runs/adjoint/sensitivity/DINO_1deg_tapAdj_ckpAll_5yr_from180yrPk_visc2x_run28486/` |
 
 The `.gitignore` rules for `analyses/**/*.{png,jpg,gif,html}` are only a safety
 net against a cell being re-run with a repo-local output path.
@@ -213,13 +260,22 @@ net against a cell being re-run with a repo-local output path.
 
 | Notebook | Runs | What it shows |
 | --- | --- | --- |
-| `01_first_look_at_dyndiag.ipynb` | `v4soma_tapAdj_test_run_5975` | first look at a SOMA run: `dynDiag` temperature and velocity |
-| `02_sensitivity_vs_run_length.ipynb` | `v4StP_srl_*` 5–150 d | manual tile stitching and halo removal, `adxx_theta` by depth, and an animation of how sensitivity grows with run length |
-| `03_sensitivity_theta_salt_diffkr.ipynb` | `pd_v4StP_srl_*` 30/180/360 d | three controls: temperature, salinity, vertical diffusivity |
-| `04_sensitivity_full_control_set.ipynb` | `pd_v4StP_srl_*` 30/180/360 d | the full control set — adds velocities, wind stress, and surface heat and freshwater fluxes |
+| `adjoint_sensitivity_control_set.ipynb` | `pd_v4StP_srl_*` 30/180/360 d (9716, 9717, 9719) | the full control set — temperature, salinity and vertical diffusivity, plus velocities, wind stress, and surface heat and freshwater fluxes |
 
-KPP and GM/Redi are disabled in all of them and the cost section is at 40°N, so
-neither is repeated in the file names.
+KPP and GM/Redi are disabled and the cost section is at 40°N, so neither is
+repeated in the file name.
+
+**This notebook cannot be re-executed as written.** Its c69f-era `v4_soma` runs
+were deleted on 2026-09-03; its outputs are the record. It also absorbed the
+content of three retired siblings — the manual tile-stitch/halo utilities, the
+sensitivity-sign reading notes, and the run-length study's run list — so it is
+now the single SOMA analysis document.
+
+The surviving c69m SOMA runs are the 5-day adjoints
+`SOMA_1deg_tapAdj_5d_run31033` and `run31076` and the 30-day forward
+`SOMA_1deg_frd_30d_run31034`. c69m SOMA is single-tile serial, so a notebook
+repointed at them needs only `xmitgcm.open_mdsdataset` — the manual tile
+machinery is not required.
 
 ## Reading the output files
 
@@ -228,12 +284,34 @@ follow `data.diagnostics` and are `float32`. Read the `.meta` beside a file rath
 than assuming — guessing wrong silently reshapes the array into plausible-looking
 garbage. `xmitgcm.open_mdsdataset` handles this for you; raw `np.fromfile` does not.
 
-Two runs were added on 2026-08-18 for verification rather than science:
+One run is kept for verification rather than science:
 
 | Run | What it is |
 | --- | --- |
-| `DINO_1deg_frd_10yr_from_rest_visc2x_run30945` | 10-year forward, confirmed **bit-identical** to the first 10 years of run 28463. Carries `figures/` with the MOC, AMOC and reproduction-check plots |
-| `DINO_1deg_tapAdj_ckpAll_30d_from180yrPk_visc2x_run31032` | 30-day adjoint, confirms `ADJ*`/`adxx*` output (incl. `ADJetan`) and sensitivity on the cost section. Successor of the 2026-08-18 original (30948, superseded and removable): 31032 is the current-toolchain rerun of the same config, bitwise-validated back to it through the 31022 chain |
+| `DINO_1deg_tapAdj_ckpAll_30d_from180yrPk_visc2x_run31032` | 30-day adjoint, confirms `ADJ*`/`adxx*` output (incl. `ADJetan`) and sensitivity on the cost section. Successor of the 2026-08-18 original (30948): 31032 is the current-toolchain rerun of the same config, bitwise-validated back to it through the 31022 chain |
+
+The forward reproducibility check that used to sit beside it — a 10-year run
+bit-identical to the first 10 years of the spin-up — was run 30945, deleted in
+the 2026-09-03 consolidation. The check is cheap to repeat: build, run 10 years
+from rest with `from_rest_visc2x`, and diff against 30983.
+
+## Retired analyses
+
+Thirteen notebooks were moved to `~/trash/Proj_ImPACTS/analyses/` on 2026-09-03
+because every run they read had been deleted. Their durable findings were
+transferred into the notebooks that remain before the move — the retired
+notebook is not the record any more, the receiving notebook is.
+
+| Retired | Runs | Findings went to |
+| --- | --- | --- |
+| `02_forward/00_archive/` — two crashed 200-yr attempts | 19369, 28452 | `forward/spinup_200yr_from_rest_visc2x.ipynb` |
+| `02_forward/01_viscosity_study/` — three `viscAhGrid` comparisons | 28402, 28447, 28448, 28451 | `forward/viscosity_binaries_construction.ipynb` |
+| `03_adjoint/00_archive/serial_*` — five serial exploratory runs | 18222, 18232, 22038, 22039, 24020 | nothing unique; the runs were already gone before this cleanup |
+| `03_adjoint/02_`, `03_`, `04_` — three 5-yr adjoints | 24493, 28461, 28453 | `adjoint/sensitivity_5yr_from180yrPk_visc2x.ipynb` |
+| `SOMA_1deg/01_`, `02_`, `03_` | `v4soma_*`, `v4StP_srl_*`, `pd_v4StP_srl_*` | `SOMA_1deg/adjoint_sensitivity_control_set.ipynb` |
+
+`~/trash/Proj_ImPACTS/analyses/README.md` lists them file by file, with the
+path each had before the move.
 
 ## Notebook size discipline
 

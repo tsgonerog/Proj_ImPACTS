@@ -50,7 +50,7 @@ partway through the reverse sweep (non-monotonically in κ — a property of eac
 member's adjusted background state, with the plain, non-`adjViscBoost` build).
 The finite-difference comparison ran but fails as a validation: the response is
 nonlinear already at factor-2 steps. Full analysis:
-`analyses/DINO_1deg/03_adjoint/05_kappa_v_ensemble/`; results prose:
+`analyses/DINO_1deg/adjoint/kappa_v_ensemble/`; results prose:
 `notes/directions/nn_surrogate/` (master Part I §Results and the `kappa_ensemble_results`
 brief). Rerunning a blown member as-is reproduces the blow-up — pair these
 namelists with the `adjViscBoost` build+submit pair if a stable large-κ adjoint

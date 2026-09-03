@@ -105,7 +105,7 @@ Two blockers it exists to catch, because neither is in this repository:
 cd "$(git rev-parse --show-toplevel)"          # the repo root
 source tools/machine_env.sh && impacts_check_env
 echo "$MACHINE $SCRATCH_ROOT"                  # sverdrup /scratch2/<user>
-ls "$SCRATCH_ROOT/DINO_1deg_tapAdj_runs/"
+ls "$SCRATCH_ROOT/DINO_1deg_outputs/runs/adjoint/"
 ```
 
 `build_tapAdj.sh` sources this file to get `MPI_OPTFILE` for `genmake2 -of`, and
@@ -193,7 +193,7 @@ live `input_tap/data` rather than the committed variant.
 Output lands in two places: `<job-name>.<job-id>.{out,err}` in the setup
 directory (the `.err` is a full `set -x` trace of staging, which is where
 staging failures appear), and the run itself under
-`$SCRATCH_ROOT/DINO_1deg_tapAdj_runs/DINO_1deg_<run_token>_<duration>[_<tag>]_run<jobid>/`,
+`$SCRATCH_ROOT/DINO_1deg_outputs/runs/adjoint/DINO_1deg_<run_token>_<duration>[_<tag>]_run<jobid>/`,
 where `run_token` (`tapAdj_<ckp>[_<variant>]`, e.g. `tapAdj_nocheckpoint`,
 `tapAdj_ckpAll`, `tapAdj_ckpAll_adjViscBoost`, `tapAdj_ckpAll_tapProfile`)
 is read from the build directory's `build_info.txt` — written by the build
@@ -268,15 +268,15 @@ even when an earlier one fails.
 ### DINO examples
 
 ```bash
-R=/scratch2/$USER/DINO_1deg_tapAdj_runs
+R=/scratch2/$USER/DINO_1deg_outputs/runs/adjoint
 
 # the comparison that established 30995 reproduces the May baseline exactly
 # (2026-08-28; 30995 was deleted after the 2026-09-01 rerun — the rerun's own
 #  validation reports sit in each 31039-31046 run directory as
 #  comparison_vs_*.txt, ADJ* differing seam-only there by design)
 tools/compare_adj_runs.sh \
-  "$R/DINO_1deg_tapAdj_ckpAll_5yr_from180yrPk_visc2x_run28486" \
-  "$R/DINO_1deg_tapAdj_5yr_from180yrPk_visc2x_run30995"
+  "$R/sensitivity/DINO_1deg_tapAdj_ckpAll_5yr_from180yrPk_visc2x_run28486" \
+  "$R/DINO_1deg_tapAdj_5yr_from180yrPk_visc2x_run30995"   # 30995: gone
 echo "verdict: $?"          # 0 = equivalent
 #   EQUIVALENT: all 8116 sensitivity fields bit-identical, fc identical to every
 #   printed digit (3.30992121938681E-01), 18801 %MON lines byte-identical.
@@ -288,22 +288,24 @@ echo "verdict: $?"          # 0 = equivalent
 # (all eight EQUIVALENT -- 8850 sensitivity fields bit-identical, fc and the
 #  18801 %MON lines identical; 31060-31067 against 31039-31046)
 tools/compare_adj_runs.sh \
-  "$R/DINO_1deg_tapAdj_ckpAll_5yr_M3_run31042" \
-  "$R/DINO_1deg_tapAdj_nocheckpoint_5yr_M3_run31063"
+  "$R/kappa_v_ensemble/DINO_1deg_tapAdj_ckpAll_5yr_M3_run31042" \
+  "$R/kappa_v_ensemble/DINO_1deg_tapAdj_nocheckpoint_5yr_M3_run31063"   # 31063: gone
 
 # submit and compare unattended, from the setup directory
 cd MITgcm_c69m/mysetups/DINO_1deg
 jid=$(IMPACTS_DURATION_DAYS=30 ../../../tools/submit.sh submit_tapAdj.sh --parsable | tail -1)
 nohup ../../../tools/compare_adj_runs.sh --wait "$jid" \
-  "$R/DINO_1deg_tapAdj_ckpAll_30d_from180yrPk_visc2x_run31022" \
+  "$R/toolchain_validation/DINO_1deg_tapAdj_ckpAll_30d_from180yrPk_visc2x_run31022" \
   "$R/DINO_1deg_tapAdj_nocheckpoint_30d_from180yrPk_visc2x_run$jid" &
+#   note the asymmetry: the reference sits in a campaign directory, the new run
+#   does not — a fresh run lands directly in runs/adjoint/ and is filed later
 #   (submit_tapAdj.sh is the nocheckpoint default since 2026-09-02; its output
 #    is bitwise identical to the ckpAll runs, so this comparison still holds)
 
 # print only, keep the listings for a closer look (still in the setup directory)
 ../../../tools/compare_adj_runs.sh --no-report --work /tmp/cmp_31032 \
-  "$R/DINO_1deg_tapAdj_ckpAll_30d_from180yrPk_visc2x_run31022" \
-  "$R/DINO_1deg_tapAdj_ckpAll_30d_from180yrPk_visc2x_run31032"
+  "$R/toolchain_validation/DINO_1deg_tapAdj_ckpAll_30d_from180yrPk_visc2x_run31022" \
+  "$R/toolchain_validation/DINO_1deg_tapAdj_ckpAll_30d_from180yrPk_visc2x_run31032"
 ```
 
 A cleaner way to arrange the second one, without a background process holding
@@ -666,11 +668,12 @@ jid=$(IMPACTS_DURATION_DAYS=30 ../../../tools/submit.sh submit_tapAdj.sh --parsa
 echo "submitted $jid"
 
 # 3. when it lands, bit-compare it against a run you trust
-R=$SCRATCH_ROOT/DINO_1deg_tapAdj_runs
+R=$SCRATCH_ROOT/DINO_1deg_outputs/runs/adjoint
 ../../../tools/compare_adj_runs.sh --wait "$jid" \
-  "$R/DINO_1deg_tapAdj_ckpAll_30d_from180yrPk_visc2x_run31022" \
+  "$R/toolchain_validation/DINO_1deg_tapAdj_ckpAll_30d_from180yrPk_visc2x_run31022" \
   "$R/DINO_1deg_tapAdj_nocheckpoint_30d_from180yrPk_visc2x_run$jid"
-#   -> writes comparison_vs_..._run31022.txt into the new run directory
+#   -> writes comparison_vs_..._run31022.txt into the new run directory,
+#      which lands unfiled in runs/adjoint/ — move it into a campaign later
 #      (the run_token in the name comes from build_info.txt; the default
 #       build is nocheckpoint, bitwise identical to the ckpAll reference)
 #      exit 0 = every ADJ*/adxx* bit-identical, fc and %MON identical

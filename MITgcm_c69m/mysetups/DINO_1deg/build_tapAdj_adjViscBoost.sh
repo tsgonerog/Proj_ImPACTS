@@ -14,8 +14,8 @@
 # in split mode those intermediates were taped in the forward sweep at forward
 # viscosities and the boost reaches only what the _BWD code reads live. Only
 # the joint-mode boost is what the ASTE/TAF-style mechanism was designed as
-# and what 31025 validated. Record: analyses/DINO_1deg/03_adjoint/
-# 07_tapenade_profiling/compare_30d_adjViscBoost_run31025_vs_nocheckpoint_run31056.md.
+# and what 31025 validated. Record: analyses/DINO_1deg/adjoint/
+# tapenade_profiling/compare_30d_adjViscBoost_run31025_vs_nocheckpoint_run31056.md.
 #
 # What differs from build_tapAdj_ckpAll.sh is a second -mods directory,
 # code_tap/variants/adjViscBoost/, listed FIRST so that its four files shadow

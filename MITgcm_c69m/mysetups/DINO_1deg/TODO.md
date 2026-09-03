@@ -22,8 +22,24 @@
   four blow-ups included; wall time 114.6 h → 76.8 h over the eight runs
   (1.45–1.65× per run, 1.54× on the reverse sweep, forward sweep unchanged).
   The executable rebuilt on 2026-09-02 also reproduces 31055 bitwise. Report
-  and script in `analyses/DINO_1deg/03_adjoint/07_tapenade_profiling/`; the
+  and script in `analyses/DINO_1deg/adjoint/tapenade_profiling/`; the
   ensemble analysis keeps reading 31039–31046 (the sets are interchangeable).
+
+- [x] ~~**Scratch layout: separate runs from analysis, executables and logs**~~
+  (added and **done 2026-09-03**). `/scratch2/<user>/DINO_1deg_outputs/` was a
+  flat `{frd,tapAdj}/` pair with `kappa_v_ensemble_analysis/` and
+  `executables_preserved/` sitting among the run directories. It is now
+  `runs/{forward,adjoint}/<campaign>/`, `analysis/<campaign>/`, `executables/`
+  and `logs/`, with a `README.md` on scratch giving the campaign map. The five
+  DINO submit scripts write to `runs/forward/` or `runs/adjoint/` directly, so
+  **a new run lands unfiled at that level** and is moved into a campaign when
+  it joins one — filing a run means updating the notebook that reads it. Run
+  directory *names* are unchanged, so the `build_info.txt` `run_token` contract
+  still holds and the job ID is still the durable key. All six pickup symlink
+  targets were re-verified to resolve. Also pruned: `STDOUT.0001`–`0026` from
+  every run (20.6 GB; only rank 0 writes `%MON`, the rest are `cg2d:` traces
+  with no ERROR or WARNING anywhere) — moved to
+  `/scratch2/<user>/_trash_20260903/`, not deleted.
 
 - [ ] **Retry the four blown ensemble members (M1/M4/M5/M7) with adjViscBoost**
   (added 2026-08-31). Not possible before: the boost was silently inert under
@@ -71,7 +87,7 @@
   the boost only reaches what the `_BWD` code reads live. The list was
   removed from `build_tapAdj_adjViscBoost.sh` again (run token
   `tapAdj_ckpAll_adjViscBoost`); 31056 stays on scratch as the record, report in
-  `analyses/DINO_1deg/03_adjoint/07_tapenade_profiling/compare_30d_adjViscBoost_run31025_vs_nocheckpoint_run31056.md`.
+  `analyses/DINO_1deg/adjoint/tapenade_profiling/compare_30d_adjViscBoost_run31025_vs_nocheckpoint_run31056.md`.
   A faster boosted adjoint would need the boost applied to the taped
   intermediates too (i.e. boosting the *forward* sweep's recorded viscosities,
   which changes the forward trajectory) or a list restricted to routines whose
@@ -147,4 +163,4 @@
   `ADJ*`, 18 801 `%MON` lines — in 9:36:30 against 9:35:58. Merged to `main`
   2026-09-03 (rebased, fast-forward; `main` = ea6f75f); the pre-merge state —
   the last commit with the `TAP_*` names — is tag
-  `archive/20260903_pre-tapenade-hooks-upstream-shape`.
+  `archive/20260903_pre-hook-upstream-rename`.
