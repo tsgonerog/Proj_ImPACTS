@@ -2,7 +2,9 @@
 
 *Practical reference — DINO_1deg, MITgcm checkpoint69m + Tapenade, written
 2026-09-01. Every source claim below was verified against the working tree at
-commit `1d6bfa1`; every number is the DINO 5-yr adjoint configuration
+commit `1d6bfa1` (hook routine and file names updated 2026-09-03 for the
+upstream-name layout of 2026-09-02, commit `ea6f75f`); every number is the
+DINO 5-yr adjoint configuration
 (runs 30995 / 31039–31046: `nIter0=3162240`, 87 840 steps, ΔT = 1800 s,
 `adjDumpFreq` = 5 d). A styled copy of this note lives beside it as
 [`adxx_vs_adj_note.html`](adxx_vs_adj_note.html) — self-contained, opens in any
@@ -24,7 +26,7 @@ questions.
 | --- | --- | --- |
 | represents | ∂J/∂(state at time *t*) — the adjoint variables `thetab`, `saltb`, `uVelb`, … as the reverse sweep passes time *t* | ∂J/∂(control) — the accumulated gradient w.r.t. each control declared in `data.ctrl`, weights applied (unit weights here) |
 | what selects the set | the hand-wired dump-hook field list — **12 fields**, fixed in code, independent of `data.ctrl` | `data.ctrl` — one file per control family, **16 here**, automatic |
-| produced by | `TAP_DUMMY_IN_STEPPING_B` / `TAP_DUMMY_FOR_ETAN_B` → `DUMP_ADJ_XYZ` (pkg/autodiff) | the adjoint of the control *read* — pkg/autodiff's active-file machinery (`active_file_control.F`) |
+| produced by | `DUMMY_IN_STEPPING_B` / `DUMMY_FOR_ETAN_B` (`code_tap/dummy_tap.F`) → `DUMP_ADJ_XYZ` (pkg/autodiff) | the adjoint of the control *read* — pkg/autodiff's active-file machinery (`active_file_control.F`) |
 | written when | during the reverse sweep, every `adjDumpFreq` (5 d) → 366 dumps per field per run | once, when the sweep reaches `nIter0` — the very end of the run |
 | file numbering | 10-digit **forward-model iteration** of the snapshot (`3162240…3249840`) | 10-digit **optimization-cycle** counter — always `0000000000` here; *not* a timestep |
 | precision | float32 (`writeBinaryPrec`) | float64 |
@@ -45,7 +47,7 @@ state variable — Tapenade's `b`-suffixed twins (`thetab(i,j,k)` =
 cost-window end they hold only the direct cost forcing on the 26°N section;
 sweeping back they pick up advection, diffusion and wave dynamics. An `ADJ*`
 file is a snapshot of one of them, taken every `adjDumpFreq`. The dumped set is
-a code-level choice — the 11 fields passed to `TAP_DUMMY_IN_STEPPING` in
+a code-level choice — the 11 fields passed to `DUMMY_IN_STEPPING` in
 `code_tap/forward_step.F`, plus `etaN` through its own hook — and has nothing
 to do with `data.ctrl`.
 
@@ -70,12 +72,12 @@ counterpart. Full map in §8.
 DURING EVERY BACKWARD STEP (dumped every adjDumpFreq = 5 d)          [ADJ*]
 
   FORWARD_STEP_B                       generated forward_step_b.f
-    ├─ TAP_DUMMY_IN_STEPPING_B         code_tap/addummy_in_stepping.F
+    ├─ DUMMY_IN_STEPPING_B             code_tap/dummy_tap.F
     │    ├─ ADEXCH_* halo folds        code_tap/stubs_tap_adj.F
     │    └─ DUMP_ADJ_XYZ / _XY         pkg/autodiff
     │                                    -> ADJtheta.<iter> ... x11  (float32)
     └─ INTEGR_CONTINUITY_B             (nested in FORWARD_STEP_B)
-         └─ TAP_DUMMY_FOR_ETAN_B       code_tap/addummy_for_etan.F
+         └─ DUMMY_FOR_ETAN_B           code_tap/dummy_tap.F
                                        no halo fold, own counter dumpAdRecEt
                                          -> ADJetan.<iter>          (float32)
 
@@ -111,19 +113,25 @@ force the hand-written `ADDUMMY_IN_STEPPING` into the reverse sweep even though
 the forward hook `DUMMY_IN_STEPPING` carries no active data. Tapenade has no
 such directive — its external-library mechanism is purely data-flow driven, so
 a passive hook is simply dropped from the backward sweep. Since 2026-08-31 both
-setups bridge that gap the same way: the `-mods` shadow `forward_step.F` passes
-the 11 state fields to `TAP_DUMMY_IN_STEPPING`, and `code_tap/flow_tap_local`
-(injected via `-tap_extra "-ext …"`) declares them active — so Tapenade itself
-generates the `CALL TAP_DUMMY_IN_STEPPING_B(theta, thetab, …)` at the
-reverse-sweep mirror point. Same pattern for `etaN`. The full story — gap,
+setups bridge that gap the same way (under the upstream hook names since
+2026-09-02): the `-mods` shadow `forward_step.F` passes the 11 state fields to
+`DUMMY_IN_STEPPING`, whose interface gains them under `ALLOW_TAPENADE` in the
+shadow `code_tap/dummy_in_stepping.F`, and `code_tap/flow_tap_local` (appended
+after the stock external library by the `-adof` file
+`code_tap/adjoint_tap_local`, because Tapenade keeps the last declaration of an
+external) declares them active — so Tapenade itself generates the
+`CALL DUMMY_IN_STEPPING_B(theta, thetab, …)` at the reverse-sweep mirror
+point, and the hand-written body in `code_tap/dummy_tap.F` fills the no-op stub
+upstream ships in `pkg/tapenade`. Same pattern for `etaN`. The full story — gap,
 mechanism, validation, upstreaming — is [`../tapenade_hooks/`](../tapenade_hooks/).
 
-> **Extending the dump set is a four-file change, not a namelist change.** The
-> field list is baked into (1) the hook call in `forward_step.F`, (2) the
-> activity declaration in `flow_tap_local`, (3) the hand-written `_B`/`_D`
-> bodies, and (4) the `check_gen_call` argument-count assertion in both build
-> scripts (25 args for the stepping hook — F77 would silently misalign a
-> mismatch). Adding a *control*, by contrast, is `data.ctrl` + a weight file,
+> **Extending the dump set is a five-file change, not a namelist change.** The
+> field list is baked into (1) the hook call in `forward_step.F`, (2) the hook's
+> `ALLOW_TAPENADE` interface in `dummy_in_stepping.F`, (3) the activity
+> declaration in `flow_tap_local`, (4) the hand-written `_B`/`_D` bodies in
+> `dummy_tap.F`, and (5) the `check_gen_call` argument-count assertion in every
+> adjoint build script (25 args for the stepping hook — F77 would silently
+> misalign a mismatch). Adding a *control*, by contrast, is `data.ctrl` + a weight file,
 > and its `adxx_*` comes for free.
 
 ## 5 · One run on a timeline
@@ -261,9 +269,10 @@ Three caveats when reading `ADJ*`:
 ---
 
 *Source claims verified against the tree at `1d6bfa1`:
-`code_tap/addummy_in_stepping.F` (ADEXCH folds, `DUMP_ADJ_XYZ`,
-`DIFFERENT_MULTIPLE(adjDumpFreq,…)`), `code_tap/addummy_for_etan.F`
-(`dumpAdRecEt`), `pkg/autodiff/active_file_control.F` (`ADD_PREFIX('ad',…)`),
+`code_tap/dummy_tap.F` — the `_B` bodies, then still in
+`code_tap/addummy_in_stepping.F` and `code_tap/addummy_for_etan.F` — (ADEXCH
+folds, `DUMP_ADJ_XYZ`, `DIFFERENT_MULTIPLE(adjDumpFreq,…)`, `dumpAdRecEt`),
+`pkg/autodiff/active_file_control.F` (`ADD_PREFIX('ad',…)`),
 `pkg/autodiff/dump_adj_xyz.F` (`WRITE_REC_XYZ_RL`),
 `model/src/forward_step.F:927` (`INTEGR_CONTINUITY` call site),
 `build_tapAdj_ckpAll/the_main_loop_b.f` (`THE_MAIN_LOOP_B`; the directory was `build_tapAdj/` until 2026-09-02). Correlations measured on

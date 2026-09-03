@@ -203,20 +203,25 @@ gap the same way since 2026-08-31.
 **DINO — Tapenade-native (since 2026-08-31).** The hook's activity is made
 visible through its interface, which is the one mechanism Tapenade honours:
 `code_tap/forward_step.F` (a `-mods` shadow) passes the state and forcing
-fields to `TAP_DUMMY_IN_STEPPING(...)`, and `code_tap/flow_tap_local` — a
-setup-local Tapenade external library injected with
-`-tap_extra "-ext ../code_tap/flow_tap_local"` — declares those arguments
-active. Tapenade then generates `CALL TAP_DUMMY_IN_STEPPING_B(theta, thetab, …)`
-in the reverse sweep itself; the hand-written `_B` body in
-`code_tap/addummy_in_stepping.F` halo-folds and dumps its adjoint arguments.
-The same pattern drives the adjoint-mode switch hooks (`TAP_INADMODE_SET/UNSET`),
+fields to the upstream hook `DUMMY_IN_STEPPING(...)`, whose interface gains
+those fields under `ALLOW_TAPENADE` in the shadow `code_tap/dummy_in_stepping.F`,
+and `code_tap/flow_tap_local` — a setup-local Tapenade external library that
+the setup's `-adof` file `code_tap/adjoint_tap_local` appends after the stock
+`flow_tap`, since Tapenade keeps the last declaration of an external —
+declares those arguments active. Tapenade then generates
+`CALL DUMMY_IN_STEPPING_B(theta, thetab, …)` in the reverse sweep itself; the
+hand-written `_B` body in `code_tap/dummy_tap.F` (upstream ships it as a no-op
+stub in `pkg/tapenade`) halo-folds and dumps its adjoint arguments.
+The same pattern drives the adjoint-mode switch hooks (`AUTODIFF_INADMODE_SET/UNSET`),
 which apply and revert the `inAd*` adjViscBoost parameters around every backward
 step — TAF did this via `ADAUTODIFF_INADMODE_*`, which nothing in a Tapenade
 build ever called, so adjViscBoost was silently inert before these hooks.
 DINO's adjoint builds therefore use **stock** `genmake2`, post-edit no
 generated file, and assert after every `make` that each generated `_B` call
 carries exactly the argument count the hand-written routines declare (F77
-would silently misalign a mismatch).
+would silently misalign a mismatch) and that the compiled `dummy_tap.f` still
+carries the ten `ADJ*` dump calls (they vanish silently if the file loses its
+`AD_CONFIG.h` include).
 
 **SOMA — converted the same day, and the conversion was a rescue.** SOMA had
 used a patched `genmake2` (`genmake2_override_forward_step_b`) that overwrote
@@ -228,7 +233,8 @@ an adjoint on this tree (runs 31029/31030). The hook conversion fixed it: run
 31031 is the first successful c69m SOMA adjoint, with `fc` bitwise-identical
 to the crashed baseline's forward value. The override script and the frozen
 copy are deleted, and `pkg/tapenade/dummy_tap.F` — removed at vendoring time
-for a symbol collision the `TAP_*` renaming dissolved — is restored verbatim.
+for a symbol collision — is restored verbatim (since 2026-09-02 it is shadowed
+from `code_tap/`, its stubs filled with the real `_B` bodies).
 **The vendored `MITgcm/` tree now deviates from upstream in zero files.**
 
 **ADJetan, and the additive file layout (later the same day).** The
@@ -236,8 +242,8 @@ free-surface adjoint has its own upstream hook (`DUMMY_FOR_ETAN`, inside
 `INTEGR_CONTINUITY` — `adEtaN` is half a time step out of phase with the
 `forward_step` fields), passive under Tapenade for the same reason and
 therefore never dumped. Both setups now wire it identically:
-`code_tap/integr_continuity.F` calls `TAP_DUMMY_FOR_ETAN(etaN, …)`, and the
-hand-written `_B` in `code_tap/addummy_for_etan.F` writes `ADJetan`. In the
+`code_tap/integr_continuity.F` calls `DUMMY_FOR_ETAN(etaN, …)`, and the
+hand-written `DUMMY_FOR_ETAN_B` in `code_tap/dummy_tap.F` writes `ADJetan`. In the
 same pass every `code_tap/` shadow in both setups was re-laid out to be the
 upstream c69m file byte-for-byte plus guarded additions (and each option
 header the upstream text with only `#define`/`#undef` toggles changed), so
@@ -323,10 +329,11 @@ Each script does the same four things, and none copies anything into
 `code_tap/`:
 
 1. `make CLEAN`;
-2. run stock `genmake2` with `-tap`, `-adof=.../adjoint_tap` and `-mods` (the
+2. run stock `genmake2` with `-tap`, `-adof=../code_tap/adjoint_tap_local` and `-mods` (the
    boost build lists `code_tap/variants/adjViscBoost` ahead of `code_tap`);
 3. `make depend`;
-4. `make -j 8 tap_adj`, then assert the generated hook calls and write
+4. `make -j 8 tap_adj`, then assert the generated hook calls' argument counts
+   and the ten `ADJ*` dump calls in the compiled `dummy_tap.f`, and write
    `build_info.txt`.
 
 Build directories are gitignored, large, and fully reproducible — delete and
@@ -569,7 +576,7 @@ There are no unit tests. What has and has not been checked, as of 2026-09-02:
 | Check | Status | What it showed |
 | --- | --- | --- |
 | Forward reproducibility | **verified** | A 10-year `from_rest_visc2x` run reproduces the first 10 years of production run 28463 **bit-identically** — 161 field comparisons, four diagnostic streams, 1334 monitor values, AMOC series, all exactly zero. Re-verified 2026-08-28: the new spin-up 30983 reproduces 28463 |
-| Builds | **verified** | All build directories compile clean. Both setups' adjoint builds generate their `TAP_*` hook calls natively from stock `genmake2` (argument counts asserted by every build script); no generated file is post-edited anywhere |
+| Builds | **verified** | All build directories compile clean. Both setups' adjoint builds generate their hook `_B` calls natively from stock `genmake2` (argument counts asserted by every build script); no generated file is post-edited anywhere |
 | Adjoint runs end to end | **verified** | 30-day adjoint from the 180-year pickup writes `ADJ*` and `adxx*`, peak sensitivity on the cost section at `i=2, j=127, k=26`. The 5-yr reference chain 28486 ≡ 30995 ≡ 31039 reproduces `fc` and every `adxx_*` bit-identically (the 2026-09-01 rerun's `ADJ*` dumps are seam-corrected and add `ADJetan`) |
 | `-nocheckpoint` tuned adjoint (DINO) | **verified 2026-09-02** | `build_tapAdj_nocheckpoint.sh` — the 33 routines Tapenade's own profiler ranked highest, differentiated in split mode instead of checkpointed — reproduces the plain build **bitwise** (fc, all `adxx_*`, all `ADJ*`) at 30 days (run 31054 vs 31052, 8:47 vs 13:13) and at 5 years (31055 vs 31039, 9:35:58 vs 14:05:45, **1.47×**). Method, numbers and the 45 % ceiling in `tools/tapenade_profiling/README.md`. **Made the DINO default on 2026-09-02** (`build_tapAdj.sh` → symlink to it; the plain build lives on as `build_tapAdj_ckpAll.sh`)). **Re-verified 2026-09-03 on the whole κ_v ensemble**: all eight 5-yr adjoints (31060–31067 vs 31039–31046) bitwise identical, the four blow-ups included, at 1.45–1.65× per run — 37.8 h saved of 114.6 h |
 | `-nocheckpoint` under `adjViscBoost` | **tested 2026-09-02, not equivalent — rejected** | Run 31056 (boost + list) vs 31025 (boost, every call checkpointed): `fc` and `%MON` byte-identical, every `ADJ*` and `adxx_*` field different at order one. Joint-mode recomputation happens after the mode-switch hook has boosted the viscosities; split-mode tapes were taken before it. The boosted adjoint therefore stays a `ckpAll` build; report in `analyses/DINO_1deg/03_adjoint/07_tapenade_profiling/` |
@@ -682,9 +689,10 @@ gone. Re-run the cell, or keep an export outside the repo
 Reference states of the tree are kept as **annotated tags**, not branches:
 
 ```
-archive/20260831_pre-tapenade-hooks       last commit before the TAP_* hook redesign (run 31038 control build)
-archive/20260901_pre-tapenade-profiling   main immediately before the tapenade-profiling merge
-archive/20260902_pre-nocheckpoint-default main before the nocheckpoint build became the DINO default (build_tapAdj.sh = ckpAll, runs named from the job name)
+archive/20260831_pre-tapenade-hooks                 last commit before the TAP_* hook redesign (run 31038 control build)
+archive/20260901_pre-tapenade-profiling             main immediately before the tapenade-profiling merge
+archive/20260902_pre-nocheckpoint-default           main before the nocheckpoint build became the DINO default (build_tapAdj.sh = ckpAll, runs named from the job name)
+archive/20260903_pre-tapenade-hooks-upstream-shape  main immediately before the tapenade-hooks-upstream-shape fast-forward (last commit with the TAP_* hook names)
 ```
 
 The name is `archive/<YYYYMMDD>_pre-<change>`, the date being the *commit date*

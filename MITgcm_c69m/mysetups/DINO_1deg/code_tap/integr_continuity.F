@@ -314,8 +314,8 @@ C     In reverse, print adjoint variable for etaN
 C     Tapenade has no TAF ADNAME/REQUIRED equivalent to force a hand-written
 C     adjoint for a hook with no active arguments, so etaN is passed
 C     explicitly; code_tap/flow_tap_local declares it active and Tapenade
-C     generates the reverse-sweep call to TAP_DUMMY_FOR_ETAN_B itself.
-      CALL TAP_DUMMY_FOR_ETAN( etaN, myTime, myIter, myThid )
+C     generates the reverse-sweep call to DUMMY_FOR_ETAN_B itself.
+      CALL DUMMY_FOR_ETAN( etaN, myTime, myIter, myThid )
 # else
       CALL DUMMY_FOR_ETAN( myTime, myIter, myThid )
 # endif

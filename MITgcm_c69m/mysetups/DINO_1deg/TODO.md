@@ -27,7 +27,8 @@
 
 - [ ] **Retry the four blown ensemble members (M1/M4/M5/M7) with adjViscBoost**
   (added 2026-08-31). Not possible before: the boost was silently inert under
-  Tapenade until the `TAP_INADMODE_*` hooks (first working boost: run 31025 vs
+  Tapenade until the 2026-08-31 mode-switch hooks, now `AUTODIFF_INADMODE_SET/UNSET`
+  (first working boost: run 31025 vs
   31026 — `fc` bit-identical, adjoints damped). Pair
   `build_tapAdj_adjViscBoost.sh` with `submit_tapAdj_adjViscBoost.sh` and the
   member test case.
@@ -64,7 +65,8 @@
   `fc` and all 441 `%MON` lines byte-identical, but all 66 `ADJ*` dumps and
   all 8 real `adxx_*` gradients differ at order one (RMS ratio 0.3–0.9) —
   where the plain pair is bitwise identical under the same list. Joint-mode
-  recomputation runs *after* `TAP_INADMODE_SET_B` has boosted the viscosities;
+  recomputation runs *after* the mode-switch adjoint (then `TAP_INADMODE_SET_B`,
+  now `AUTODIFF_INADMODE_SET_B`) has boosted the viscosities;
   split-mode tapes were taken in the forward sweep at forward viscosities, so
   the boost only reaches what the `_BWD` code reads live. The list was
   removed from `build_tapAdj_adjViscBoost.sh` again (run token
@@ -101,7 +103,8 @@
   them, are gone (git history keeps them): `SIZE.h` is the one decomposition,
   the plain builds compile the vendored `pkg/autodiff` files (the `_OG`
   copies were byte-identical to them), the `TAP_INADMODE_*_B/_D` wrappers
-  live in `code_tap/tap_inadmode.F`, and the four ASTE-derived shadows live
+  live in `code_tap/tap_inadmode.F` (moved into `code_tap/dummy_tap.F` by the
+  next entry), and the four ASTE-derived shadows live
   in `code_tap/variants/adjViscBoost/` under their real names as a second
   `-mods` directory (`-mods="../code_tap/variants/adjViscBoost ../code_tap"`,
   asserted after `make`). Also removed: the debug-print `ini_procs.F` shadow
@@ -116,3 +119,32 @@
   from rest) to 31025 — `fc`, 32 `adxx_*`, 66 `ADJ*`, 441 `%MON`, 13:15 vs
   13:19; its 14 `ADJetan` files are new only because 31025 predates that
   hook. Reports: `comparison_vs_*.txt` in the two run directories.
+
+- [x] ~~**Give the Tapenade hooks their upstream names and layout**~~ (added and
+  **done 2026-09-02**, branch `tapenade-hooks-upstream-shape`). `TAP_DUMMY_IN_STEPPING`,
+  `TAP_DUMMY_FOR_ETAN` and `TAP_INADMODE_SET/UNSET` are gone: the upstream hooks
+  keep their names and gain the wider interface under `#ifdef ALLOW_TAPENADE`
+  in shadows of their own `pkg/autodiff` files (`#else` = upstream), the
+  `_B`/`_D` bodies fill the stubs upstream ships in `pkg/tapenade/dummy_tap.F`
+  (a shadow that also carries the mode-switch wrappers), and `flow_tap_local`
+  re-declares the hooks under their upstream names. Tapenade keeps the *last*
+  declaration of an external, so the library now rides in through
+  `code_tap/adjoint_tap_local` (a `-adof` file sourcing the stock options and
+  appending `-ext ../code_tap/flow_tap_local`) instead of `-tap_extra`. Same in
+  SOMA (dump hooks only). Validation: every adjoint build's generated code is
+  token-identical to the previous layout's after the renames (the profiling
+  build differs only in the routine-name strings its instrumentation embeds);
+  run 31074 (default, 30 d from the 180-yr pickup) is bitwise identical to
+  31069 — `fc`, 32 `adxx_*`, 73 `ADJ*`, 441 `%MON`, 8:45 — run 31075 (boost,
+  30 d from rest) to 31070 — `fc`, 32 `adxx_*`, 73 `ADJ*`, 441 `%MON`, 14:14 —
+  and SOMA run 31076 (5 d) to 31033 — `fc`, 32 `adxx_*`, 61 `ADJ*`, 390 `%MON`.
+  One trap found on the way: `dummy_tap.F` must include `AD_CONFIG.h`, the only
+  definition of `ALLOW_ADJOINT_RUN`; without it the adjoint was still bitwise
+  correct but wrote no `ADJ*` files (runs 31071–31073, deleted) — every adjoint
+  build script now asserts after `make` that the compiled `dummy_tap.f` carries
+  the 10 dump calls. At 5 years (2026-09-03): run 31077 (default build, from the
+  180-yr pickup) is bitwise identical to 31055 — `fc`, 32 `adxx_*`, 4 393
+  `ADJ*`, 18 801 `%MON` lines — in 9:36:30 against 9:35:58. Merged to `main`
+  2026-09-03 (rebased, fast-forward; `main` = ea6f75f); the pre-merge state —
+  the last commit with the `TAP_*` names — is tag
+  `archive/20260903_pre-tapenade-hooks-upstream-shape`.

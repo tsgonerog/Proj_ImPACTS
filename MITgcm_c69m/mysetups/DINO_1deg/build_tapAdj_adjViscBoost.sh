@@ -9,7 +9,7 @@
 # 31025, without it): fc and the %MON stream byte-identical, but every ADJ*
 # dump and adxx_* gradient differed at order one -- while the plain pair is
 # bitwise identical under the same list. In joint mode Tapenade re-runs each
-# routine's primal inside the backward sweep, after TAP_INADMODE_SET_B has
+# routine's primal inside the backward sweep, after AUTODIFF_INADMODE_SET_B has
 # boosted the viscosities, so the boost reaches every recomputed intermediate;
 # in split mode those intermediates were taped in the forward sweep at forward
 # viscosities and the boost reaches only what the _BWD code reads live. Only
@@ -84,9 +84,9 @@ cd build_tapAdj_adjViscBoost || { echo "Failed to enter build_tapAdj_adjViscBoos
 # Clean any previous build (ignore if Makefile not created yet)
 make CLEAN || true
 
-# Configure the build (this creates the Makefile here); -tap_extra injects
-# the setup-local external library that makes Tapenade generate the ADJ*
-# dump-hook call (see build_tapAdj_ckpAll.sh). No -nocheckpoint here, on
+# Configure the build (this creates the Makefile here); -adof names the
+# setup's Tapenade options file (stock options + code_tap/flow_tap_local,
+# see build_tapAdj_ckpAll.sh). No -nocheckpoint here, on
 # purpose -- see the header. -mods names the variant directory FIRST: genmake2
 # gives a file in an earlier -mods directory preference over a same-named file
 # anywhere later, so the four files in code_tap/variants/adjViscBoost/ replace
@@ -95,8 +95,7 @@ make CLEAN || true
     -rd="$MITGCM_ROOT" \
     -of="$MPI_OPTFILE" \
     -mods="../code_tap/variants/adjViscBoost ../code_tap" \
-    -adof="$MITGCM_ROOT/tools/adjoint_options/adjoint_tap" \
-    -tap_extra "-ext ../code_tap/flow_tap_local"
+    -adof=../code_tap/adjoint_tap_local
 
 # Generate dependency list
 make depend
@@ -134,10 +133,22 @@ check_gen_call() {
     fi
     echo "OK: generated ${name} call has ${expect} arguments."
 }
-check_gen_call TAP_DUMMY_IN_STEPPING_B 25 forward_step_b.f
-check_gen_call TAP_INADMODE_SET_B 5 forward_step_b.f
-check_gen_call TAP_INADMODE_UNSET_B 5 forward_step_b.f
-check_gen_call TAP_DUMMY_FOR_ETAN_B 5 integr_continuity_b.f
+check_gen_call DUMMY_IN_STEPPING_B 25 forward_step_b.f
+check_gen_call AUTODIFF_INADMODE_SET_B 5 forward_step_b.f
+check_gen_call AUTODIFF_INADMODE_UNSET_B 5 forward_step_b.f
+check_gen_call DUMMY_FOR_ETAN_B 5 integr_continuity_b.f
+
+# The hook adjoints must have kept their bodies. dummy_tap.F includes
+# AD_CONFIG.h, the only definition of ALLOW_ADJOINT_RUN, which guards the ADJ*
+# dump code: without it the adjoint is still bitwise correct but writes no ADJ*
+# files (2026-09-02, runs 31071-31073). Fail here rather than after a run.
+ndump=$(grep -c 'CALL DUMP_ADJ_' dummy_tap.f)
+if [ "${ndump:-0}" -lt 10 ]; then
+    echo "ERROR: the compiled dummy_tap.f carries only ${ndump:-0} DUMP_ADJ_* calls (expected 10):"
+    echo "       the ADJ* dump bodies were preprocessed away -- check the AD_CONFIG.h include."
+    exit 1
+fi
+echo "OK: the compiled dummy_tap.f carries ${ndump} ADJ* dump calls."
 
 # ========== BUILD RECORD ==========
 # Written last, after every check above passed, so build_info.txt can only

@@ -9,7 +9,7 @@ C     build_tapAdj_adjViscBoost.sh (its first -mods directory).
 C     Upstream c69m body plus the inAd* override block adapted from the
 C     ASTE 90x150x60 setup, whose original is archived in
 C     00_archive/code_tap/. Reached at the start of each backward step
-C     through TAP_INADMODE_SET_B (code_tap/tap_inadmode.F); the values
+C     through AUTODIFF_INADMODE_SET_B (code_tap/dummy_tap.F); the values
 C     come from input_tap/variants/adjViscBoost/. See README.md here.
 
 CBOP

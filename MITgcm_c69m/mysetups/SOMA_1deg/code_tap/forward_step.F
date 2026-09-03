@@ -579,8 +579,8 @@ C--   Add control vector for forcing and parameter fields
 C     Tapenade has no TAF ADNAME/REQUIRED equivalent to force a hand-written
 C     adjoint for a hook with no active arguments, so the fields are passed
 C     explicitly; code_tap/flow_tap_local declares them active and Tapenade
-C     generates the reverse-sweep call to TAP_DUMMY_IN_STEPPING_B itself.
-      CALL TAP_DUMMY_IN_STEPPING(
+C     generates the reverse-sweep call to DUMMY_IN_STEPPING_B itself.
+      CALL DUMMY_IN_STEPPING(
      &     theta, salt, uVel, vVel, wVel,
      &     fu, fv, Qnet, Qsw, EmPmR, diffKr,
      &     myTime, myIter, myThid )

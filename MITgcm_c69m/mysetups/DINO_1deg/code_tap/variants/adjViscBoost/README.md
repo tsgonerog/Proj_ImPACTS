@@ -23,8 +23,8 @@ checks that the compiled `autodiff_*.f` really came from here.
 | --- | --- | --- |
 | `AUTODIFF_PARAMS.h` | `../../../../../MITgcm/pkg/autodiff/AUTODIFF_PARAMS.h` | declares `inAd*`/`outAd*` (`viscA4Grid`, `viscAhGrid`, `viscArNr`, `diffKh*`, `diffK4*`, `SEAICEadjMODE`) and adds them to the common blocks |
 | `autodiff_readparms.F` | `../../../../../MITgcm/pkg/autodiff/autodiff_readparms.F` | reads them from `AUTODIFF_PARM01`, defaults them to `UNSET_RL`, echoes them to STDOUT |
-| `autodiff_inadmode_set_ad.F` | `../../../../../MITgcm/pkg/autodiff/autodiff_inadmode_set_ad.F` | the `inAd*` apply block, run at the start of each backward step through `TAP_INADMODE_SET_B` in `../../tap_inadmode.F` |
-| `autodiff_inadmode_unset_ad.F` | `../../../../../MITgcm/pkg/autodiff/autodiff_inadmode_unset_ad.F` | the `outAd*` restore block, run at the end of each backward step through `TAP_INADMODE_UNSET_B`, so checkpoint re-forwards use forward physics |
+| `autodiff_inadmode_set_ad.F` | `../../../../../MITgcm/pkg/autodiff/autodiff_inadmode_set_ad.F` | the `inAd*` apply block, run at the start of each backward step through `AUTODIFF_INADMODE_SET_B` in `../../dummy_tap.F` |
+| `autodiff_inadmode_unset_ad.F` | `../../../../../MITgcm/pkg/autodiff/autodiff_inadmode_unset_ad.F` | the `outAd*` restore block, run at the end of each backward step through `AUTODIFF_INADMODE_UNSET_B` in `../../dummy_tap.F`, so checkpoint re-forwards use forward physics |
 
 Each file is the upstream c69m file plus its block, in the same additive
 layout as every other shadow in `code_tap/`. The three `.F` files carry a
@@ -37,7 +37,7 @@ this build differ from the plain build's in files the variant never touches.
 the ASTE 90×150×60 regional setup; its original `autodiff_inadmode_set_ad.F`
 is archived in `../../../00_archive/code_tap/`, whose README describes the
 c69f→c69m port. The restore block has no ASTE ancestor: it was written on
-2026-08-31, when the `TAP_INADMODE_*` hooks first made the mechanism reachable
+2026-08-31, when the Tapenade mode-switch hooks first made the mechanism reachable
 under Tapenade. Until 2026-09-02 these files lived in `code_tap/` itself as
 `*_aste_90x150x60` / `*_adapted_frm_aste_90x150x60` siblings that the build
 script copied over the bare names; the copy step and the suffixes are gone,

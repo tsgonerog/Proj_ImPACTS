@@ -85,17 +85,17 @@ cd build_tapAdj_nocheckpoint || { echo "Failed to enter build_tapAdj_nocheckpoin
 # Clean any previous build (ignore if Makefile not created yet)
 make CLEAN || true
 
-# Configure the build (this creates the Makefile here). -tap_extra carries
-# both flags: the split-mode routine list and the setup-local external
-# library that makes Tapenade generate the ADJ* dump-hook call (see
-# build_tapAdj_ckpAll.sh). genmake2 writes the string verbatim into the Makefile's
-# TAP_EXTRA, so the inner quotes survive to the shell that runs Tapenade.
+# Configure the build (this creates the Makefile here). -adof names the
+# setup's Tapenade options file (stock options + code_tap/flow_tap_local, see
+# build_tapAdj_ckpAll.sh); -tap_extra carries the split-mode routine list.
+# genmake2 writes that string verbatim into the Makefile's TAP_EXTRA, so the
+# inner quotes survive to the shell that runs Tapenade.
 "$MITGCM_ROOT/tools/genmake2" -mpi -tap \
     -rd="$MITGCM_ROOT" \
     -of="$MPI_OPTFILE" \
     -mods=../code_tap \
-    -adof="$MITGCM_ROOT/tools/adjoint_options/adjoint_tap" \
-    -tap_extra "-nocheckpoint \"$NOCP\" -ext ../code_tap/flow_tap_local"
+    -adof=../code_tap/adjoint_tap_local \
+    -tap_extra "-nocheckpoint \"$NOCP\""
 
 # Generate dependency list
 make depend
@@ -121,10 +121,22 @@ check_gen_call() {
     fi
     echo "OK: generated ${name} call has ${expect} arguments."
 }
-check_gen_call TAP_DUMMY_IN_STEPPING_B 25 forward_step_b.f
-check_gen_call TAP_INADMODE_SET_B 5 forward_step_b.f
-check_gen_call TAP_INADMODE_UNSET_B 5 forward_step_b.f
-check_gen_call TAP_DUMMY_FOR_ETAN_B 5 integr_continuity_b.f
+check_gen_call DUMMY_IN_STEPPING_B 25 forward_step_b.f
+check_gen_call AUTODIFF_INADMODE_SET_B 5 forward_step_b.f
+check_gen_call AUTODIFF_INADMODE_UNSET_B 5 forward_step_b.f
+check_gen_call DUMMY_FOR_ETAN_B 5 integr_continuity_b.f
+
+# The hook adjoints must have kept their bodies. dummy_tap.F includes
+# AD_CONFIG.h, the only definition of ALLOW_ADJOINT_RUN, which guards the ADJ*
+# dump code: without it the adjoint is still bitwise correct but writes no ADJ*
+# files (2026-09-02, runs 31071-31073). Fail here rather than after a run.
+ndump=$(grep -c 'CALL DUMP_ADJ_' dummy_tap.f)
+if [ "${ndump:-0}" -lt 10 ]; then
+    echo "ERROR: the compiled dummy_tap.f carries only ${ndump:-0} DUMP_ADJ_* calls (expected 10):"
+    echo "       the ADJ* dump bodies were preprocessed away -- check the AD_CONFIG.h include."
+    exit 1
+fi
+echo "OK: the compiled dummy_tap.f carries ${ndump} ADJ* dump calls."
 
 # Every listed routine must actually have gone split: Tapenade emits a
 # <NAME>_FWD / <NAME>_BWD pair for it. A name it does not know, or one it never

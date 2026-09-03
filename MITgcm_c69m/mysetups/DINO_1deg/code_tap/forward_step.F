@@ -431,10 +431,10 @@ C--   Reset the model iteration counter and the model time.
 
 #ifdef ALLOW_AUTODIFF
 # ifdef ALLOW_TAPENADE
-C     Tapenade mode-switch hook (see tap_inadmode.F): the generated
-C     TAP_INADMODE_UNSET_B runs at the END of each backward step and
+C     Tapenade mode-switch hook (see pkg/tapenade/dummy_tap.F): the generated
+C     AUTODIFF_INADMODE_UNSET_B runs at the END of each backward step and
 C     restores forward-mode parameters before the next re-forward.
-      CALL TAP_INADMODE_UNSET( uVel, myTime, myIter, myThid )
+      CALL AUTODIFF_INADMODE_UNSET( uVel, myTime, myIter, myThid )
 # else
       CALL AUTODIFF_INADMODE_UNSET( myTime, myIter, myThid )
 # endif
@@ -586,8 +586,8 @@ C--   Add control vector for forcing and parameter fields
 C     Tapenade has no TAF ADNAME/REQUIRED equivalent to force a hand-written
 C     adjoint for a hook with no active arguments, so the fields are passed
 C     explicitly; code_tap/flow_tap_local declares them active and Tapenade
-C     generates the reverse-sweep call to TAP_DUMMY_IN_STEPPING_B itself.
-      CALL TAP_DUMMY_IN_STEPPING(
+C     generates the reverse-sweep call to DUMMY_IN_STEPPING_B itself.
+      CALL DUMMY_IN_STEPPING(
      &     theta, salt, uVel, vVel, wVel,
      &     fu, fv, Qnet, Qsw, EmPmR, diffKr,
      &     myTime, myIter, myThid )
@@ -1223,10 +1223,10 @@ C--   Save state for restarts
 
 #ifdef ALLOW_AUTODIFF
 # ifdef ALLOW_TAPENADE
-C     Tapenade mode-switch hook (see tap_inadmode.F): the generated
-C     TAP_INADMODE_SET_B runs at the START of each backward step and
+C     Tapenade mode-switch hook (see pkg/tapenade/dummy_tap.F): the generated
+C     AUTODIFF_INADMODE_SET_B runs at the START of each backward step and
 C     applies the inAd* (adjViscBoost) parameters.
-      CALL TAP_INADMODE_SET( uVel, myTime, myIter, myThid )
+      CALL AUTODIFF_INADMODE_SET( uVel, myTime, myIter, myThid )
 # else
       CALL AUTODIFF_INADMODE_SET( myTime, myIter, myThid )
 # endif

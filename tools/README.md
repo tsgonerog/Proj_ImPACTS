@@ -539,16 +539,20 @@ material you copy from by hand.
   template is in use. `-fconvert=big-endian` in it is **not** optional: every
   pickup, input binary and `ADJ*`/`adxx*` file in this project was written
   big-endian on sverdrup.
-- **[`tapenade_profiling/`](tapenade_profiling/)** — how to profile the adjoint
-  (`-tap_extra "-profile"`, plus the missing `adProfile.c` symlink) and how to
-  trade recomputation for memory (`-tap_extra '-nocheckpoint "…"'`, with the
-  64-routine list the c69f work settled on). On c69m both are **flags**, not
-  patched `genmake2` copies — c69m's `genmake2` takes `-tap_extra` and passes it
-  straight to Tapenade. The two `c69f_originals/` are kept as the record of what
-  was tried and **must not be installed** into `MITgcm/tools/`: they are full
-  copies of the *c69f* `genmake2`, ~200 lines adrift. Both recipes are untested
-  on c69m. Note the `use_TapProfile` switch still in each build script only
-  works in its `NO` mode; `YES`/`AFTER` name c69f files that are not here.
+- **[`tapenade_profiling/`](tapenade_profiling/)** — how the DINO adjoint is
+  profiled (`build_tapAdj_tapProfile.sh`: `-tap_extra "-profile"` plus the
+  `mods_profile/` directory, which supplies the installed Tapenade's
+  `adProfile.c` and an instrumented `the_model_main.F`) and how recomputation
+  is traded for memory (`build_tapAdj_nocheckpoint.sh`: `-tap_extra
+  '-nocheckpoint "…"'` with the 33-routine list in
+  `code_tap/tap_nocheckpoint.txt` — the DINO default since 2026-09-02, bitwise
+  identical to the checkpoint-everything build and 1.5× faster). On c69m both
+  are **flags**, not patched `genmake2` copies — c69m's `genmake2` takes
+  `-tap_extra` and passes it straight to Tapenade. The two `c69f_originals/`
+  are kept as the record of what was tried and **must not be installed** into
+  `MITgcm/tools/`: they are full copies of the *c69f* `genmake2`, ~200 lines
+  adrift; the c69f 64-routine list beside them shares 8 routines with the
+  current one. The `use_TapProfile` switch is gone from every build script.
 
 ---
 

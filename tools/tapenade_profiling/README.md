@@ -105,10 +105,10 @@ Two things c69m does not provide, hence `mods_profile/`:
   `THE_MAIN_LOOP_B`, writing `tapenade_profile.NNNN.txt` per MPI process.
 
 `build_tapAdj_tapProfile.sh` lists `mods_profile/` **before** `../code_tap` in
-`-mods` so both files shadow, and passes
-`-tap_extra "-profile -ext ../code_tap/flow_tap_local"` — one `-tap_extra`,
-because genmake2 overwrites it on repeat and the `-ext` is what generates the
-`ADJ*` dump-hook call. After `make` it asserts the hook argument counts (as
+`-mods` so both files shadow, and passes `-tap_extra "-profile"` (the
+setup's external library reaches Tapenade through `-adof
+../code_tap/adjoint_tap_local`, not through `-tap_extra`). After `make` it
+asserts the hook argument counts (as
 `build_tapAdj_ckpAll.sh` does), that `forward_step_b.f` carries `ADPROFILEADJ_*`
 calls, that the compiled `the_model_main.f` is the profiling variant, and that
 `adProfile.o` exists. The whole build takes about six minutes.
@@ -191,7 +191,7 @@ toy program and from the DINO build:
 - **`-nocheckpoint` is a pure performance change only while the backward
   sweep leaves the primal's parameters alone.** With the `adjViscBoost`
   mode-switch hooks it is not: in joint mode every checkpointed routine
-  re-runs its primal inside the backward sweep *after* `TAP_INADMODE_SET_B`
+  re-runs its primal inside the backward sweep *after* `AUTODIFF_INADMODE_SET_B`
   has boosted the viscosities, so the boost reaches every recomputed
   intermediate; in split mode those intermediates were taped in the forward
   sweep at the forward viscosities. Run 31056 (boost + this list) vs 31025
@@ -202,15 +202,15 @@ toy program and from the DINO build:
   `analyses/DINO_1deg/03_adjoint/07_tapenade_profiling/compare_30d_adjViscBoost_run31025_vs_nocheckpoint_run31056.md`.
 
 The list lives in `code_tap/tap_nocheckpoint.txt` (one lower-case name per
-line, `#` comments allowed) beside `flow_tap_local`, the setup's other
-Tapenade input. The build script joins it into
-`-tap_extra "-nocheckpoint \"<list>\" -ext ../code_tap/flow_tap_local"`.
+line, `#` comments allowed) beside `flow_tap_local` and `adjoint_tap_local`,
+the setup's other Tapenade inputs. The build script joins it into
+`-tap_extra "-nocheckpoint \"<list>\""`.
 
 What a split routine must satisfy is the same as what a checkpointed one must:
 be re-entrant and free of hidden state (the Tapenade FAQ's warning about I/O
 inside checkpointed code cuts both ways). Everything inside a DINO time step
 already passes that test under joint mode, and the hand-written hook adjoints
-(`TAP_DUMMY_IN_STEPPING_B` and friends) are `-ext` externals, which
+(`DUMMY_IN_STEPPING_B` and friends) are `-ext` externals, which
 `-nocheckpoint` does not touch.
 
 ---

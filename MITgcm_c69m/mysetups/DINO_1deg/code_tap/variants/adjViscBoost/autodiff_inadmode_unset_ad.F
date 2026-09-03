@@ -11,7 +11,7 @@ C     inAd* block of autodiff_inadmode_set_ad.F beside it. ASTE never
 C     had this half - the mechanism was unreachable under Tapenade until
 C     the TAP mode-switch hooks (2026-08-31) - so it was written here to
 C     complete the pair. Reached at the end of each backward step through
-C     TAP_INADMODE_UNSET_B (code_tap/tap_inadmode.F).
+C     AUTODIFF_INADMODE_UNSET_B (code_tap/dummy_tap.F).
 
       SUBROUTINE ADAUTODIFF_INADMODE_UNSET( myTime, myIter, myThid )
 C     *==========================================================*

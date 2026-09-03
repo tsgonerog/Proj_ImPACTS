@@ -10,8 +10,11 @@
 \begin{callout}
 \textbf{Snapshot note (added 2026-08-31).} This appendix records the machine
 and toolchain state Part~I actually ran under, and is kept as that record. The
-adjoint toolchain has since moved to Tapenade-native \code{TAP\_*} hooks:
-stock \code{genmake2}, no post-edited generated files (the
+adjoint toolchain has since moved to Tapenade-native hooks (since 2026-09-02
+under the upstream hook names \code{DUMMY\_IN\_STEPPING}, \code{DUMMY\_FOR\_ETAN},
+\code{AUTODIFF\_INADMODE\_SET/UNSET}, their hand-written adjoints filling the
+\code{pkg/tapenade/dummy\_tap.F} stubs): stock \code{genmake2}, no post-edited
+generated files (the
 \code{forward\_step\_b.f\_modified\_*} staging described below is gone), the
 \code{rawTapenade} control build retired --- raw Tapenade output \emph{is}
 the working configuration --- \code{ADJ*} dumps free of the tile-seam
@@ -19,7 +22,10 @@ artifact and now including \code{ADJetan}, and \code{useGrdchk = .FALSE.}
 as the committed DINO default (this plan's per-member instruction, adopted
 repo-wide). The commands themselves are unchanged
 (\code{build\_tapAdj.sh}, \code{tools/submit.sh} with \code{IMPACTS\_*}
-overrides). See \code{notes/references/tapenade\_hooks/} for the full change
+overrides), but since 2026-08-27 the submit scripts patch the namelist copy
+staged in the run directory rather than the tracked one, so the ``Submitting
+edits the tracked namelist'' callout below describes behaviour that no longer
+occurs. See \code{notes/references/tapenade\_hooks/} for the full change
 note.
 
 \textbf{Update (2026-09-02).} The adjoint that ran this ensemble --- every

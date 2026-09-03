@@ -11,7 +11,8 @@ are byte-identical (the forward trajectory is untouched, as always), but every
 0.3–0.9, max ratio up to 1.4), while the plain pair (31054 vs 31052, 31055 vs
 31039) is bitwise identical under the same list. Mechanism: in joint
 (checkpointed) mode Tapenade re-runs each routine's primal inside the backward
-sweep, *after* `TAP_INADMODE_SET_B` has switched the viscosities to the
+sweep, *after* the mode-switch adjoint (`TAP_INADMODE_SET_B` in the builds
+compared, `AUTODIFF_INADMODE_SET_B` since 2026-09-02) has switched the viscosities to the
 `inAd*` values, so the boost reaches every recomputed intermediate (the
 per-level viscosity fields of `mom_calc_visc`, the tendencies of `timestep`,
 …); in split mode those intermediates were taped during the forward sweep at

@@ -164,6 +164,38 @@ anything into `code_tap/`, and `tools/pre_push_check.sh` lost its
 staged-variant clause. The hook mechanism and the validation below are
 unchanged.
 
+**Update 2026-09-02, later the same day: the hooks now carry their upstream
+names.** `TAP_DUMMY_IN_STEPPING`, `TAP_DUMMY_FOR_ETAN` and `TAP_INADMODE_SET/UNSET`
+are gone. The upstream hooks `DUMMY_IN_STEPPING`, `DUMMY_FOR_ETAN`,
+`AUTODIFF_INADMODE_SET/UNSET` keep their names and gain the wider interface
+under `#ifdef ALLOW_TAPENADE` in shadows of their own `pkg/autodiff` files
+(the `#else` branch is the upstream interface, so TAF and OpenAD see no
+change — the idiom `pkg/autodiff` already uses under
+`AUTODIFF_TAMC_COMPATIBILITY`); the hand-written `_B`/`_D` bodies fill the
+no-op stubs upstream ships in `pkg/tapenade/dummy_tap.F` (a shadow), with the
+mode-switch wrappers added beside them; `flow_tap_local` re-declares the
+hooks under their upstream names. Because Tapenade keeps the *last*
+declaration of an external (passed first through `-tap_extra`, the local
+stanza lost to the stock all-passive one: `TC32 Conflicting numbers of
+arguments`, no `_B` generated), the library is now appended by a setup-local
+`-adof` file, `code_tap/adjoint_tap_local`, which sources the stock
+`tools/adjoint_options/adjoint_tap` and adds `-ext ../code_tap/flow_tap_local`
+to `TAPENADE_FLAGS`. The upstream patch this implies is: two call sites in
+`model/src`, four hook interfaces in `pkg/autodiff`, the corresponding stanzas
+in `tools/TAP_support/flow_tap`, and bodies for the stubs in
+`pkg/tapenade/dummy_tap.F`. Validated bitwise against the `TAP_*` layout:
+run 31074 (DINO default, 30 d) ≡ 31069, 31075 (boost, 30 d) ≡ 31070, SOMA
+31076 (5 d) ≡ 31033, and at 5 years 31077 ≡ 31055 — `fc`, 32 `adxx_*`,
+4 393 `ADJ*`, 18 801 `%MON` lines, 9:36:30 against 9:35:58 — with the
+generated adjoint code token-identical after the renames. One trap on the
+way: `dummy_tap.F` must include `AD_CONFIG.h`, the only definition of
+`ALLOW_ADJOINT_RUN`, which guards the dump bodies; without it the adjoint is
+still bitwise correct but writes no `ADJ*` files (runs 31071–31073), so every
+adjoint build script now asserts after `make` that the compiled `dummy_tap.f`
+carries the ten `DUMP_ADJ_*` calls. Merged to `main` on 2026-09-03
+(fast-forward; `main` = ea6f75f); the pre-merge state, the last with the
+`TAP_*` names, is tag `archive/20260903_pre-tapenade-hooks-upstream-shape`.
+
 ## 4 · Validation
 
 All runs: DINO 1°, 51×198×36, 27 MPI ranks, 30-day adjoints (1,440 steps),
@@ -323,5 +355,9 @@ correctness*.
 (initial commits `27e4ee5`, `e789533`; merged to `main` 2026-09-01, the
 pre-hook base kept as tag `archive/20260831_pre-tapenade-hooks`); validation
 runs 31022–31026 on sverdrup, 2026-08-31; §7 validated by runs 31032 (DINO),
-31033/31034 (SOMA) and the gradient-check pair 31037/31038. Line references
-are to MITgcm checkpoint69m.*
+31033/31034 (SOMA) and the gradient-check pair 31037/31038. The 2026-09-02
+rename to the upstream hook names was prepared on branch
+`tapenade-hooks-upstream-shape` (commits `473ac6e`, `ea6f75f`; merged
+2026-09-03; pre-merge base kept as tag
+`archive/20260903_pre-tapenade-hooks-upstream-shape`) and validated by runs
+31074–31077. Line references are to MITgcm checkpoint69m.*

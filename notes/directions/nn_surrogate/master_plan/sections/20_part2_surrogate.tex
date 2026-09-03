@@ -77,8 +77,9 @@ Surface forcing & \code{ADJtaux}, \code{ADJtauy}, \code{ADJqnet},
 \textbf{Parametric} & \code{ADJdiffkr}
   & 3-D --- \emph{the target}: $\partial J/\partial\kv$\\
 Parametric, not active & \code{ADJbtdrg}, \code{ADJkapgm}, \code{ADJkapredi}
-  & dumped by \code{addummy\_in\_stepping.F} but need controls declared and,
-    for the last two, GM/Redi enabled\\
+  & in upstream's TAF dump set (\code{addummy\_in\_stepping.F}), not among the
+    11 fields the Tapenade hook dumps; need controls declared and, for the last
+    two, GM/Redi enabled\\
 \midrule
 Accumulated controls & \code{adxx\_*} & \code{float64}, written once per run\\
 \bottomrule
