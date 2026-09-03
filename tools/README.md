@@ -528,8 +528,14 @@ Run it after any change to `overleaf_sync.sh`:
 
 ## `optfile_templates/` and `tapenade_profiling/`
 
-Reference directories. **No build or submit script reads either one** — they are
-material you copy from by hand.
+Reference directories that live outside any setup — but **each one is read by a
+script**, so neither is inert: `machine_env.sh` points `MPI_OPTFILE` and
+`SERIAL_OPTFILE` at `optfile_templates/linux_amd64_gnu+mpi_perlmutter` when
+`MACHINE=perlmutter`, and `build_tapAdj_tapProfile.sh` passes
+`tapenade_profiling/mods_profile/` to `genmake2` as its *first* `-mods`
+directory, failing with exit 1 if `adProfile.c` or `the_model_main.F` is
+missing. What you do copy from by hand is the rest: the `c69f_originals/`
+`genmake2` copies and the c69f 64-routine `-nocheckpoint` list.
 
 - **[`optfile_templates/`](optfile_templates/)** — `genmake2` optfiles written
   for this project that have not been validated on the machine they target,
