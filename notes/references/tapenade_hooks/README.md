@@ -242,7 +242,8 @@ bodies and dual-guard adjoint bodies in `pkg/autodiff` (replacing the
   when this was written; since closed by the same pattern — see §7),
   and the `ADEXCH_*` adjoint halo exchanges that upstream
   `pkg/tapenade/stubs_tap_adj.F` ships as no-ops (implemented in this repo via
-  `EXCH2_*_CUBE_AD` in an earlier commit, `7378086`; without them multi-tile
+  `EXCH2_*_CUBE_AD` in an earlier commit, `c7aede2`, which the tag
+  `archive/20260831_pre-tapenade-hooks` also marks; without them multi-tile
   `ADJ*` dumps carry seam artifacts). TLM counterparts (`_D`) are currently
   link-safe no-ops and would need real bodies for tangent-mode dumps.
 
