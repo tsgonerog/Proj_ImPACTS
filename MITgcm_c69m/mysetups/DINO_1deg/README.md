@@ -201,10 +201,14 @@ not involved. **Validated 2026-09-01: a 30-day run of this build (31054) is
 bitwise identical to the plain build's (31052) in `fc`, all 32 `adxx_*` and
 all 73 `ADJ*` files, and runs in 8:47 instead of 13:13 (1.5×); at 5 years (31055 vs 31039) it is
 again bitwise identical — fc, 32 `adxx_*`, 4 393 `ADJ*` — in 9:35:58 instead
-of 14:05:45 (1.47×, 4.5 h saved).** `tools/tapenade_profiling/README.md`
+of 14:05:45 (1.47×, 4.5 h saved); re-verified 2026-09-02/03 on the whole κ_v
+ensemble — all eight 5-yr adjoints (31060–31067 vs the `ckpAll` runs
+31039–31046) bitwise identical, the four blow-ups included, 1.45–1.65× per run,
+37.8 h saved of 114.6 h.** `tools/tapenade_profiling/README.md`
 has the method and the numbers;
 `analyses/DINO_1deg/03_adjoint/07_tapenade_profiling/` the records and the
-two scripts (`parse_tapenade_profile.py`, `compare_adjoint_runs.py`).
+three scripts (`parse_tapenade_profile.py`, `compare_adjoint_runs.py`,
+`compare_ensemble_ckpAll_vs_nocheckpoint.py`).
 
 **Since 2026-09-02 it is the default adjoint**: `build_tapAdj.sh` and
 `submit_tapAdj.sh` are symlinks to the `_nocheckpoint` pair, and the

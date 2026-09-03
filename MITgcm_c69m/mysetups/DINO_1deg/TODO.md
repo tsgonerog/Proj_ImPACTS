@@ -13,6 +13,18 @@
   the only moved conclusion number is M4's departure lead 0.72 → 0.70 yr
   (52 → 50/366 usable dumps). Old runs cleared for scratch deletion.
 
+- [x] ~~Rerun the kappa_v ensemble with the `-nocheckpoint` build and compare~~
+  (added and **done 2026-09-02/03**). Jobs 31060–31067 (REF + M1–M7; same
+  pickups and namelists; submitted through temporary copies of
+  `submit_tapAdj_nocheckpoint.sh` with the member pickup repointed, see
+  `notes/references/slurm_job_chaining/` §2.2). Every pair **bitwise
+  identical** to 31039–31046 (`fc`, 32 `adxx_*`, 4 393 `ADJ*`, `%MON`), the
+  four blow-ups included; wall time 114.6 h → 76.8 h over the eight runs
+  (1.45–1.65× per run, 1.54× on the reverse sweep, forward sweep unchanged).
+  The executable rebuilt on 2026-09-02 also reproduces 31055 bitwise. Report
+  and script in `analyses/DINO_1deg/03_adjoint/07_tapenade_profiling/`; the
+  ensemble analysis keeps reading 31039–31046 (the sets are interchangeable).
+
 - [ ] **Retry the four blown ensemble members (M1/M4/M5/M7) with adjViscBoost**
   (added 2026-08-31). Not possible before: the boost was silently inert under
   Tapenade until the `TAP_INADMODE_*` hooks (first working boost: run 31025 vs

@@ -34,6 +34,14 @@ rerun with the Tapenade-native hook build (ADEXCH-fixed `ADJ*` dumps +
 `ADJetan`); `fc` and `adxx_*` reproduce the original runs below bitwise, so
 the outcome stands — read `ADJ*` from the rerun directories.
 
+**Rerun again (runs 31061–31067 + reference 31060, 2026-09-02).** The same
+eight adjoints with the profile-guided `-nocheckpoint` build that became the
+DINO default that day: bitwise identical to the 2026-09-01 set in `fc`,
+`adxx_*` and `ADJ*`, the four blow-ups included, in 9.5–9.75 h each instead of
+14.0–15.7 h. Either set can serve; the analysis reads the 2026-09-01 one.
+Members go in through temporary copies of `submit_tapAdj_nocheckpoint.sh` with
+the pickup repointed (`notes/references/slurm_job_chaining/` §2.2).
+
 **Outcome (original runs 31003–31009, 2026-08-29; analysed 2026-08-30;
 conclusions re-verified on the 2026-09-01 rerun).** All seven
 completed, but only `M2` (0.5×) and `M3` (2×) produced healthy full-length

@@ -643,7 +643,10 @@ for. Three reductions, largest first:
         reproduces the checkpoint-everything one bitwise in \code{fc},
         \code{adxx\_*} and \code{ADJ*} at 30 days and at 5 years while
         running $1.47\times$ faster (9.6\,h against 14.1\,h for a five-year
-        window). \code{build\_tapAdj.sh} now points at it; the record is
+        window); rerunning all eight ensemble adjoints with it on 2026-09-02
+        (jobs 31060--31067) gave the same bitwise identity, blow-ups included,
+        at $1.45$--$1.65\times$ (9.5--9.75\,h against 14.0--15.7\,h).
+        \code{build\_tapAdj.sh} now points at it; the record is
         \code{tools/tapenade\_profiling/README.md}. It does not apply to the
         \code{adjViscBoost} build, where the same list changes the boosted
         adjoint at order one (run 31056 vs 31025).
@@ -679,11 +682,12 @@ the science allows.
 
 These are still extrapolations from two measured rates and want replacing with a
 real number. The first job in Phase~1 is to benchmark one one-year member with
-\code{useGrdchk=.FALSE.} and report both halves separately. Two five-year
-numbers measured since: 14.1\,h with every call checkpointed (run 31039,
-2026-09-01) and 9.6\,h with the \code{-nocheckpoint} build that is now the
-default (run 31055), so the $8.9$\,h in the table was close for the tuned
-build and optimistic for the other.
+\code{useGrdchk=.FALSE.} and report both halves separately. Five-year
+numbers measured since: 14.0--15.7\,h with every call checkpointed (the
+eight ensemble adjoints 31039--31046, 2026-09-01) and 9.5--9.75\,h with the
+\code{-nocheckpoint} build that is now the default (run 31055 and the
+ensemble rerun 31060--31067, 2026-09-02), so the $8.9$\,h in the table was
+close for the tuned build and optimistic for the other.
 
 \paragraph{Storage.}
 A five-year run writes $8.3\,\mathrm{GB}$, mostly the $366$ dumps of eleven

@@ -16,16 +16,26 @@ dump fields with horizontal stencils: the four local-operator fields —
 `ADJdiffkr` (the surrogate target), `ADJqnet`, `ADJqsw`, `ADJempmr` — are
 bit-identical between the campaigns at every dump.
 
-| run | κ factor | forward job | adjoint job (2026-09-01 rerun; original) | run directory (under `/scratch2/tshahriar/DINO_1deg_tapAdj_runs/`) |
-| --- | --- | --- | --- | --- |
-| REF | 1× | 30983 (spin-up) | 31039 (30995) | `DINO_1deg_tapAdj_ckpAll_5yr_from180yrPk_visc2x_run31039` |
-| M1 | 0.25× | 30996 | 31040 (31003) | `DINO_1deg_tapAdj_ckpAll_5yr_M1_run31040` |
-| M2 | 0.5× | 30997 | 31041 (31004) | `DINO_1deg_tapAdj_ckpAll_5yr_M2_run31041` |
-| M3 | 2× | 30998 | 31042 (31005) | `DINO_1deg_tapAdj_ckpAll_5yr_M3_run31042` |
-| M4 | 4× | 30999 | 31043 (31006) | `DINO_1deg_tapAdj_ckpAll_5yr_M4_run31043` |
-| M5 | 8× | 31000 | 31044 (31007) | `DINO_1deg_tapAdj_ckpAll_5yr_M5_run31044` |
-| M6 | 16× | 31001 | 31045 (31008) | `DINO_1deg_tapAdj_ckpAll_5yr_M6_run31045` |
-| M7 | 32× | 31002 | 31046 (31009) | `DINO_1deg_tapAdj_ckpAll_5yr_M7_run31046` |
+On 2026-09-02 all eight adjoints ran a third time, with the profile-guided
+`-nocheckpoint` build that became the DINO default that day (jobs 31060–31067,
+run directories `DINO_1deg_tapAdj_nocheckpoint_5yr_<tag>_run<job>`; same
+namelists, pickups and forward legs). Every pair is **bitwise identical** to its
+2026-09-01 run — `fc`, all 32 `adxx_*`, all 4 393 `ADJ*` dumps and the `%MON`
+stream, the four blow-ups included — at 1.45–1.65× the speed (9:31–9:45 against
+14:03–15:39 wall time). The two sets are interchangeable; this analysis keeps
+reading 31039–31046. Report and script:
+`../07_tapenade_profiling/compare_5yr_kappa_ensemble_ckpAll_vs_nocheckpoint.md`.
+
+| run | κ factor | forward job | adjoint job (2026-09-01 rerun; original) | run directory (under `/scratch2/tshahriar/DINO_1deg_tapAdj_runs/`) | `-nocheckpoint` rerun 2026-09-02 (bitwise identical) |
+| --- | --- | --- | --- | --- | --- |
+| REF | 1× | 30983 (spin-up) | 31039 (30995) | `DINO_1deg_tapAdj_ckpAll_5yr_from180yrPk_visc2x_run31039` | 31060 |
+| M1 | 0.25× | 30996 | 31040 (31003) | `DINO_1deg_tapAdj_ckpAll_5yr_M1_run31040` | 31061 |
+| M2 | 0.5× | 30997 | 31041 (31004) | `DINO_1deg_tapAdj_ckpAll_5yr_M2_run31041` | 31062 |
+| M3 | 2× | 30998 | 31042 (31005) | `DINO_1deg_tapAdj_ckpAll_5yr_M3_run31042` | 31063 |
+| M4 | 4× | 30999 | 31043 (31006) | `DINO_1deg_tapAdj_ckpAll_5yr_M4_run31043` | 31064 |
+| M5 | 8× | 31000 | 31044 (31007) | `DINO_1deg_tapAdj_ckpAll_5yr_M5_run31044` | 31065 |
+| M6 | 16× | 31001 | 31045 (31008) | `DINO_1deg_tapAdj_ckpAll_5yr_M6_run31045` | 31066 |
+| M7 | 32× | 31002 | 31046 (31009) | `DINO_1deg_tapAdj_ckpAll_5yr_M7_run31046` | 31067 |
 
 ## Reading order
 

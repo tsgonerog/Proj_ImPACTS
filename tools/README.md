@@ -283,6 +283,14 @@ echo "verdict: $?"          # 0 = equivalent
 #   Its report went with the deleted directory; the surviving reports are the
 #   rerun ones described above
 
+# the 2026-09-02 ensemble rerun with the -nocheckpoint build: one call per pair,
+# each report landing in the new run directory as comparison_vs_<ckpAll run>.txt
+# (all eight EQUIVALENT -- 8850 sensitivity fields bit-identical, fc and the
+#  18801 %MON lines identical; 31060-31067 against 31039-31046)
+tools/compare_adj_runs.sh \
+  "$R/DINO_1deg_tapAdj_ckpAll_5yr_M3_run31042" \
+  "$R/DINO_1deg_tapAdj_nocheckpoint_5yr_M3_run31063"
+
 # submit and compare unattended, from the setup directory
 cd MITgcm_c69m/mysetups/DINO_1deg
 jid=$(IMPACTS_DURATION_DAYS=30 ../../../tools/submit.sh submit_tapAdj.sh --parsable | tail -1)

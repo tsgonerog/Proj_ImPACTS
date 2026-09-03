@@ -26,7 +26,10 @@ Section~\ref{sec:sequence} was superseded and all members were submitted
 together; and the reference adjoint reproduced the earlier production run
 bit-identically, so all prior reference analysis carries over unchanged.
 (Update 2026-09-01: the eight adjoints were rerun as jobs 31039--31046 with
-the Tapenade-native dump hooks after the \code{ADEXCH} halo-fold repair.
+the Tapenade-native dump hooks after the \code{ADEXCH} halo-fold repair ---
+and again on 2026-09-02 as jobs 31060--31067 with the profile-guided
+\code{-nocheckpoint} build that became the default that day, bitwise
+identical to 31039--31046 in every output and $1.5\times$ faster.
 \code{fc} and every control gradient are bit-identical to the original runs,
 so the numbers here stand; the rerun's \code{ADJ*} dumps are seam-clean ---
 the artifact only ever touched the seven horizontal-stencil dump fields, so

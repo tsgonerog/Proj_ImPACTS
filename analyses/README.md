@@ -135,7 +135,9 @@ write the intermediates the notebooks read. Unlike the single-run notebooks,
 this suite spans nine runs, so everything it generates goes to the sibling
 scratch directory `/scratch2/<user>/DINO_1deg_tapAdj_runs/kappa_v_ensemble_analysis/`
 (`cache/`, `figures/`, `animations/`, `stats/`) rather than into any one run
-directory.
+directory. All eight adjoints ran a third time on 2026-09-02 with the `-nocheckpoint`
+build (31060–31067): bitwise identical to 31039–31046 in `fc`, `adxx_*` and
+`ADJ*`, so the suite still reads the 2026-09-01 set.
 
 `07_tapenade_profiling/` (2026-09-01) is scripts and records rather than a
 notebook: the Tapenade checkpointing profile of the adjoint (run 31053,
@@ -144,9 +146,14 @@ notebook: the Tapenade checkpointing profile of the adjoint (run 31053,
 the plain one — 30 days on the same node, run 31054 vs 31052: `fc` identical,
 all 32 `adxx_*` and 73 `ADJ*` files bitwise identical, 8:47 vs 13:13 wall time
 (1.5×); at 5 years (run 31055 vs 31039) again bitwise identical across fc,
-32 `adxx_*` and 4 393 `ADJ*` files, 9:36 vs 14:06 wall time (1.47×). Its `README.md`
-has the run table; the two scripts (`parse_tapenade_profile.py`,
-`compare_adjoint_runs.py`) are general enough to reuse on any pair of runs.
+32 `adxx_*` and 4 393 `ADJ*` files, 9:36 vs 14:06 wall time (1.47×); and on
+2026-09-02/03 across the whole κ_v ensemble (31060–31067 vs 31039–31046), all
+eight 5-yr pairs bitwise identical, the four blow-ups included, 1.45–1.65× per
+run and 37.8 h saved of 114.6 h. Its `README.md`
+has the run table; two of its scripts (`parse_tapenade_profile.py`,
+`compare_adjoint_runs.py`) are general enough to reuse on any pair of runs, and
+`compare_ensemble_ckpAll_vs_nocheckpoint.py` drives the pairwise comparison over
+the ensemble.
 Since 2026-09-02 that tuned build is the DINO default (`build_tapAdj.sh` is a
 symlink to `build_tapAdj_nocheckpoint.sh`; the plain build lives on as
 `build_tapAdj_ckpAll.sh`), and the directory also records the one negative

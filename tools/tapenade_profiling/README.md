@@ -267,6 +267,16 @@ primal code, same binomial schedule) and the reverse sweep 8.76 h against
 than the reverse-sweep factor only because the binomial re-runs of plain
 forward steps inside the reverse sweep are untouched by `-nocheckpoint`.
 
+**The whole κ_v ensemble, 5 years × 8 (31060–31067 vs 31039–31046,
+2026-09-02/03):** the reference and the seven members of
+`analyses/DINO_1deg/03_adjoint/05_kappa_v_ensemble/`, four of which blow up,
+rerun with the tuned build, eight jobs at once on separate nodes as before.
+Every pair bitwise identical (`fc`; 32/32 `adxx_*`; 4 393/4 393 `ADJ*`; the
+`%MON` stream byte-identical; `tools/compare_adj_runs.sh` EQUIVALENT), the
+blow-ups reproduced exactly; wall time **114.6 h → 76.8 h** (1.45–1.65× per
+run, the reverse sweep 1.49–1.71×, the forward sweep unchanged at 50–52 min).
+Report: `analyses/DINO_1deg/03_adjoint/07_tapenade_profiling/compare_5yr_kappa_ensemble_ckpAll_vs_nocheckpoint.md`.
+
 **Against the c69f list.** `nocheckpoint_routines.txt` (64 routines) shares
 8 with the new list (`calc_3d_diffusivity`, `exch_xy_rl`, `find_rho_2d`,
 `gad_calc_rhs`, `gmredi_calc_tensor_dummy`, `impldiff`, `mom_calc_visc`,

@@ -32,7 +32,11 @@ profile-guided \code{-nocheckpoint} pair, whose adjoint is bitwise identical in
 directories now carry the build token, so the ensemble adjoints are
 \code{DINO\_1deg\_tapAdj\_ckpAll\_5yr\_M1\_run31040} to
 \code{\ldots\_M7\_run31046} on scratch, and
-\code{build\_tapAdj\_rawTapenade/} has been deleted. The
+\code{build\_tapAdj\_rawTapenade/} has been deleted. The same eight
+adjoints were rerun with the new default on 2026-09-02 as jobs 31060--31067
+(\code{DINO\_1deg\_tapAdj\_nocheckpoint\_5yr\_\ldots}): bitwise identical
+to 31039--31046 in \code{fc}, \code{adxx\_*} and \code{ADJ*}, the four
+blow-ups included, in 9.5--9.75\,h each against 14.0--15.7\,h. The
 \code{adjViscBoost} build stays checkpoint-everything on purpose: with the
 list it is a different regularisation (run 31056 vs 31025).
 \end{callout}
