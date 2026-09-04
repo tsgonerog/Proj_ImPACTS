@@ -5,11 +5,68 @@
 `tapenade-active-dump-hook`, whose pre-hook base survives as the tag
 `archive/20260831_pre-tapenade-hooks`), MITgcm checkpoint69m, Tapenade 3.16,
 2026-08-31. A styled copy of this note lives beside it as
-`tapenade_hook_note.html`.*
+`tapenade_hook_note.html`, and a Beamer deck making the upstream case from it
+lives in `upstream_slides/` (its own Overleaf project — see below).*
 
 How the DINO adjoint's `ADJ*` dumps and adjoint-mode parameter switching were
 moved off hand-patched generated code and onto a mechanism Tapenade itself
 honors — and what an upstream version would look like.
+
+**[`upstream_slides/`](upstream_slides/) is the 13-frame talk version of this
+note**, written 2026-09-04 for a meeting: the gap and the mechanism, then the
+twelve modified files **grouped by role** over six frames (call sites, dump-hook
+interfaces, adjoint-mode switches, bodies for the `pkg/tapenade` stubs, the
+Tapenade configuration, the parameter bodies), then the non-interference
+argument and the contribution inventory.
+
+The deck **deliberately carries no evidence table and no open-questions frame**;
+both were cut in Overleaf on 2026-09-04 and are not to be reinstated. §4 of this
+note holds the bitwise validation and §5 the design questions, so the material
+is recorded — it is simply not on the slides, and the summary frame's
+"verified bitwise" line is the only claim about it that remains.
+
+**The deck is DINO-only** — every file pair, run number and validation claim on
+it is DINO 1°. §6 of this note (the SOMA conversion, and the evidence it gave
+that the c69m SOMA adjoint had never run) is deliberately not in it, so the
+deck's evidence frame is narrower than the one below: it does not carry the
+second-configuration argument.
+
+Each file appears as `code_tap/<file>` → the checkpoint69m file it shadows,
+with the first path hyperlinked to its blob on GitHub, and answers three
+questions in fixed positions: what checkpoint69m does, what was missing for
+Tapenade, and what we changed. The fourth — why it still fits MITgcm's
+structure — is the same for every file in a group, so each frame answers it
+once in its closing strip. That grouping is the deck's one real editorial
+decision: a frame per file would repeat the shared answers twice over.
+
+Three conventions the deck holds to, each of which came from review:
+
+- **`adxx_*` versus `ADJ*`.** The Tapenade path in checkpoint69m already writes
+  `adxx_*` control gradients; they come from `pkg/ctrl`'s active-file machinery
+  and involve no hooks. What it cannot write is the `ADJ*` adjoint-state dumps.
+  Saying "adjoint sensitivities" for this blurs the two — see
+  [`../adxx_vs_adj/`](../adxx_vs_adj/).
+- **The version is named.** Frames say "checkpoint69m", never "upstream today".
+- **`adjViscBoost` is not used as a term, and no longer appears at all.** It
+  was an internal coinage; the deck describes the capability in MITgcm's own
+  vocabulary instead (`inAdMode`, `viscFacInAd`, "running the reverse sweep
+  with different physics from the forward trajectory"). On 2026-09-04 the two
+  variant directories were renamed to `adjointViscosity/` as well, so the file
+  paths the deck links to no longer carry it either. **The build identity still
+  does** — `build_tapAdj_adjViscBoost.sh`, `build_tapAdj_adjViscBoost/` and
+  `run_token=tapAdj_ckpAll_adjViscBoost` — deliberately, because scratch run
+  directories and every `build_info.txt` already written record that tag.
+
+It is a separate document with its own Overleaf project, mapped in
+`project_url()` as `references/tapenade_hooks/upstream_slides`:
+
+```bash
+./tools/overleaf_sync.sh status references/tapenade_hooks/upstream_slides
+cd notes/references/tapenade_hooks/upstream_slides && latexmk -pdf -auxdir=build main.tex
+```
+
+This note stays authoritative: a correction that arrives on the slides belongs
+here first.
 
 ## 1 · The gap: TAF has a directive Tapenade doesn't
 

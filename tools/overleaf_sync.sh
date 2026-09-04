@@ -95,11 +95,20 @@ MIRROR_ROOT=${OVERLEAF_MIRROR_ROOT:-$HOME/.overleaf_mirrors}
 # Direction -> Overleaf project id. Add a line when a direction gets a project.
 # OVERLEAF_REMOTE overrides, which is what the self-test uses to run the whole
 # round trip against a local bare repo instead of the real project.
+#
+# A key is the path under notes/, so it need not be a direction: the resolver
+# below falls through to notes/<key>, which lets a single document under
+# notes/references/ have its own project. That is the right shape when the
+# project is one document rather than a whole direction -- a slide deck built
+# on an Overleaf template, say -- since the project root must be the folder
+# holding its main.tex.
 project_url() {
     if [[ -n "${OVERLEAF_REMOTE:-}" ]]; then echo "$OVERLEAF_REMOTE"; return; fi
     case "$1" in
         nn_surrogate)        echo "https://git.overleaf.com/6a8f28882435332e2f9da280" ;;
         dino_quarter_degree) echo "https://git.overleaf.com/6a8f360a0c4433896e31b5c3" ;;
+        references/tapenade_hooks/upstream_slides)
+                             echo "https://git.overleaf.com/6a9ae4128fd4f821fbd24a65" ;;
         *)                   return 1 ;;
     esac
 }

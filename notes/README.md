@@ -48,7 +48,7 @@ done rather than what might be.
 | Reference | Covers |
 | --- | --- |
 | [`slurm_job_chaining/`](references/slurm_job_chaining/) | Making one job wait for another with `--dependency`, and running a follow-on step automatically when a job finishes. Worked from the κ_v ensemble submitted 2026-08-28 |
-| [`tapenade_hooks/`](references/tapenade_hooks/) | Change note on replacing the TAF hook directives with Tapenade-native active-argument hooks (`ADJ*` + `ADJetan` dumps, adjViscBoost mode switching): the gap, the mechanism, a file-by-file comparison, bitwise validation, and upstream-MITgcm considerations; §6–7 add the SOMA conversion, the additive upstream+append file re-layout of both setups' `code_tap/`, and the DINO/SOMA workflow alignment. Written 2026-08-31 for advisor/MITgcm review; a styled HTML copy sits beside the README |
+| [`tapenade_hooks/`](references/tapenade_hooks/) | Change note on replacing the TAF hook directives with Tapenade-native active-argument hooks (`ADJ*` + `ADJetan` dumps, adjViscBoost mode switching): the gap, the mechanism, a file-by-file comparison, bitwise validation, and upstream-MITgcm considerations; §6–7 add the SOMA conversion, the additive upstream+append file re-layout of both setups' `code_tap/`, and the DINO/SOMA workflow alignment. Written 2026-08-31 for advisor/MITgcm review; a styled HTML copy sits beside the README, and `upstream_slides/` is the 13-frame Beamer talk version of the same argument, DINO-only, with the twelve modified files grouped by role and each linked to its blob on GitHub (2026-09-04, its own Overleaf project) |
 | [`adxx_vs_adj/`](references/adxx_vs_adj/) | What the two sensitivity outputs of a Tapenade adjoint run mean: `adxx_*` control gradients vs `ADJ*` adjoint-state dumps — who writes each (call path), when, how the iteration numbers read, the measured `adxx` ≈ final-`ADJ`-dump equivalence, and which output to use for gradients vs animations. DINO 5-yr window as the worked example. Written 2026-09-01; a styled HTML copy sits beside the README |
 
 Keep these honest about their own scope: name the machine and the scheduler
@@ -225,8 +225,12 @@ produce all mean the same thing:
 nn_surrogate     nn_surrogate/     directions/nn_surrogate     notes/directions/nn_surrogate/
 ```
 
-Currently mapped: **`nn_surrogate`** and **`dino_quarter_degree`**. A name that
-is wrong in either of the two possible ways says which:
+Currently mapped: **`nn_surrogate`**, **`dino_quarter_degree`** and
+**`references/tapenade_hooks/upstream_slides`**. The last one shows that a key
+need not be a direction: it is just the path under `notes/`, so a single
+document under `references/` can have its own project — which is the right
+shape when the project holds one document rather than a whole direction. A name
+that is wrong in either of the two possible ways says which:
 
 ```
 FAIL  no such direction: notes/directions/nn_surrogat  <- no such folder

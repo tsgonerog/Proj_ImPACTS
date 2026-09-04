@@ -1,0 +1,66 @@
+%=======================================================================
+%  SLIDE DECK: the case for taking this project's Tapenade hook mechanism
+%  into upstream MITgcm.
+%
+%  MAIN DOCUMENT -- structure only; every word of prose lives in sections/.
+%  Compile this file.
+%
+%  DERIVED FROM ../README.md (the change note for MITgcm review) and the
+%  "Reading the code" section of
+%  MITgcm_c69m/mysetups/DINO_1deg/README.md, both of which are
+%  authoritative. A correction that arrives on these slides belongs in the
+%  change note first.
+%
+%  SCOPE: architecture and the upstream case, in 13 frames -- a meeting deck,
+%  not a walkthrough. The ten upstream/modified file pairs are grouped by role
+%  over four frames (call sites, hook interfaces, adjoint bodies, plumbing):
+%  within a group the "what is missing", "why" and "why it is upstream-safe"
+%  answers are the same for every file, so stating them once per group loses
+%  nothing. One Fortran snippet in the whole deck, on the frame where the CPP
+%  guard IS the argument.
+%
+%  Deliberately standalone -- own preamble, shares no file with any other
+%  document under notes/ -- so it is its own Overleaf project and can be
+%  shared on its own.
+%
+%  No reader is named anywhere in this document.
+%
+%  INPUT PATH. Overleaf compiles from the PROJECT ROOT, not from the folder
+%  the main file sits in. The \input@path below lists this document's own
+%  folder first and the compilation directory second, so the same source
+%  builds whether the project root is this folder (one Overleaf project per
+%  document, and the local `cd <doc> && latexmk` habit) or the parent
+%  notes/references/tapenade_hooks/ folder. Do not remove it: without it an
+%  upload of the parent folder fails on the very first \input.
+%=======================================================================
+\documentclass[10pt,aspectratio=169]{beamer}
+
+\makeatletter
+\expandafter\edef\csname input@path\endcsname{{upstream_slides/}{./}}
+\makeatother
+
+\input{preamble}
+
+\title{Tapenade-native AD hooks for MITgcm}
+\subtitle{Making the \texttt{ADJ*} dumps and adjoint-mode switching work
+          without TAF directives --- and what an upstream patch looks like}
+\author{Tanvir Shahriar}
+\date{4 September 2026}
+
+\begin{document}
+
+\begin{frame}[plain]
+  \titlepage
+  \vspace{-1.2em}
+  \begin{center}
+    \footnotesize\color{ImpSlate}
+    MITgcm checkpoint69m \quad$\cdot$\quad Tapenade 3.16 \quad$\cdot$\quad
+    DINO 1\textdegree{} --- 51\,$\times$\,198\,$\times$\,36, 27 MPI ranks
+  \end{center}
+\end{frame}
+
+\input{sections/01_gap_and_mechanism}
+\input{sections/02_file_pairs}
+\input{sections/03_the_case}
+
+\end{document}

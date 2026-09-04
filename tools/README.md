@@ -16,7 +16,7 @@ call, plus the checks that guard the repository around them.
 | [`submit.sh`](submit.sh) | `sbatch` wrapper that adds the per-machine flags. Submit through this, not bare `sbatch` | `./tools/submit.sh <script> [sbatch flags]` |
 | [`compare_adj_runs.sh`](compare_adj_runs.sh) | Bit-compares two adjoint run directories and writes a verdict report; can wait on a running job first | `tools/compare_adj_runs.sh [opts] <ref> <new>` |
 | [`pre_push_check.sh`](pre_push_check.sh) | Read-only standing check: filters, side effects you did not author, derived output, dead notebook paths | `./tools/pre_push_check.sh` |
-| [`overleaf_sync.sh`](overleaf_sync.sh) | Two-way sync between `notes/directions/<direction>/` and its Overleaf project | `./tools/overleaf_sync.sh <cmd> <direction>` |
+| [`overleaf_sync.sh`](overleaf_sync.sh) | Two-way sync between a folder under `notes/` — usually `directions/<direction>/` — and its Overleaf project | `./tools/overleaf_sync.sh <cmd> <direction>` |
 | [`overleaf_sync_selftest.sh`](overleaf_sync_selftest.sh) | 40 assertions over the above, against a throwaway local repo. No credential, no network | `./tools/overleaf_sync_selftest.sh` |
 | [`optfile_templates/`](optfile_templates/) | `genmake2` optfiles written here and **not yet validated** on their target machine | see its own [README](optfile_templates/README.md) |
 | [`tapenade_profiling/`](tapenade_profiling/) | How to profile the adjoint and tune checkpointing on c69m, plus the c69f originals | see its own [README](tapenade_profiling/README.md) |
@@ -386,7 +386,9 @@ tab-completion produces is accepted: `nn_surrogate`, `nn_surrogate/`,
 direction, in any order.
 
 Directions with a project mapped today: **`nn_surrogate`**,
-**`dino_quarter_degree`**. A new one needs a line added to `project_url()` in the
+**`dino_quarter_degree`**, plus one single-document reference,
+**`references/tapenade_hooks/upstream_slides`** (a key is the path under
+`notes/`, so it need not be a direction). A new one needs a line added to `project_url()` in the
 script.
 
 ### What each subcommand does

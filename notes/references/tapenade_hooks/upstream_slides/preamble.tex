@@ -1,0 +1,153 @@
+%-----------------------------------------------------------------------
+%  Packages, palette, frame furniture and the file-pair frame template.
+%  \input by main.tex -- not compiled on its own.
+%  Shares no file with any other document under notes/, so this deck can be
+%  its own Overleaf project and go to one reader alone.
+%-----------------------------------------------------------------------
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,fit,backgrounds}
+\usepackage{microtype}
+
+%-------------------------------------------------- palette
+% Four roles, used consistently on every frame: what upstream has today, what
+% is missing, what this project changed, and why it is safe. Reading the deck
+% by colour alone should still tell the story.
+\definecolor{ImpBlue} {HTML}{1F4E79}   % structure, and "the change"
+\definecolor{ImpSlate}{HTML}{5A6672}   % upstream, as it stands
+\definecolor{ImpAmber}{HTML}{A85C00}   % the gap
+\definecolor{ImpGreen}{HTML}{2E6B3E}   % why it is safe / verified
+\definecolor{ImpRule} {HTML}{C8D0D8}
+\definecolor{ImpWash} {HTML}{F2F5F8}
+
+%-------------------------------------------------- theme furniture
+\usetheme{default}
+\usecolortheme{default}
+\setbeamertemplate{navigation symbols}{}
+\setbeamercolor{structure}{fg=ImpBlue}
+\setbeamercolor{normal text}{fg=black!88}
+\setbeamerfont{frametitle}{series=\bfseries,size=\large}
+\setbeamerfont{framesubtitle}{size=\footnotesize}
+\setbeamercolor{framesubtitle}{fg=ImpSlate}
+
+% Frame title: colour, then a hairline. No shaded bar -- these frames carry
+% coloured boxes of their own and a heavy title competes with them.
+% \makeatletter: this file is \input after \documentclass, so @ is not a
+% letter here and the \@empty test below would otherwise not parse.
+\makeatletter
+\setbeamertemplate{frametitle}{%
+  \vspace{0.2em}%
+  {\usebeamerfont{frametitle}\color{ImpBlue}\insertframetitle\par}%
+  \ifx\insertframesubtitle\@empty\else
+    {\usebeamerfont{framesubtitle}\color{ImpSlate}\insertframesubtitle\par}%
+  \fi
+  \vspace{2pt}{\color{ImpRule}\rule{\textwidth}{0.4pt}}\par\vspace{-0.4em}}
+\makeatother
+
+\setbeamertemplate{footline}{%
+  \hbox{\begin{beamercolorbox}[wd=\paperwidth,ht=2.2ex,dp=4.0ex,leftskip=1.2em,rightskip=1.2em]{}%
+    \scriptsize\color{ImpSlate}%
+    Tapenade-native AD hooks for MITgcm\hfill\insertframenumber%
+  \end{beamercolorbox}}}
+
+\setbeamertemplate{itemize item}{\color{ImpBlue}\rule[0.28ex]{0.5em}{0.5pt}}
+\setbeamertemplate{itemize subitem}{\color{ImpSlate}\rule[0.28ex]{0.35em}{0.4pt}}
+\setlength{\leftmargini}{1.2em}
+\setlength{\leftmarginii}{1.1em}
+
+
+%-------------------------------------------------- text macros
+% \code renders identifiers verbatim-ish without escaping every underscore by
+% hand. \detokenize hands TeX the characters rather than the catcodes, which is
+% the whole reason a deck full of Fortran names is writable at all. Do not put
+% a backslash or a percent sign inside it.
+\newcommand{\code}[1]{\texttt{\detokenize{#1}}}
+% CPP directives need their own macro: beamer grabs a frame body as a
+% macro argument, so a literal # in it is read as a parameter number and
+% the frame dies at its \end. \char35 sidesteps the catcode entirely.
+\newcommand{\cpp}[1]{\texttt{\char35\relax\detokenize{#1}}}
+\newcommand{\file}[1]{\texttt{\small\detokenize{#1}}}
+
+%-------------------------------------------------- the file-pair template
+% Every file-pair frame opens with the same header: the upstream file, the file
+% in this repository that shadows it, and the size of the diff between them.
+% The diff size is the argument -- these are small, guarded additions, not
+% rewrites -- so it is on the frame rather than in the notes.
+% ---------------------------------------------- the file-pair block
+% Each modified file is shown as: our file (linked to it on GitHub) -> the
+% MITgcm file it shadows, then three aligned rows saying what checkpoint69m
+% does, what was missing for Tapenade, and what we changed. The fourth
+% question -- why it still fits MITgcm's structure -- is the same for every
+% file in a group, so it is answered once per frame by \Safe.
+
+% The URL survives the underscores because #1 is substituted into \href's
+% first argument, which hyperref normalises. Verified: the emitted PDF
+% annotations carry the exact paths.
+\newcommand{\ghfile}[1]{%
+  \href{https://github.com/tsgonerog/Proj_ImPACTS/blob/main/MITgcm_c69m/mysetups/DINO_1deg/#1}%
+       {\color{ImpBlue}\underline{\texttt{\detokenize{#1}}}}}
+
+% One labelled row inside a file block: fixed-width label, hanging indent so
+% wrapped text lines up under the text rather than under the label.
+\newcommand{\pfrow}[3]{%
+  \par\vspace{0.25pt}\noindent
+  \hangindent=5.0em\hangafter=1
+  \makebox[5.0em][l]{\labelface{#1}{#2}}#3\par}
+
+% #1 our file  #2 the MITgcm file it shadows  #3 size of the difference
+% #4 what checkpoint69m does  #5 what was missing  #6 what we changed
+\newcommand{\pairfile}[6]{%
+  \par\vspace{3.5pt}
+  \begin{minipage}[t]{0.80\textwidth}\scriptsize\raggedright
+    \ghfile{#1}\ $\rightarrow$\ {\color{ImpSlate}\texttt{\detokenize{#2}}}
+  \end{minipage}\hfill
+  \begin{minipage}[t]{0.19\textwidth}\scriptsize\raggedleft
+    {\color{ImpSlate}#3}
+  \end{minipage}%
+  \par\vspace{1pt}
+  {\scriptsize
+   \pfrow{ImpSlate}{c69m}{#4}%
+   \pfrow{ImpAmber}{Missing}{#5}%
+   \pfrow{ImpBlue}{Change}{#6}}}
+
+% The four labelled sections of a file-pair frame. A run-in coloured label
+% rather than a boxed block: four blocks on one frame is a wall, four labels
+% reads as a list and leaves room for the words that matter.
+% ONE label formula for the whole deck, so it cannot drift again.
+%
+% Latin Modern Sans ships no bold small-caps shape: T1/lmss/bx/sc does not
+% exist, so \bfseries\scshape silently rendered as T1/lmss/bx/n -- bold
+% upright, the small caps dropped -- and LaTeX raised "Font shape
+% `T1/lmss/bx/sc' undefined" plus its end-of-run "Some font shapes were not
+% available" summary. Bold + \MakeUppercase asks for a shape the family
+% actually has, gives the label-like appearance the small caps were reaching
+% for, and is what \lbl already used for every section label -- so the strips
+% and the section labels now share one style instead of two.
+\newcommand{\labelface}[2]{{\color{#1}\bfseries\MakeUppercase{#2}}}
+
+\newcommand{\lbl}[2]{\par\vspace{2.5pt}{\scriptsize\labelface{#1}{#2}}\par\vspace{0.5pt}}
+\newcommand{\Upstream}{\lbl{ImpSlate}{In MITgcm checkpoint69m}}
+\newcommand{\Gap}     {\lbl{ImpAmber}{What is missing for Tapenade}}
+\newcommand{\Change}  {\lbl{ImpBlue} {The change}}
+\newcommand{\Why}     {\lbl{ImpBlue} {Why it is necessary}}
+
+% The closing strip every frame ends on, in the same place every time. \Safe
+% is the common case -- the non-interference claim in one sentence -- and
+% \Strip is for the few frames whose closing point is a caveat or a scope
+% note rather than a safety claim, so the label never says the wrong thing.
+\newcommand{\Strip}[3]{%
+  \vfill
+  \begin{beamercolorbox}[wd=\textwidth,sep=4pt]{safebox}%
+    \scriptsize\labelface{#1}{#2}\ \ #3
+  \end{beamercolorbox}}
+\newcommand{\Safe}[1]{\Strip{ImpGreen}{Upstream-safe}{#1}}
+\setbeamercolor{safebox}{bg=ImpGreen!8,fg=black}
+
+\newcommand{\vfin}{\code{viscFacInAd}}
+
+\setlength{\parskip}{1.5pt}

@@ -1,0 +1,190 @@
+%-----------------------------------------------------------------------
+%  02 -- the modified files, grouped by the role they play. Six frames.
+%
+%  Each file is shown as ours -> the checkpoint69m file it shadows, with the
+%  path linked to GitHub, and answers three questions; the fourth (why it
+%  still fits MITgcm's structure) is shared across the group and answered by
+%  the closing strip.
+%
+%  Difference sizes are `diff <c69m file> <our file>` changed-line counts
+%  measured against the vendored tree, not quoted from the change note.
+%  \input by main.tex. Not compiled alone.
+%-----------------------------------------------------------------------
+
+\begin{frame}{The modified files 1/6 --- the two call sites}
+  \framesubtitle{\code{model/src/} --- where the hooks are invoked}
+
+\Gap
+Tapenade generates a reverse-sweep call only where active data crosses an
+interface. Both hooks are called with three passive scalars, so both are
+absent from the generated backward sweep.
+
+\pairfile{code_tap/forward_step.F}{../../MITgcm/model/src/forward_step.F}{25 lines}
+{The forward time-stepping driver. It calls \code{DUMMY_IN_STEPPING} in its
+\code{ALLOW_AUTODIFF_MONITOR} block, and the two \code{AUTODIFF_INADMODE_*}
+hooks at the start and end of each step.}
+{Nothing in those calls is differentiable, so no reverse-sweep counterpart is
+produced for any of them.}
+{Under \cpp{ifdef ALLOW_TAPENADE} the same three calls also pass model state:
+eleven fields to the dump hook, \code{uVel} to each mode switch. The
+three-argument calls remain in \cpp{else}.}
+
+\pairfile{code_tap/integr_continuity.F}{../../MITgcm/model/src/integr_continuity.F}{8 lines}
+{Integrates the continuity equation and updates the free surface. It calls
+\code{DUMMY_FOR_ETAN} from a block of its own because the free-surface adjoint
+is half a time step out of phase with the fields in \code{forward_step.F}.}
+{The generated \code{integr_continuity_b.f} retained an \code{EXTERNAL}
+declaration and no call, so no \code{ADJetan} field was ever written.}
+{One guarded call site passing \code{etaN}.}
+
+\Safe{Four guarded call sites and no other change. The \cpp{else} branch is
+the checkpoint69m line, so a TAF or OpenAD build preprocesses to the unmodified
+source.}
+\end{frame}
+
+
+\begin{frame}{The modified files 2/6 --- the two dump-hook interfaces}
+  \framesubtitle{\code{pkg/autodiff/} --- the no-op routines the call sites reach}
+
+\Gap
+Both routines are deliberately empty and declare no fields, so there is no
+interface through which activity can pass. Under TAF this does not matter: a
+\code{.flow} directive attaches a hand-written adjoint to the hook regardless.
+
+\pairfile{code_tap/dummy_in_stepping.F}{../../MITgcm/pkg/autodiff/dummy_in_stepping.F}{31 lines}
+{An empty subroutine on \code{(myTime, myIter, myThid)}, so the call in
+\code{forward_step.F} resolves in forward runs and checkpoint re-forwards;
+\code{ADNAME} binds \code{ADDUMMY_IN_STEPPING} to it for TAF.}
+{No field arguments, so nothing can be declared active to Tapenade.}
+{The \code{SUBROUTINE} statement and declarations carry the eleven dump fields
+under the \code{ALLOW_TAPENADE} guard, with the checkpoint69m interface in
+\cpp{else}. The body remains empty.}
+
+\pairfile{code_tap/dummy_for_etan.F}{../../MITgcm/pkg/autodiff/dummy_for_etan.F}{20 lines}
+{The same, for the free surface.}
+{As above.}
+{One field, \code{etaN}, added under the same guard.}
+
+\Safe{This is the interface-widening idiom \code{pkg/autodiff} already applies
+under \code{AUTODIFF_TAMC_COMPATIBILITY}. Neither routine appears in any
+package's \code{*_ad_diff.list}, so no AD tool differentiates them and both
+remain no-ops.}
+\end{frame}
+
+
+\begin{frame}{The modified files 3/6 --- the adjoint-mode switches}
+  \framesubtitle{\code{pkg/autodiff/} --- entering and leaving adjoint mode}
+
+\Gap
+MITgcm can run the reverse sweep with different physics from the forward
+trajectory (\code{inAdMode}, \code{\vfin}) --- the usual way of keeping a long
+adjoint from diverging. The routines applying those settings are TAF-named, so
+nothing Tapenade generated called them: \code{\vfin{} = 10} could be set in the
+namelist with no code path applying it.
+
+\pairfile{code_tap/autodiff_inadmode_set.F}{../../MITgcm/pkg/autodiff/autodiff_inadmode_set.F}{20 lines}
+{An empty hook marking where the backward sweep enters adjoint mode.}
+{No active argument, so no \code{_B} routine is generated and the settings are
+never applied.}
+{\code{uVel} added under the \code{ALLOW_TAPENADE} guard purely to carry
+activity across the interface; it is never read.}
+
+\pairfile{code_tap/autodiff_inadmode_unset.F}{../../MITgcm/pkg/autodiff/autodiff_inadmode_unset.F}{20 lines}
+{The matching hook for leaving adjoint mode.}
+{As above.}
+{The same argument, so the restore runs at each backward step's end and
+checkpoint re-forwards use forward physics.}
+
+\Safe{Confirmed an exact no-op when adjoint and forward settings agree
+(\code{\vfin{} = viscFacInFw = 1}): run 31024 reproduces 31023 bitwise.}
+\end{frame}
+
+
+\begin{frame}{The modified files 4/6 --- bodies for routines shipped as stubs}
+  \framesubtitle{\code{pkg/tapenade/} --- where checkpoint69m provides names but no implementation}
+
+\pairfile{code_tap/dummy_tap.F}{../../MITgcm/pkg/tapenade/dummy_tap.F}{456 lines}
+{Provides \code{DUMMY_IN_STEPPING_B}, \code{DUMMY_FOR_ETAN_B} and their
+tangent-mode counterparts as empty routines on the three passive scalars, so
+that a Tapenade build links.}
+{The implementations. Even if a reverse-sweep call were generated, it would
+reach a routine that returns immediately --- which is why the Tapenade path
+produces no \code{ADJ*} output as distributed.}
+{Full bodies at the wider signatures: the adjoint arguments are folded across
+tile boundaries and written through \code{DUMP_ADJ_XYZ}/\code{DUMP_ADJ_XY}, with
+\code{ADJetan} on its own record counter. Two short wrappers call MITgcm's
+existing \code{ADAUTODIFF_INADMODE_SET}/\code{UNSET}, so the parameter logic is
+not duplicated.}
+
+\pairfile{code_tap/stubs_tap_adj.F}{../../MITgcm/pkg/tapenade/stubs_tap_adj.F}{183 lines}
+{Provides the five \code{ADEXCH_*} adjoint halo exchanges as routines that
+print \code{"Called not yet defined"} and return.}
+{The implementations. The dump path calls them to fold tile-halo adjoint
+contributions back into the interior cells that own them before writing.}
+{Implemented using the same \code{EXCH2_*_CUBE_AD} routines the adjoint
+dynamics already calls. The effect is confined to the dumps: \code{fc} and the
+\code{adxx_*} gradients were correct throughout.}
+
+\Safe{Both files complete routines checkpoint69m already declares. No
+interface changes, no file is displaced, and 639 of the contribution's lines
+replace \code{RETURN} statements.}
+\end{frame}
+
+
+\begin{frame}{The modified files 5/6 --- the Tapenade configuration}
+  \framesubtitle{\code{tools/} --- the declaration the whole mechanism rests on}
+
+\pairfile{code_tap/flow_tap_local}{../../MITgcm/tools/TAP_support/flow_tap}{4 stanzas}
+{Tapenade's external library. It declares each of the four hooks with three
+parameters, every one \code{ReadNotWritten} --- that is, entirely passive.}
+{This declaration is precisely what tells Tapenade the hooks carry no
+derivative information, and so is the reason they are removed from the reverse
+sweep. It is MITgcm's own description of the routines, and it is accurate for
+the interfaces as they stand.}
+{Four stanzas re-declaring the same routine names with their field arguments
+\code{ReadThenWritten}: fourteen parameters for the dump hook, four for the
+others. This one declaration is what causes the \code{_B} calls to be
+generated; the source changes are the interface work around it.}
+
+\pairfile{code_tap/adjoint_tap_local}{../../MITgcm/tools/adjoint_options/adjoint_tap}{2 lines}
+{The \code{-adof} options file \code{genmake2} sources to assemble
+\code{TAPENADE_FLAGS}, including \code{-ext tools/TAP_support/flow_tap}.}
+{Nothing structural. This file exists only so that the vendored MITgcm tree
+need not be edited in place.}
+{Sources the stock options file and appends the second \code{-ext} library.
+The order matters: Tapenade retains the \emph{last} declaration of an external,
+and when the local stanzas were supplied first they were overridden by the
+stock ones (\code{TC32 Conflicting numbers of arguments}), with no \code{_B}
+call generated.}
+
+\Safe{\code{flow_tap} is read by Tapenade alone, so neither TAF nor OpenAD is
+affected. In a contribution the stanzas would be edited into \code{flow_tap}
+and the wrapper would not be needed; \code{genmake2} is unmodified either way.}
+\end{frame}
+
+
+\begin{frame}{The modified files 6/6 --- the adjoint-mode parameter bodies}
+  \framesubtitle{\code{pkg/autodiff/} --- supplied for our experiments, and not part of the proposal}
+
+\pairfile{code_tap/variants/adjointViscosity/autodiff_inadmode_set_ad.F}{../../MITgcm/pkg/autodiff/autodiff_inadmode_set_ad.F}{applies}
+{Holds \code{ADAUTODIFF_INADMODE_SET}, which applies the adjoint-mode
+parameters when the backward sweep begins.}
+{Reachability, addressed on frame 7 --- and a body raising viscosity and
+diffusivity for the reverse sweep.}
+{The checkpoint69m body together with the block that applies the elevated
+values, supplied as a second \code{-mods} directory and compiled only by the
+corresponding build.}
+
+\pairfile{code_tap/variants/adjointViscosity/autodiff_inadmode_unset_ad.F}{../../MITgcm/pkg/autodiff/autodiff_inadmode_unset_ad.F}{restores}
+{Holds the matching routine for leaving adjoint mode.}
+{The restore side had no implementation anywhere: the parameters are declared
+and read, and nothing applied them. Because the hook was unreachable, this had
+gone unnoticed.}
+{A restore block that returns the forward values at each backward step's end,
+so that checkpoint re-forwards integrate with forward physics.}
+
+\Strip{ImpBlue}{Scope}{These two bodies encode the viscosity settings of one
+set of experiments, so they are configuration rather than mechanism and are not
+part of what we would propose. The general half --- the hooks that make them
+reachable at all --- is on frame 7.}
+\end{frame}
