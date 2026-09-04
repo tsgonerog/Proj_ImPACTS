@@ -157,9 +157,9 @@ gone. The `TAP_INADMODE_SET_B`/`UNSET_B` wrappers now live in
 shadows `autodiff_inadmode_{set,unset}_ad.F` at all (the `_OG` copies of
 `AUTODIFF_PARAMS.h` and `autodiff_readparms.F` were byte-identical to upstream
 and are deleted too); the ASTE-derived shadows live in
-`code_tap/variants/adjViscBoost/` under their real names and reach the boost
+`code_tap/variants/adjointViscosity/` under their real names and reach the boost
 build as a second `-mods` directory
-(`-mods="../code_tap/variants/adjViscBoost ../code_tap"`). No build copies
+(`-mods="../code_tap/variants/adjointViscosity ../code_tap"`). No build copies
 anything into `code_tap/`, and `tools/pre_push_check.sh` lost its
 staged-variant clause. The hook mechanism and the validation below are
 unchanged.

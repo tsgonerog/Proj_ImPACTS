@@ -1225,7 +1225,7 @@ C--   Save state for restarts
 # ifdef ALLOW_TAPENADE
 C     Tapenade mode-switch hook (see pkg/tapenade/dummy_tap.F): the generated
 C     AUTODIFF_INADMODE_SET_B runs at the START of each backward step and
-C     applies the inAd* (adjViscBoost) parameters.
+C     applies the inAd* adjoint-mode viscosity parameters.
       CALL AUTODIFF_INADMODE_SET( uVel, myTime, myIter, myThid )
 # else
       CALL AUTODIFF_INADMODE_SET( myTime, myIter, myThid )

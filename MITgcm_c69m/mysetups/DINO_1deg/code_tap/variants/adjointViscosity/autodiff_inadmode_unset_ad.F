@@ -3,7 +3,7 @@
 # include "CTRL_OPTIONS.h"
 #endif
 
-C     adjViscBoost shadow of pkg/autodiff/autodiff_inadmode_unset_ad.F,
+C     adjointViscosity shadow of pkg/autodiff/autodiff_inadmode_unset_ad.F,
 C     compiled ahead of the vendored file by
 C     build_tapAdj_adjViscBoost.sh (its first -mods directory).
 C     Upstream c69m body plus the outAd* restore block mirroring the

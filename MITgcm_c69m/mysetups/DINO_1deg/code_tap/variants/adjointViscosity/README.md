@@ -1,12 +1,13 @@
-# `code_tap/variants/adjViscBoost/` — sources for the adjoint-mode viscosity inflation
+# `code_tap/variants/adjointViscosity/` — sources for the adjoint-mode viscosity inflation
 
-The four files here are the **source half** of the adjViscBoost configuration;
-the namelist half is `input_tap/variants/adjViscBoost/data.autodiff_adjViscBoost`.
+The four files here are the **source half** of the adjoint-mode viscosity
+configuration;
+the namelist half is `input_tap/variants/adjointViscosity/data.autodiff_adjointViscosity`.
 `build_tapAdj_adjViscBoost.sh` compiles them by listing this directory *first*
 in `genmake2 -mods`:
 
 ```
--mods="../code_tap/variants/adjViscBoost ../code_tap"
+-mods="../code_tap/variants/adjointViscosity ../code_tap"
 ```
 
 `genmake2` gives a file in an earlier `-mods` directory preference over a

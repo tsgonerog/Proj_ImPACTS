@@ -121,7 +121,7 @@ that field doubled.
 | `viscD2x_Zref` | `viscAhDfile` at 2× but `viscAhZfile` left at the reference field — a **mixed** setting, not the same experiment as `visc2x` |
 | `viscRef` | both files at the unscaled reference |
 | `viscGrid<v>` | scalar `viscAhGrid` in `PARM01` instead, `PARM05` files commented out; `viscGrid1p8e-2` is `viscAhGrid=1.8E-2` |
-| `adjViscBoost` | adjoint-mode viscosity inflation: `viscFacInAd = 10.` against `viscFacInFw = 1.`, from `data.autodiff_adjViscBoost`. Needs the matching build *and* submit script |
+| `adjViscBoost` | adjoint-mode viscosity inflation: `viscFacInAd = 10.` against `viscFacInFw = 1.`, from `data.autodiff_adjointViscosity`. Needs the matching build *and* submit script |
 | `ckpAll` / `nocheckpoint` | which Tapenade checkpointing the adjoint was built with; `nocheckpoint` is the DINO default since 2026-09-02 and is bitwise identical to `ckpAll` except under `adjViscBoost` |
 
 Reading `p` as the decimal point keeps the tokens shell-safe: `1p135e-2` is

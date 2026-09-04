@@ -121,8 +121,8 @@
   copies were byte-identical to them), the `TAP_INADMODE_*_B/_D` wrappers
   live in `code_tap/tap_inadmode.F` (moved into `code_tap/dummy_tap.F` by the
   next entry), and the four ASTE-derived shadows live
-  in `code_tap/variants/adjViscBoost/` under their real names as a second
-  `-mods` directory (`-mods="../code_tap/variants/adjViscBoost ../code_tap"`,
+  in `code_tap/variants/adjointViscosity/` under their real names as a second
+  `-mods` directory (`-mods="../code_tap/variants/adjointViscosity ../code_tap"`,
   asserted after `make`). Also removed: the debug-print `ini_procs.F` shadow
   (both copies), `code/pc`, the ASTE CVS header in `packages.conf`, SOMA's
   unused `SIZE.h_mpi`/`_serial`, and the staged-variants clause of

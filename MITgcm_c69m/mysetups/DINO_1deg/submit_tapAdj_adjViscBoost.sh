@@ -3,7 +3,7 @@
 #                                  build_tapAdj_adjViscBoost/mitgcmuv_tap_adj
 #
 # Besides pointing at that build, this script replaces data.autodiff with
-# data.autodiff_adjViscBoost in the staged run directory, which is what actually
+# data.autodiff_adjointViscosity in the staged run directory, which is what actually
 # turns the inAd*/outAd* parameters on. Build and submit script are a pair -
 # neither works as intended without the other. The build checkpoints every
 # call, like build_tapAdj_ckpAll.sh -- the default build's -nocheckpoint list
@@ -219,7 +219,7 @@ if [[ -n "$variant_tag" ]]; then
   done
 fi
 rm data.autodiff
-cp "$base_dir/input_tap/variants/adjViscBoost/data.autodiff_adjViscBoost" data.autodiff
+cp "$base_dir/input_tap/variants/adjointViscosity/data.autodiff_adjointViscosity" data.autodiff
 
 # ---------- time stepping: patch the STAGED copy, not the tracked namelist ----------
 # This runs here, after the whole staging block, so the repo is never written to.

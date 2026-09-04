@@ -285,7 +285,7 @@ renamed `build_tapAdj_ckpAll.sh`) — see `tools/tapenade_profiling/README.md`.
 
 **Hand-adapted AD sources.** The ASTE-derived shadows of `pkg/autodiff`
 (`AUTODIFF_PARAMS.h`, `autodiff_readparms.F`, `autodiff_inadmode_set_ad.F`,
-`autodiff_inadmode_unset_ad.F`) live in `DINO_1deg/code_tap/variants/adjViscBoost/`
+`autodiff_inadmode_unset_ad.F`) live in `DINO_1deg/code_tap/variants/adjointViscosity/`
 under their real names; `build_tapAdj_adjViscBoost.sh` lists that directory
 first in `-mods`, which is how the `adjViscBoost` variant is produced. The plain
 builds compile the vendored files.
@@ -335,7 +335,7 @@ Each script does the same four things, and none copies anything into
 
 1. `make CLEAN`;
 2. run stock `genmake2` with `-tap`, `-adof=../code_tap/adjoint_tap_local` and `-mods` (the
-   boost build lists `code_tap/variants/adjViscBoost` ahead of `code_tap`);
+   boost build lists `code_tap/variants/adjointViscosity` ahead of `code_tap`);
 3. `make depend`;
 4. `make -j 8 tap_adj`, then assert the generated hook calls' argument counts
    and the ten `ADJ*` dump calls in the compiled `dummy_tap.f`, and write
@@ -348,7 +348,7 @@ rebuild freely. Two things about them are worth knowing:
   the generated `Makefile`, so renaming or moving a setup invalidates every build
   inside it. Re-run the build script rather than patching the `Makefile`.
 - **They symlink back into `code_tap/`.** Sources are symlinks, not copies
-  (the boost build's point into `code_tap/variants/adjViscBoost/`). Since no
+  (the boost build's point into `code_tap/variants/adjointViscosity/`). Since no
   build rewrites `code_tap/`, building one variant leaves the others' links
   valid; after editing a source, re-run the build script rather than running
   bare `make` in a build directory. The generated `.f` files are real and
@@ -360,8 +360,8 @@ Until 2026-09-02 the build scripts overwrote tracked files with suffixed
 siblings (`SIZE.h_mpi -> SIZE.h`, `AUTODIFF_PARAMS.h_OG -> AUTODIFF_PARAMS.h`,
 …), so a build dirtied the tree and the bare file was whatever the last build
 staged. That is gone: each file exists once under its MITgcm name, and a
-variant is a second `-mods` directory (`code_tap/variants/adjViscBoost/`,
-mirroring `input_tap/variants/adjViscBoost/` on the namelist side). If
+variant is a second `-mods` directory (`code_tap/variants/adjointViscosity/`,
+mirroring `input_tap/variants/adjointViscosity/` on the namelist side). If
 `git status` shows a change after a build, something regressed.
 
 ## Running

@@ -18,7 +18,7 @@
 # tapenade_profiling/compare_30d_adjViscBoost_run31025_vs_nocheckpoint_run31056.md.
 #
 # What differs from build_tapAdj_ckpAll.sh is a second -mods directory,
-# code_tap/variants/adjViscBoost/, listed FIRST so that its four files shadow
+# code_tap/variants/adjointViscosity/, listed FIRST so that its four files shadow
 # both code_tap/ and the vendored tree: AUTODIFF_PARAMS.h / autodiff_readparms.F
 # declare and read the inAd*/outAd* parameters, autodiff_inadmode_set_ad.F /
 # autodiff_inadmode_unset_ad.F apply and restore them. Those let the model run
@@ -28,7 +28,7 @@
 # is what got compiled.
 #
 # The build only provides the machinery; the values come from
-# input_tap/data.autodiff_adjViscBoost at run time (viscFacInAd = 10 vs
+# input_tap/data.autodiff_adjointViscosity at run time (viscFacInAd = 10 vs
 # viscFacInFw = 1, inAdviscArNr = 2.E-3 against a forward 1.2E-4, and added
 # inAddiffKhT/S). So this build MUST be paired with
 # submit_tapAdj_adjViscBoost.sh, which swaps that namelist in. Pairing it with
@@ -89,12 +89,12 @@ make CLEAN || true
 # see build_tapAdj_ckpAll.sh). No -nocheckpoint here, on
 # purpose -- see the header. -mods names the variant directory FIRST: genmake2
 # gives a file in an earlier -mods directory preference over a same-named file
-# anywhere later, so the four files in code_tap/variants/adjViscBoost/ replace
+# anywhere later, so the four files in code_tap/variants/adjointViscosity/ replace
 # their code_tap/ and pkg/autodiff/ counterparts without any copy step.
 "$MITGCM_ROOT/tools/genmake2" -mpi -tap \
     -rd="$MITGCM_ROOT" \
     -of="$MPI_OPTFILE" \
-    -mods="../code_tap/variants/adjViscBoost ../code_tap" \
+    -mods="../code_tap/variants/adjointViscosity ../code_tap" \
     -adof=../code_tap/adjoint_tap_local
 
 # Generate dependency list
@@ -108,12 +108,12 @@ make -j 8 tap_adj
 # this build's name. The inAd*/outAd* names exist only in the variant sources.
 for f in autodiff_readparms.f autodiff_inadmode_set_ad.f autodiff_inadmode_unset_ad.f; do
     if ! grep -qE 'inAdviscAhGrid|outAdviscAhGrid' "$f"; then
-        echo "ERROR: the compiled $f is not the adjViscBoost variant;"
-        echo "       check the -mods order (code_tap/variants/adjViscBoost must come first)."
+        echo "ERROR: the compiled $f is not the adjointViscosity variant;"
+        echo "       check the -mods order (code_tap/variants/adjointViscosity must come first)."
         exit 1
     fi
 done
-echo "OK: the compiled autodiff sources are the adjViscBoost variant."
+echo "OK: the compiled autodiff sources are the adjointViscosity variant."
 
 # Same generated-call checks as build_tapAdj_ckpAll.sh: each hook's _B argument
 # list must match its hand-written routine; F77 would silently misalign a
@@ -163,7 +163,7 @@ dirty=$(git -C "$SCRIPT_DIR" diff --name-only HEAD -- . 2>/dev/null | wc -l)
     echo "build_dir=$(basename "$PWD")"
     echo "exe_md5=$(md5sum mitgcmuv_tap_adj | cut -d' ' -f1)"   # identity of the binary this record describes; the submit scripts verify it
     echo "tapenade_checkpointing=ckpAll        # every call checkpointed; the -nocheckpoint list is NOT equivalent under the boost (run 31056 vs 31025)"
-    echo "variant=adjViscBoost                 # code_tap/variants/adjViscBoost/ compiled ahead of code_tap/ (inAd*/outAd*); pair with submit_tapAdj_adjViscBoost.sh"
+    echo "variant=adjViscBoost                 # code_tap/variants/adjointViscosity/ compiled ahead of code_tap/ (inAd*/outAd*); pair with submit_tapAdj_adjViscBoost.sh"
     echo "run_token=tapAdj_ckpAll_adjViscBoost"
     echo "tap_extra=$(sed -n 's/^TAP_EXTRA *= *//p' Makefile)"
     echo "git_commit=$(git -C "$SCRIPT_DIR" rev-parse --short HEAD 2>/dev/null || echo unknown)"

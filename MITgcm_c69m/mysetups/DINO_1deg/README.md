@@ -138,7 +138,7 @@ conversion also retired the patched `genmake2` override entirely — the
 vendored `MITgcm/` tree deviates from upstream in zero files.)
 
 Build directories symlink back into `code_tap/` (the boost build's into
-`code_tap/variants/adjViscBoost/` as well). Since 2026-09-02 no build copies
+`code_tap/variants/adjointViscosity/` as well). Since 2026-09-02 no build copies
 anything into `code_tap/`, so building one variant leaves every other build
 directory consistent; after editing a source, re-run the build script rather
 than running bare `make` in a build directory.
@@ -310,10 +310,10 @@ forward settings on the way out. Values were adapted from the ASTE 90x150x60
 regional setup.
 
 It is a **build and a namelist variant**. The build compiles
-`code_tap/variants/adjViscBoost/` ahead of `code_tap/` (a second `-mods`
+`code_tap/variants/adjointViscosity/` ahead of `code_tap/` (a second `-mods`
 directory, listed first — see the README there), which is what provides the
 `inAd*`/`outAd*` parameters at all; the submit script swaps
-`data.autodiff_adjViscBoost` in at run time, which is what sets them. **The two must be used together** — pairing the
+`data.autodiff_adjointViscosity` in at run time, which is what sets them. **The two must be used together** — pairing the
 plain submit script with this build silently runs the ordinary configuration.
 
 **27 ranks**, fixed by `code_tap/SIZE.h` (`nPx=3, nPy=9` over `sNx=17, sNy=22`).
@@ -365,7 +365,7 @@ input_tap/
     ├── baseline/                 the config the committed default points at
     │   └── data_from180yrPk_visc2x
     ├── viscosity_study/
-    ├── adjViscBoost/             data.autodiff_adjViscBoost
+    ├── adjViscBoost/             data.autodiff_adjointViscosity
     ├── grdchk_repair/            gradient check on the sensitivity peak (passes; the
     │                             committed data.grdchk's point measures noise)
     └── kappa_v_ensemble/
@@ -553,14 +553,14 @@ the file it replaces. From this directory:
 | `code_tap/dummy_for_etan.F` | `../../MITgcm/pkg/autodiff/dummy_for_etan.F` | Same widening for the `ADJetan` hook: the one `etaN` argument under `#ifdef ALLOW_TAPENADE` |
 | `code_tap/autodiff_inadmode_set.F`, `…unset.F` | `../../MITgcm/pkg/autodiff/autodiff_inadmode_set.F`, `…unset.F` | The mode-switch no-op hooks with the `uVel` activity-vehicle argument under `#ifdef ALLOW_TAPENADE` |
 | `code_tap/dummy_tap.F` | `../../MITgcm/pkg/tapenade/dummy_tap.F` | Upstream ships `DUMMY_IN_STEPPING_B/_D` and `DUMMY_FOR_ETAN_B/_D` as no-op stubs; the shadow gives them bodies (`DUMMY_IN_STEPPING_B` dumps its adjoint *arguments* after ADEXCH-folding them via `stubs_tap_adj.F`, mirroring upstream's `ADDUMMY_IN_STEPPING` restricted to the 11 fields the hook carries; `DUMMY_FOR_ETAN_B` dumps `etaNb` as `ADJetan` with no fold, like upstream) and adds the thin `AUTODIFF_INADMODE_SET_B`/`UNSET_B` wrappers that call the TAF-named bodies `ADAUTODIFF_INADMODE_SET`/`UNSET` (so the parameter-switching logic is not duplicated) plus `_D` no-ops. Keeping the wrappers here is what lets a plain build leave `pkg/autodiff/autodiff_inadmode_{set,unset}_ad.F` unshadowed |
-| `code_tap/variants/adjViscBoost/autodiff_inadmode_set_ad.F` | `../../MITgcm/pkg/autodiff/autodiff_inadmode_set_ad.F` | Upstream body + the ASTE-derived `inAd*` apply block (`viscArNr`, `viscAhGrid`, `diffKh*`, … declared in the `AUTODIFF_PARAMS.h` beside it). Compiled only by `build_tapAdj_adjViscBoost.sh`; a plain build uses the vendored file, unshadowed |
-| `code_tap/variants/adjViscBoost/autodiff_inadmode_unset_ad.F` | `../../MITgcm/pkg/autodiff/autodiff_inadmode_unset_ad.F` | Upstream body + the `outAd*` restore block — this half never existed anywhere before (it was unreachable dead code territory), so expect no ASTE original to diff against |
+| `code_tap/variants/adjointViscosity/autodiff_inadmode_set_ad.F` | `../../MITgcm/pkg/autodiff/autodiff_inadmode_set_ad.F` | Upstream body + the ASTE-derived `inAd*` apply block (`viscArNr`, `viscAhGrid`, `diffKh*`, … declared in the `AUTODIFF_PARAMS.h` beside it). Compiled only by `build_tapAdj_adjViscBoost.sh`; a plain build uses the vendored file, unshadowed |
+| `code_tap/variants/adjointViscosity/autodiff_inadmode_unset_ad.F` | `../../MITgcm/pkg/autodiff/autodiff_inadmode_unset_ad.F` | Upstream body + the `outAd*` restore block — this half never existed anywhere before (it was unreachable dead code territory), so expect no ASTE original to diff against |
 | `code_tap/flow_tap_local` | *(supplement to `../../MITgcm/tools/TAP_support/flow_tap`, not a shadow)* | Four stanzas re-declaring the hooks with their field arguments active. Compare with the `dummy_in_stepping` / `dummy_for_etan` / `autodiff_inadmode_*` stanzas in the stock file (all-passive) to see the one change of meaning; in an upstream patch these would replace those stanzas |
 | `code_tap/adjoint_tap_local` | *(wrapper around `../../MITgcm/tools/adjoint_options/adjoint_tap`, not a shadow)* | Sources the stock options file and appends `-ext ../code_tap/flow_tap_local` after the stock library, because Tapenade keeps the last declaration of an external |
 | `code_tap/stubs_tap_adj.F` | `../../MITgcm/pkg/tapenade/stubs_tap_adj.F` | Pre-dates the hook redesign: implements the five `ADEXCH_*` adjoint halo exchanges upstream ships as no-op stubs (see below) |
 
 Two reading rules: every file carries its real MITgcm name and is the only
-copy of itself — the variant shadows sit in `code_tap/variants/adjViscBoost/`
+copy of itself — the variant shadows sit in `code_tap/variants/adjointViscosity/`
 rather than as suffixed siblings (the staged-copy layout ended 2026-09-02);
 and the artefacts of the pre-redesign mechanism are gone on purpose (`forward_step_b.f_modified*` deleted — no
 generated file is post-edited any more; `adcommon.h` archived in
@@ -572,7 +572,7 @@ in `notes/references/tapenade_hooks/`.
 
 Every file here is compiled as-is under its real MITgcm name; no build script
 copies anything into this directory (since 2026-09-02), so a build leaves
-`git status` clean. `variants/adjViscBoost/` is a second `-mods` directory that
+`git status` clean. `variants/adjointViscosity/` is a second `-mods` directory that
 `build_tapAdj_adjViscBoost.sh` lists ahead of `code_tap/`; its README explains.
 The 2026-09-02 relocation reproduces the previous layout's runs bit for bit
 (31069 vs 31054 for the default build, 31070 vs 31025 for the boost; see
@@ -589,7 +589,7 @@ The 2026-09-02 relocation reproduces the previous layout's runs bit for bit
 | `flow_tap_local` | Tapenade external library re-declaring the hooks' field arguments active; appended after `tools/TAP_support/flow_tap` by `adjoint_tap_local` |
 | `adjoint_tap_local` | the setup's `-adof` file: sources the stock `tools/adjoint_options/adjoint_tap` and appends `-ext ../code_tap/flow_tap_local` |
 | `tap_nocheckpoint.txt` | the routines `build_tapAdj_nocheckpoint.sh` (the default) passes to Tapenade's `-nocheckpoint` — `build_tapAdj_adjViscBoost.sh` deliberately does not (see "Profiling and checkpoint tuning") (split `_FWD`/`_BWD` mode instead of checkpointing), each annotated with the profiling-run gain that put it there — see "Profiling and checkpoint tuning" below |
-| `variants/adjViscBoost/` | the four ASTE-derived shadows of `pkg/autodiff` (`AUTODIFF_PARAMS.h`, `autodiff_readparms.F`, `autodiff_inadmode_set_ad.F`, `autodiff_inadmode_unset_ad.F`) that declare, read, apply and restore the `inAd*`/`outAd*` parameters; compiled only by `build_tapAdj_adjViscBoost.sh`, as its first `-mods` directory — see the README inside. A plain build compiles the vendored files |
+| `variants/adjointViscosity/` | (named `adjViscBoost/` until 2026-09-04; the build script, build directory and run token keep the old tag on purpose, because scratch run directories record it) the four ASTE-derived shadows of `pkg/autodiff` (`AUTODIFF_PARAMS.h`, `autodiff_readparms.F`, `autodiff_inadmode_set_ad.F`, `autodiff_inadmode_unset_ad.F`) that declare, read, apply and restore the `inAd*`/`outAd*` parameters; compiled only by `build_tapAdj_adjViscBoost.sh`, as its first `-mods` directory — see the README inside. A plain build compiles the vendored files |
 | `stubs_tap_adj.F` | override of `pkg/tapenade/stubs_tap_adj.F` implementing the five `ADEXCH_*` adjoint halo exchanges (see below) |
 | `SIZE.h` | grid and decomposition (`nPx=3, nPy=9` over `sNx=17, sNy=22`); the one and only copy |
 | `CTRL_SIZE.h` | control-vector dimensions |
@@ -621,7 +621,7 @@ Beyond the forward set, the adjoint adds four:
 | --- | --- |
 | `data.cost` | `mult_atl` — scales the cost function |
 | `data.ctrl` | which controls are optimised (`xx_theta`, `xx_salt`, `xx_diffkr`, wind stress, heat and freshwater flux) and their weight files — every `xx_*_weight` points at `ones_64b.bin` |
-| `data.autodiff` | checkpointing and adjoint-mode behaviour; `data.autodiff_adjViscBoost` is the inflated-viscosity variant |
+| `data.autodiff` | checkpointing and adjoint-mode behaviour; `data.autodiff_adjointViscosity` is the inflated-viscosity variant |
 | `data.grdchk` | the finite-difference gradient check: `grdchk_eps`, `grdchkvarname`, and the `iGloPos/jGloPos/kGloPos` point to perturb |
 
 Variants are selected by `test_cases` in a submit script as `<group>/<tag>`; see

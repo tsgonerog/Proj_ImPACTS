@@ -1,6 +1,6 @@
-# `adjViscBoost/` — inflated viscosity during the adjoint sweep
+# `adjointViscosity/` — inflated viscosity during the adjoint sweep
 
-`data.autodiff_adjViscBoost` sets a **larger viscosity and diffusivity in the
+`data.autodiff_adjointViscosity` sets a **larger viscosity and diffusivity in the
 adjoint sweep than in the forward**: `viscFacInAd = 10.` against
 `viscFacInFw = 1.`, `inAdviscArNr = 2.E-3` against a forward `1.2E-4`, plus
 added `inAddiffKhT/S`. The `outAd*` values restore the forward settings on the
@@ -11,7 +11,7 @@ and the values were adapted from the ASTE 90×150×60 regional setup.
 
 | Piece | Supplies |
 | --- | --- |
-| `build_tapAdj_adjViscBoost.sh` | compiles `code_tap/variants/adjViscBoost/` ahead of `code_tap/` (its first `-mods` directory; see the README there), which is what makes the `inAd*`/`outAd*` parameters exist at all |
+| `build_tapAdj_adjViscBoost.sh` | compiles `code_tap/variants/adjointViscosity/` ahead of `code_tap/` (its first `-mods` directory; see the README there), which is what makes the `inAd*`/`outAd*` parameters exist at all |
 | `submit_tapAdj_adjViscBoost.sh` | copies this file over `data.autodiff` in the staged run directory, which is what gives them values |
 
 Pairing the plain submit script with the adjViscBoost build, or the reverse,

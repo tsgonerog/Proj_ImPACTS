@@ -25,7 +25,7 @@ plain `ls`.
 | `monitor_ad.F` | `MONITOR_b`, an adjoint-state monitor over the `adcommon.h` commons | Same: nothing generated ever called it, and it needs the archived `adcommon.h` |
 
 **Lineage worth knowing.** `autodiff_inadmode_set_ad.F_aste_90x150x60` is the
-direct ancestor of the live `code_tap/variants/adjViscBoost/autodiff_inadmode_set_ad.F`,
+direct ancestor of the live `code_tap/variants/adjointViscosity/autodiff_inadmode_set_ad.F`,
 which `build_tapAdj_adjViscBoost.sh` compiles from its first `-mods` directory
 (until 2026-09-02 that file was the staged sibling
 `code_tap/autodiff_inadmode_set_ad.F_adapted_frm_aste_90x150x60`). Diffing the
@@ -72,7 +72,7 @@ which still documents the dead-end `adcommon.h` approach it replaced.
 | `data.autodiff_aste_90x150x60` | ASTE adjoint-mode viscosity namelist | Superseded by the DINO-tuned copy — see lineage below |
 
 **Lineage worth knowing.** `data.autodiff_aste_90x150x60` is the direct ancestor
-of the live `input_tap/variants/adjViscBoost/data.autodiff_adjViscBoost`, which
+of the live `input_tap/variants/adjointViscosity/data.autodiff_adjointViscosity`, which
 `submit_tapAdj_adjViscBoost.sh` swaps in. The diff is the whole derivation:
 
 - the entire `SEAICE*` block commented out (DINO has no sea ice)

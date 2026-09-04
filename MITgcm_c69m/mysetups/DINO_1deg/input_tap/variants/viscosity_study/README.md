@@ -9,5 +9,5 @@ files, from two different starting points.
 | `from_rest_viscGrid1p8e-2` | from rest |
 | `from50yrPk_viscGrid1p8e-2` | from the 50-year pickup (`nIter0=878400`) |
 
-A long adjoint at these settings may need `adjViscBoost/` to stay stable — see
+A long adjoint at these settings may need `adjointViscosity/` to stay stable — see
 that group.
