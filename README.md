@@ -112,7 +112,7 @@ DINO_1deg/
 ├── input_tap/                adjoint namelists MITgcm reads (12: adds data.autodiff,
 │   │                         data.cost, data.ctrl, data.grdchk)
 │   └── variants/             alternative namelists, grouped by purpose:
-│                             baseline/ viscosity_study/ adjViscBoost/
+│                             baseline/ viscosity_study/ adjointViscosity/
 │                             kappa_v_ensemble/ grdchk_repair/
 ├── input_binaries/           bathymetry, forcing, initial state — NOT tracked, 179 MB
 ├── input_adj_binaries/       ones_64b.bin, the uniform control weight — NOT tracked
@@ -187,7 +187,7 @@ itself:
 | `frd` / `tapAdj` | scripts, build dirs, run dirs | forward model / Tapenade adjoint |
 | *(unmarked)* | scripts and build dirs, both setups | the working configuration. Only deviations carry a token |
 | `adjViscBoost` | DINO build *and* submit script (SOMA has none) | larger viscosity/diffusivity during the adjoint sweep than in the forward (`viscFacInAd = 10` vs `viscFacInFw = 1`), which keeps a long adjoint from blowing up. Build supplies the machinery, namelist supplies the values — the two scripts are a pair |
-| `adjViscBoost` | DINO only | SOMA has no such variant |
+| `adjointViscosity` | DINO `code_tap/variants/` and `input_tap/variants/` | the source and namelist halves of that configuration. **Renamed from `adjViscBoost` on 2026-09-04**; the scripts, build directory and run token above keep the old tag on purpose, because scratch run directories and every `build_info.txt` already written record it |
 | `visc2x`, `viscD2x_Zref`, `viscRef`, `viscGrid<v>` | notebooks, scratch run dirs | the viscosity setting the run used — see `analyses/README.md` |
 
 ---

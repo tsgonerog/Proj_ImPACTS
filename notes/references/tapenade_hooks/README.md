@@ -253,6 +253,28 @@ carries the ten `DUMP_ADJ_*` calls. Merged to `main` on 2026-09-03
 (fast-forward; `main` = ea6f75f); the pre-merge state, the last with the
 `TAP_*` names, is tag `archive/20260903_pre-hook-upstream-rename`.
 
+**Update 2026-09-04: the parameter variant directories were renamed.**
+`code_tap/variants/adjViscBoost/` and `input_tap/variants/adjViscBoost/` are now
+`…/variants/adjointViscosity/`, and the namelist inside the second is
+`data.autodiff_adjointViscosity`. Nothing about the mechanism changed — the
+files, their contents and the `-mods` ordering are as described above — but
+`adjViscBoost` was a name coined inside this project, and it was appearing in a
+document written for readers who have no reason to know it. Where the
+capability needs naming, MITgcm's own vocabulary serves: `inAdMode` and
+`viscFacInAd` in `pkg/autodiff`, or plainly "running the reverse sweep with
+different physics from the forward trajectory".
+
+**The build identity deliberately kept the old tag**, so the two names coexist
+on purpose: `build_tapAdj_adjViscBoost.sh`, `submit_tapAdj_adjViscBoost.sh`,
+`build_tapAdj_adjViscBoost/`, `variant=adjViscBoost` and
+`run_token=tapAdj_ckpAll_adjViscBoost` are unchanged, because run directories
+are named from `run_token` — runs 31025, 31056, 31070 and 31075 carry it, as
+does every `build_info.txt` written so far and the scratch campaign directory
+`runs/adjoint/adjViscBoost/`. Renaming those would desynchronise the analysis
+notebooks from the output they read, for no gain. The rule, if it needs
+restating: **the directory is `adjointViscosity`, the build and its runs are
+`adjViscBoost`.**
+
 ## 4 · Validation
 
 All runs: DINO 1°, 51×198×36, 27 MPI ranks, 30-day adjoints (1,440 steps),

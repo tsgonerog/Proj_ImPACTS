@@ -365,7 +365,7 @@ input_tap/
     ├── baseline/                 the config the committed default points at
     │   └── data_from180yrPk_visc2x
     ├── viscosity_study/
-    ├── adjViscBoost/             data.autodiff_adjointViscosity
+    ├── adjointViscosity/         data.autodiff_adjointViscosity
     ├── grdchk_repair/            gradient check on the sensitivity peak (passes; the
     │                             committed data.grdchk's point measures noise)
     └── kappa_v_ensemble/

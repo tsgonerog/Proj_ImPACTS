@@ -164,3 +164,28 @@
   2026-09-03 (rebased, fast-forward; `main` = ea6f75f); the pre-merge state —
   the last commit with the `TAP_*` names — is tag
   `archive/20260903_pre-hook-upstream-rename`.
+
+- [x] ~~**Write the hook redesign up as a talk, and take the internal name out
+  of it**~~ (added and **done 2026-09-04**).
+  `notes/references/tapenade_hooks/upstream_slides/` is a 13-frame Beamer deck
+  derived from the change note beside it, with its own Overleaf project
+  (mapped in `project_url()` as
+  `references/tapenade_hooks/upstream_slides`). Each of the twelve modified
+  files appears as `code_tap/<file>` → the checkpoint69m file it shadows, the
+  first path linked to its blob on GitHub. DINO-only, and deliberately without
+  an evidence table or an open-questions frame — both were cut in review; §4
+  and §5 of the change note still hold that material. One error the review
+  caught and the note now records: the Tapenade path already writes `adxx_*`
+  control gradients through `pkg/ctrl`'s active-file machinery, so it is only
+  the `ADJ*` adjoint-state dumps that the hooks supply.
+  In the same pass `code_tap/variants/adjViscBoost/` and
+  `input_tap/variants/adjViscBoost/` became `…/variants/adjointViscosity/`
+  (namelist `data.autodiff_adjointViscosity`), since `adjViscBoost` was an
+  internal coinage appearing in a document for outside readers. **The build
+  identity keeps the old tag on purpose** — `build_tapAdj_adjViscBoost.sh`,
+  `build_tapAdj_adjViscBoost/`, `run_token=tapAdj_ckpAll_adjViscBoost` —
+  because run directories are named from `run_token` and runs 31025, 31056,
+  31070 and 31075 already carry it. The rule: the directory is
+  `adjointViscosity`, the build and its runs are `adjViscBoost`.
+  `build_tapAdj_adjViscBoost/` was rebuilt afterwards, since the rename left
+  its four `-mods` symlinks dangling.
