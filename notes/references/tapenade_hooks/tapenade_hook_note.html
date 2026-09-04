@@ -271,6 +271,17 @@ from <code>run_token</code> &mdash; runs 31025, 31056, 31070 and 31075 carry it,
 from the output they read, for no gain. The rule, if it needs restating: <strong>the directory is
 <code>adjointViscosity</code>, the build and its runs are <code>adjViscBoost</code>.</strong></p>
 
+<p>The rename left the existing <code>build_tapAdj_adjViscBoost/</code> with four dangling
+<code>-mods</code> symlinks, so it was rebuilt, and the rebuild was validated rather than argued:
+<strong>run 31090</strong> (30 d from rest, reproducing the configuration of 31075) returns all 210
+<code>ADJ*</code>/<code>adxx_*</code> files bitwise identical, <code>fc</code> =
+3.99075406661494E-01 to every printed digit, all 441 <code>%MON</code> lines byte-identical, and 27
+<code>NORMAL END</code>, in 13:50 against 14:14. The one file that differs is
+<code>build_info.txt</code>, which carries the new <code>exe_md5</code>, commit and build timestamp.
+That is the expected result &mdash; between the two executables every change to a compiled source is
+a Fortran comment &mdash; but a rename that touches a <code>-mods</code> path is exactly the kind of
+change that deserves measuring rather than reasoning about.</p>
+
 <h2>4 · Validation</h2>
 <hr class="rule">
 <p>All runs: DINO 1°, 51×198×36, 27 MPI ranks, 30-day adjoints (1,440 steps), identical staged namelists within each pair; comparisons are <code>cmp</code>-level bitwise on <code>fc</code>, all <code>adxx_*</code> and all <code>ADJ*</code> files.</p>

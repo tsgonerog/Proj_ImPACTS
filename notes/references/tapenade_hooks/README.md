@@ -275,6 +275,18 @@ notebooks from the output they read, for no gain. The rule, if it needs
 restating: **the directory is `adjointViscosity`, the build and its runs are
 `adjViscBoost`.**
 
+The rename left the existing `build_tapAdj_adjViscBoost/` with four dangling
+`-mods` symlinks, so it was rebuilt, and the rebuild was validated rather than
+argued: **run 31090** (30 d from rest, reproducing the configuration of 31075)
+returns all 210 `ADJ*`/`adxx_*` files bitwise identical, `fc` =
+3.99075406661494E-01 to every printed digit, all 441 `%MON` lines
+byte-identical, and 27 `NORMAL END`, in 13:50 against 14:14. The one file that
+differs is `build_info.txt`, which carries the new `exe_md5`, commit and build
+timestamp. That is the expected result — between the two executables every
+change to a compiled source is a Fortran comment — but a rename that touches a
+`-mods` path is exactly the kind of change that deserves measuring rather than
+reasoning about.
+
 ## 4 · Validation
 
 All runs: DINO 1°, 51×198×36, 27 MPI ranks, 30-day adjoints (1,440 steps),

@@ -188,4 +188,9 @@
   31070 and 31075 already carry it. The rule: the directory is
   `adjointViscosity`, the build and its runs are `adjViscBoost`.
   `build_tapAdj_adjViscBoost/` was rebuilt afterwards, since the rename left
-  its four `-mods` symlinks dangling.
+  its four `-mods` symlinks dangling, and the rebuild was validated by run
+  31090 (30 d from rest, the configuration of 31075): all 210 `ADJ*`/`adxx_*`
+  files bitwise identical, `fc` = 3.99075406661494E-01 to every printed digit,
+  all 441 `%MON` lines byte-identical, 27 `NORMAL END`, 13:50 against 14:14.
+  The only file that differs is `build_info.txt`, which records the new
+  `exe_md5`, commit and build time and is supposed to.
