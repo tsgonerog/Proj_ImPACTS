@@ -1,5 +1,45 @@
 # TODO — DINO_1deg
 
+- [ ] **Exercise the diagnostics route for adjoint output under the Tapenade
+  hooks** (added 2026-09-05). Upstream roadmap issue MITgcm#735, item 3
+  ("integrate better with the diagnostics package to manage AD output", high
+  priority), is still open as of checkpoint69q. Under TAF that route is three
+  hand-written calls in the reverse sweep: `ADDUMMY_IN_STEPPING` filling the
+  `ADJ*` diagnostics through `DUMP_ADJ_*`, `ADAUTODIFF_INADMODE_SET` calling
+  `DIAGNOSTICS_SWITCH_ONOFF(-1, …)` at the start of each backward step, and
+  `ADAUTODIFF_INADMODE_UNSET` calling `DIAGNOSTICS_WRITE_ADJ` at its end.
+  Under Tapenade as shipped none of the three is called; with the hooks all
+  three are in the generated `forward_step_b.f` of the default build
+  (`build_tapAdj_nocheckpoint/`, lines 7359, 7447 and 7464), in TAF's order,
+  and the `_B` bodies keep the `useDiag4AdjOutp` branches. So the route is
+  wired but has never been exercised: `input_tap/data.diagnostics` lists no
+  `ADJ*` field and every validation so far read the binary dumps. Test: a
+  namelist variant, say `input_tap/variants/adj_diagnostics/`, holding a
+  `data_from180yrPk_visc2x_adjDiag` copied from
+  `baseline/data_from180yrPk_visc2x` and a
+  `data.diagnostics_from180yrPk_visc2x_adjDiag` that adds a fifth stream of
+  the registered adjoint diagnostics (`ADJtheta`, `ADJsalt`, `ADJuvel`,
+  `ADJvvel`, `ADJwvel`, `ADJtaux`, `ADJtauy`, `ADJqnet`, `ADJqsw`,
+  `ADJempmr`, `ADJdifkr`, `ADJetan`; names from
+  `pkg/diagnostics/diagnostics_main_init.F`) at snapshot frequency
+  `-432000.` so it lines up with `adjDumpFreq`. Listing any of them switches
+  `useDiag4AdjOutp` on by itself (`diagnostics_set_pointers.F`, "Set internal
+  parameter useDiag4AdjOutp"), so no `data.autodiff` change is needed. Run 30
+  days with the default build,
+  `IMPACTS_TEST_CASE=adj_diagnostics/from180yrPk_visc2x_adjDiag
+  ../../../tools/submit.sh scripts/submit_tapAdj.sh`, and compare each
+  diagnostics record with the binary `ADJ*` dump at the same iteration; the
+  part TAF never had to survive is `DIAGNOSTICS_WRITE_ADJ`'s reversed-time
+  bookkeeping across Tapenade's binomial re-forwards, so check the record
+  count and the iteration stamps, not just the values. If it agrees, the
+  upstream note can say the hooks make the standard diagnostics route work
+  under Tapenade for the carried fields and cite #735 item 3 as partly
+  addressed. Coverage stays a subset either way (the TAF body handles about
+  twenty fields plus the seaice and ptracers dumps, and `pkg/exf` writes its
+  own snapshots), and the TLM `_D` bodies are no-ops. Assessment and the
+  checkpoint69q comparison behind it:
+  `impacts-notes/references/tapenade_hooks/review_upstream_checkpoint69q_20260905.md`.
+
 - [x] ~~**Shorten the two adjoint variant tokens**~~ (added and **done
   2026-09-05**). `tapProfile` → `profile` (the `tapAdj_` prefix had already
   said Tapenade, so the token read `tapAdj_ckpAll_tapProfile`) and
