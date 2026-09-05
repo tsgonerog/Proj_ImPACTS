@@ -1,7 +1,7 @@
 #!/bin/bash
 # Build the Tapenade ADJOINT with Tapenade's CHECKPOINTING PROFILER compiled in.
 #   sources : code_tap/ + input_tap/ + tools/tapenade_profiling/mods_profile/
-#          -> build_tapAdj_tapProfile/mitgcmuv_tap_adj
+#          -> build_tapAdj_profile/mitgcmuv_tap_adj
 #
 # Same stock genmake2 + flow_tap_local hook wiring as build_tapAdj_ckpAll.sh
 # (see there for how the ADJ* dump call is generated), plus two things:
@@ -22,19 +22,19 @@
 # This is a DIAGNOSTIC build. Its adjoint does exactly what build_tapAdj_ckpAll's
 # does (same checkpointing, same numbers) with timing calls added, so it is
 # somewhat slower and must not be used for production runs or as a runtime
-# reference. Pair it with submit_tapAdj_tapProfile.sh (30-day default), and
+# reference. Pair it with submit_tapAdj_profile.sh (30-day default), and
 # read tools/tapenade_profiling/README.md for how to turn the table into a
 # -nocheckpoint list for build_tapAdj_nocheckpoint.sh. It deliberately does
 # NOT carry that list: a profile of the tuned build would only show the
 # residual cost, while the list is derived by seeing every checkpoint.
 #
 # This file says WHAT to build; HOW is tools/lib/build_body.sh. Run from the
-# setup directory: ./scripts/build_tapAdj_tapProfile.sh
+# setup directory: ./scripts/build_tapAdj_profile.sh
 
 set -euo pipefail
 SETUP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-BUILD_DIR=build_tapAdj_tapProfile
+BUILD_DIR=build_tapAdj_profile
 BUILD_MODE=tapAdj
 PARALLEL=mpi
 # The profiler runtime + main program. genmake2 gets the path relative to the
@@ -45,8 +45,8 @@ PROFILE_MODS="../../../../tools/tapenade_profiling/mods_profile"
 MODS=("$PROFILE_MODS" ../code_tap)                          # the profiler FIRST
 TAP_EXTRA="-profile"
 CKP=ckpAll;         CKP_NOTE="every call checkpointed, as the profile must see them"
-VARIANT=tapProfile; VARIANT_NOTE="-profile instrumentation + mods_profile/ main program; diagnostic only"
-RUN_TOKEN=tapAdj_ckpAll_tapProfile
+VARIANT=profile; VARIANT_NOTE="-profile instrumentation + mods_profile/ main program; diagnostic only"
+RUN_TOKEN=tapAdj_ckpAll_profile
 
 pre_configure() {
     local f

@@ -1,7 +1,7 @@
 # `mods_profile/` — the two files a Tapenade `-profile` build needs
 
 A `genmake2 -mods` directory, listed **before** a setup's `code_tap/` by
-`build_tapAdj_tapProfile.sh` so that both files shadow their counterparts:
+`build_tapAdj_profile.sh` so that both files shadow their counterparts:
 
 | File | Shadows | Why it is here |
 | --- | --- | --- |

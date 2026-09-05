@@ -10,7 +10,7 @@
 # appends that library AFTER the stock flow_tap (Tapenade keeps the last
 # declaration of an external). No generated file is post-edited. Same mechanism as
 # DINO (see ../DINO_1deg/README.md, "How the Tapenade hooks work"); SOMA
-# carries only the dump hooks - it has no adjViscBoost machinery to switch.
+# carries only the dump hooks - it has no adjVisc machinery to switch.
 #
 # Every call is checkpointed (Tapenade's default): SOMA has no checkpointing
 # profile yet, so unlike DINO's build_tapAdj.sh (a symlink to its tuned

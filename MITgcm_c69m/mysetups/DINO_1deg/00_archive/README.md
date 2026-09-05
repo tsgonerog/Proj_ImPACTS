@@ -26,7 +26,7 @@ plain `ls`.
 
 **Lineage worth knowing.** `autodiff_inadmode_set_ad.F_aste_90x150x60` is the
 direct ancestor of the live `code_tap/variants/adjointViscosity/autodiff_inadmode_set_ad.F`,
-which `build_tapAdj_adjViscBoost.sh` compiles from its first `-mods` directory
+which `build_tapAdj_adjVisc.sh` compiles from its first `-mods` directory
 (until 2026-09-02 that file was the staged sibling
 `code_tap/autodiff_inadmode_set_ad.F_adapted_frm_aste_90x150x60`). Diffing the
 two shows the c69f→c69m API port; the `TAP_INADMODE_SET_B/_D` wrapper that the
@@ -73,7 +73,7 @@ which still documents the dead-end `adcommon.h` approach it replaced.
 
 **Lineage worth knowing.** `data.autodiff_aste_90x150x60` is the direct ancestor
 of the live `input_tap/variants/adjointViscosity/data.autodiff_adjointViscosity`, which
-`submit_tapAdj_adjViscBoost.sh` swaps in. The diff is the whole derivation:
+`submit_tapAdj_adjVisc.sh` swaps in. The diff is the whole derivation:
 
 - the entire `SEAICE*` block commented out (DINO has no sea ice)
 - `useGMRediInAdMode` `.TRUE.` → `.FALSE.`
@@ -81,7 +81,7 @@ of the live `input_tap/variants/adjointViscosity/data.autodiff_adjointViscosity`
   `outAdviscArNr` 5.E-4 → 1.2E-4, `outAdviscAhGrid` 0.5E-2 → 1.8E-2
 
 Together with the `code_tap/` file above, these two are the record of **how the
-`adjViscBoost` configuration was derived from ASTE**. They are the most useful
+`adjVisc` configuration was derived from ASTE**. They are the most useful
 thing in this archive.
 
 ## `scripts/`

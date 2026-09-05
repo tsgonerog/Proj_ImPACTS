@@ -677,7 +677,7 @@ C--   Set model configuration (fixed arrays)
       CALL THE_MAIN_LOOP_B( myTime, myIter, myThid )
 C--   Tapenade "-profile" build only (this file lives in
 C     tools/tapenade_profiling/mods_profile/ and shadows the upstream one
-C     solely in build_tapAdj_tapProfile.sh): report the adjoint tape's peak
+C     solely in build_tapAdj_profile.sh): report the adjoint tape's peak
 C     size and total push/pop traffic on stdout, then write the checkpointing
 C     cost/benefit table that adProfile.c accumulated during THE_MAIN_LOOP_B
 C     to one file per MPI process. Every process does the same work, so any

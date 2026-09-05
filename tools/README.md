@@ -182,8 +182,8 @@ IMPACTS_TEST_CASE=kappa_v_ensemble/M3 ../../../tools/submit.sh scripts/submit_ta
 IMPACTS_TEST_CASE=grdchk_repair/from180yrPk_visc2x_grdchkON \
   IMPACTS_DURATION_DAYS=30 ../../../tools/submit.sh scripts/submit_tapAdj.sh
 
-# the adjViscBoost pairing — build and namelist must match
-../../../tools/submit.sh scripts/submit_tapAdj_adjViscBoost.sh
+# the adjVisc pairing — build and namelist must match
+../../../tools/submit.sh scripts/submit_tapAdj_adjVisc.sh
 
 # dry-run: extra flags are passed through, and land before the script name
 ../../../tools/submit.sh scripts/submit_tapAdj.sh --test-only
@@ -205,7 +205,7 @@ directory (stdout and stderr merged — a full `set -x` trace of staging, which 
 where staging failures appear), and the run itself under
 `$SCRATCH_ROOT/DINO_1deg_outputs/runs/adjoint/DINO_1deg_<run_token>_<duration>[_<tag>]_run<jobid>/`,
 where `run_token` (`tapAdj_<ckp>[_<variant>]`, e.g. `tapAdj_nocheckpoint`,
-`tapAdj_ckpAll`, `tapAdj_ckpAll_adjViscBoost`, `tapAdj_ckpAll_tapProfile`)
+`tapAdj_ckpAll`, `tapAdj_ckpAll_adjVisc`, `tapAdj_ckpAll_profile`)
 is read from the build directory's `build_info.txt` — written by the build
 script, copied into the run directory — so the name records the build as well
 as the namelist, and a submit script cannot claim a build it did not get.
@@ -410,7 +410,7 @@ building any variant the check should report nothing:
 
 ```bash
 cd MITgcm_c69m/mysetups/DINO_1deg
-./scripts/build_tapAdj_adjViscBoost.sh
+./scripts/build_tapAdj_adjVisc.sh
 ./scripts/build_tapAdj.sh            # symlink -> _nocheckpoint
 
 cd ../../..
@@ -427,7 +427,7 @@ to the other variant. Re-run its build script instead.
 Reference directories that live outside any setup — but **each one is read by a
 script**, so neither is inert: `machine_env.sh` points `MPI_OPTFILE` and
 `SERIAL_OPTFILE` at `optfile_templates/linux_amd64_gnu+mpi_perlmutter` when
-`MACHINE=perlmutter`, and `build_tapAdj_tapProfile.sh` passes
+`MACHINE=perlmutter`, and `build_tapAdj_profile.sh` passes
 `tapenade_profiling/mods_profile/` to `genmake2` as its *first* `-mods`
 directory, failing with exit 1 if `adProfile.c` or `the_model_main.F` is
 missing. What you do copy from by hand is the rest: the `c69f_originals/`
@@ -444,7 +444,7 @@ missing. What you do copy from by hand is the rest: the `c69f_originals/`
   pickup, input binary and `ADJ*`/`adxx*` file in this project was written
   big-endian on sverdrup.
 - **[`tapenade_profiling/`](tapenade_profiling/)** — how the DINO adjoint is
-  profiled (`build_tapAdj_tapProfile.sh`: `-tap_extra "-profile"` plus the
+  profiled (`build_tapAdj_profile.sh`: `-tap_extra "-profile"` plus the
   `mods_profile/` directory, which supplies the installed Tapenade's
   `adProfile.c` and an instrumented `the_model_main.F`) and how recomputation
   is traded for memory (`build_tapAdj_nocheckpoint.sh`: `-tap_extra

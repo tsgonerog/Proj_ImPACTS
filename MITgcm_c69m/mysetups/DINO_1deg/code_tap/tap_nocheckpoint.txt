@@ -3,7 +3,7 @@
 # One name per line, lower case; '#' starts a comment.
 #
 # Selection rule: every callee whose measured time gain in the 30-day
-# profiling run 31053 (build_tapAdj_tapProfile.sh, rank 0, 809 s of adjoint)
+# profiling run 31053 (build_tapAdj_profile.sh, rank 0, 809 s of adjoint)
 # was >= 1 s, except Tapenade externals (cg2d, exch2_rl1_cube and the
 # hook externals re-declared in flow_tap_local have no source to split). Gains below 1 s print as zero in the
 # profile and were left out. The annotations are that run's numbers per

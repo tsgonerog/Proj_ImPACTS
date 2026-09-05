@@ -11,14 +11,14 @@ and the values were adapted from the ASTE 90×150×60 regional setup.
 
 | Piece | Supplies |
 | --- | --- |
-| `build_tapAdj_adjViscBoost.sh` | compiles `code_tap/variants/adjointViscosity/` ahead of `code_tap/` (its first `-mods` directory; see the README there), which is what makes the `inAd*`/`outAd*` parameters exist at all |
-| `submit_tapAdj_adjViscBoost.sh` | copies this file over `data.autodiff` in the staged run directory, which is what gives them values |
+| `build_tapAdj_adjVisc.sh` | compiles `code_tap/variants/adjointViscosity/` ahead of `code_tap/` (its first `-mods` directory; see the README there), which is what makes the `inAd*`/`outAd*` parameters exist at all |
+| `submit_tapAdj_adjVisc.sh` | copies this file over `data.autodiff` in the staged run directory, which is what gives them values |
 
-Pairing the plain submit script with the adjViscBoost build, or the reverse,
+Pairing the plain submit script with the adjVisc build, or the reverse,
 silently runs the ordinary configuration.
 
 The build checkpoints every call, like `build_tapAdj_ckpAll.sh`, and its run
-directories are named `DINO_1deg_tapAdj_ckpAll_adjViscBoost_…`. It deliberately
+directories are named `DINO_1deg_tapAdj_ckpAll_adjVisc_…`. It deliberately
 does **not** carry the default build's `-nocheckpoint` list: tried on
 2026-09-02 (run 31056 vs 31025), the split-mode boost differs at order one in
 every sensitivity field, because joint-mode recomputation happens after the

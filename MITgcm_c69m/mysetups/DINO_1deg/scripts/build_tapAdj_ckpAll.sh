@@ -11,7 +11,7 @@
 # scratch rename, plain tapAdj_*) up to job 31055 came from it.
 #
 # Keep it for what -nocheckpoint cannot do: it is what the profiler build
-# (build_tapAdj_tapProfile.sh) measures, since a profile of the tuned build
+# (build_tapAdj_profile.sh) measures, since a profile of the tuned build
 # would only show the residual; it is the fallback when a configuration change
 # invalidates the routine list; and it is the baseline for timing comparisons.
 # It is no longer needed as a correctness control -- the tuned build is

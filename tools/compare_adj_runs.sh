@@ -35,7 +35,7 @@
 # LEADING BLOCK of the same length rather than comparing wholesale.
 #
 # A fourth difference is EXPECTED between two runs of the PROFILER build
-# (tapProfile) and is likewise classified rather than reported as a failure:
+# (profile) and is likewise classified rather than reported as a failure:
 #
 #   tapenade_profile.NNNN.txt   Tapenade's per-rank cost/benefit tables carry
 #                               measured CPU seconds and are sorted by them, so

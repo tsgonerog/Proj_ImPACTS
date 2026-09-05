@@ -1,6 +1,6 @@
 #!/bin/bash
 # Submit the adjoint with ADJOINT-MODE VISCOSITY INFLATION.
-#                                  build_tapAdj_adjViscBoost/mitgcmuv_tap_adj
+#                                  build_tapAdj_adjVisc/mitgcmuv_tap_adj
 #
 # Besides pointing at that build, this script replaces data.autodiff with
 # input_tap/variants/adjointViscosity/data.autodiff_adjointViscosity in the
@@ -10,13 +10,13 @@
 # build checkpoints every call, like build_tapAdj_ckpAll.sh -- the default
 # build's -nocheckpoint list is NOT equivalent under the boost (2026-09-02, run
 # 31056 vs 31025; see the build script) -- so its run directories are named
-# tapAdj_ckpAll_adjViscBoost_*.
+# tapAdj_ckpAll_adjVisc_*.
 #
 # This file says WHAT to run; HOW is tools/lib/submit_body.sh, shared by every
 # submit script. Run it from the setup directory through the wrapper:
-#     ../../../tools/submit.sh scripts/submit_tapAdj_adjViscBoost.sh
+#     ../../../tools/submit.sh scripts/submit_tapAdj_adjVisc.sh
 
-#SBATCH -J DINO_1deg_tapAdj_adjViscBoost   # job name: names the log file only; the run directory is named from build_info.txt
+#SBATCH -J DINO_1deg_tapAdj_adjVisc   # job name: names the log file only; the run directory is named from build_info.txt
 #SBATCH -o logs/%x.%j.out                  # %x = job name, %j = job ID; relative to the setup directory, where tools/submit.sh runs sbatch
 # No -e: given only -o, sbatch sends both streams to that one file. The set -x
 # trace below is stderr, so it lands there.
@@ -32,10 +32,10 @@ set -x      # trace every command (with expansions) into the log: the record of 
 
 # ========== WHAT THIS SCRIPT RUNS ==========
 
-BUILD_DIR=build_tapAdj_adjViscBoost
+BUILD_DIR=build_tapAdj_adjVisc
 RUN_MODE=tapAdj
 PARALLEL=mpi                                  # -n above must match code_tap/SIZE.h (nPx=3, nPy=9 = 27 ranks)
-EXPECT_RUN_TOKEN=tapAdj_ckpAll_adjViscBoost   # refuse a build directory holding any other variant
+EXPECT_RUN_TOKEN=tapAdj_ckpAll_adjVisc   # refuse a build directory holding any other variant
 
 # ========== TEST CASE ==========
 
@@ -52,7 +52,7 @@ test_cases="${IMPACTS_TEST_CASE-}"
 # file under input_tap/ is never modified. The values here are the committed
 # defaults; override per run on the command line, which leaves the tree clean:
 #
-#     IMPACTS_DURATION_DAYS=3660 ../../../tools/submit.sh scripts/submit_tapAdj_adjViscBoost.sh
+#     IMPACTS_DURATION_DAYS=3660 ../../../tools/submit.sh scripts/submit_tapAdj_adjVisc.sh
 #
 duration_days="${IMPACTS_DURATION_DAYS:-1830}"              # 5 years at 366 d/yr -> nTimeSteps
 monitorFreq_days="${IMPACTS_MONITOR_FREQ_DAYS:-5}"

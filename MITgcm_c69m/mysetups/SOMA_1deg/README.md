@@ -87,7 +87,7 @@ carries the ten `ADJ*` dump calls (they vanish silently if the file loses its
 `AD_CONFIG.h` include). There is no `rawTapenade` control build any more — raw
 output *is* the working configuration. SOMA carries only the dump hooks;
 DINO's `AUTODIFF_INADMODE_*` mode-switch hooks have no SOMA counterpart because
-there is no adjViscBoost machinery here to switch.
+there is no adjVisc machinery here to switch.
 
 **The conversion was a rescue, not just hygiene.** The previous mechanism's
 frozen `forward_step_b.f_modified` had gone stale against the evolving tree
@@ -162,7 +162,7 @@ delete the log of a *running* job: SLURM holds the file open, so the job keeps
 writing to the unlinked inode, which loses the trace without freeing the space
 until the job exits.
 
-Unlike DINO there is no `adjViscBoost` variant here, and while the
+Unlike DINO there is no `adjVisc` variant here, and while the
 `test_cases` mechanism is present (it is the shared body's), SOMA has a single
 `input_tap/data` and no `variants/` directory yet.
 

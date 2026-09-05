@@ -1,6 +1,6 @@
 #!/bin/bash
 # Adjoint built for ADJOINT-MODE VISCOSITY INFLATION.
-#   sources : code_tap/ + input_tap/  ->  build_tapAdj_adjViscBoost/mitgcmuv_tap_adj
+#   sources : code_tap/ + input_tap/  ->  build_tapAdj_adjVisc/mitgcmuv_tap_adj
 #
 # Same stock genmake2 + flow_tap_local hook wiring as build_tapAdj_ckpAll.sh
 # (see there for how the ADJ* dump call is generated), and like it EVERY call
@@ -32,30 +32,30 @@
 # input_tap/variants/adjointViscosity/data.autodiff_adjointViscosity at run
 # time (viscFacInAd = 10 vs viscFacInFw = 1, inAdviscArNr = 2.E-3 against a
 # forward 1.2E-4, and added inAddiffKhT/S). So this build MUST be paired with
-# submit_tapAdj_adjViscBoost.sh, which swaps that namelist in and refuses any
+# submit_tapAdj_adjVisc.sh, which swaps that namelist in and refuses any
 # other build's run token. Pairing it with submit_tapAdj.sh silently runs the
 # plain configuration.
 #
 # Validation history: run 31025 (30 d from rest, live input_tap/data) is the
-# first working adjViscBoost adjoint (fc bit-identical to plain 31026, every
+# first working adjVisc adjoint (fc bit-identical to plain 31026, every
 # sensitivity damped); 31056 is the rejected split-mode variant.
 #
 # Numbers were adapted from the ASTE 90x150x60 regional setup.
 #
 # This file says WHAT to build; HOW is tools/lib/build_body.sh. Run from the
-# setup directory: ./scripts/build_tapAdj_adjViscBoost.sh
+# setup directory: ./scripts/build_tapAdj_adjVisc.sh
 
 set -euo pipefail
 SETUP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-BUILD_DIR=build_tapAdj_adjViscBoost
+BUILD_DIR=build_tapAdj_adjVisc
 BUILD_MODE=tapAdj
 PARALLEL=mpi
 MODS=(../code_tap/variants/adjointViscosity ../code_tap)    # the variant FIRST
 TAP_EXTRA=""                                                # no -nocheckpoint, on purpose (see the header)
 CKP=ckpAll;           CKP_NOTE="every call checkpointed; the -nocheckpoint list is NOT equivalent under the boost (run 31056 vs 31025)"
-VARIANT=adjViscBoost; VARIANT_NOTE="code_tap/variants/adjointViscosity/ compiled ahead of code_tap/ (inAd*/outAd*); pair with submit_tapAdj_adjViscBoost.sh"
-RUN_TOKEN=tapAdj_ckpAll_adjViscBoost
+VARIANT=adjVisc; VARIANT_NOTE="code_tap/variants/adjointViscosity/ compiled ahead of code_tap/ (inAd*/outAd*); pair with submit_tapAdj_adjVisc.sh"
+RUN_TOKEN=tapAdj_ckpAll_adjVisc
 
 # The variant must be what was compiled: genmake2 links the first match it
 # finds, so a wrong -mods order would silently build the plain adjoint under

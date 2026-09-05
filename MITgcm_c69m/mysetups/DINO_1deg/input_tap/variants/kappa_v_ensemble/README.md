@@ -47,11 +47,11 @@ conclusions re-verified on the 2026-09-01 rerun).** All seven
 completed, but only `M2` (0.5×) and `M3` (2×) produced healthy full-length
 adjoints; `M6` (16×) is structurally degraded, and `M1`/`M4`/`M5`/`M7` blow up
 partway through the reverse sweep (non-monotonically in κ — a property of each
-member's adjusted background state, with the plain, non-`adjViscBoost` build).
+member's adjusted background state, with the plain, non-`adjVisc` build).
 The finite-difference comparison ran but fails as a validation: the response is
 nonlinear already at factor-2 steps. Full analysis:
 `analyses/DINO_1deg/adjoint/kappa_v_ensemble/`; results prose: the surrogate
 proposal's Part I §Results and its `kappa_ensemble_results`
 brief. Rerunning a blown member as-is reproduces the blow-up — pair these
-namelists with the `adjViscBoost` build+submit pair if a stable large-κ adjoint
+namelists with the `adjVisc` build+submit pair if a stable large-κ adjoint
 is the goal.

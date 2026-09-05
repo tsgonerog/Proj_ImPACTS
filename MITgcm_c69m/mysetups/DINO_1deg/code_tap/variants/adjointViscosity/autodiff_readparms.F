@@ -4,7 +4,7 @@
 #endif /* ALLOW_MOM_COMMON */
 
 C     adjointViscosity shadow of pkg/autodiff/autodiff_readparms.F, compiled
-C     ahead of the vendored file by build_tapAdj_adjViscBoost.sh (its
+C     ahead of the vendored file by build_tapAdj_adjVisc.sh (its
 C     first -mods directory). Upstream c69m body plus the reading,
 C     defaulting and echoing of the inAd*/outAd* parameters declared in
 C     the AUTODIFF_PARAMS.h beside it. See README.md here.

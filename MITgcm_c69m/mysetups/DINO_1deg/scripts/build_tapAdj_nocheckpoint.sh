@@ -10,7 +10,7 @@
 # 31039) and 1.5x faster. The routine list is a profile of ONE configuration
 # (KPP/GM off, 27 ranks, this package set): the _FWD check below catches a
 # name that vanished, not a list that stopped being the right list, so
-# re-profile with build_tapAdj_tapProfile.sh whenever the adjoint's package
+# re-profile with build_tapAdj_profile.sh whenever the adjoint's package
 # set, physics or decomposition changes.
 #
 # Same stock genmake2 + flow_tap_local hook wiring as build_tapAdj_ckpAll.sh
@@ -27,7 +27,7 @@
 #
 # The routine list is code_tap/tap_nocheckpoint.txt (one name per line, '#'
 # comments allowed). It was derived from the cost/benefit table of the
-# build_tapAdj_tapProfile.sh run -- tools/tapenade_profiling/README.md records
+# build_tapAdj_profile.sh run -- tools/tapenade_profiling/README.md records
 # how, and what the validation against build_tapAdj_ckpAll gave. Re-profile
 # before editing it: a routine Tapenade never checkpoints is a no-op here and
 # the check below rejects it, so the list stays honest.

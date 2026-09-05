@@ -1,6 +1,6 @@
 #!/bin/bash
 # Submit the Tapenade ADJOINT built with the CHECKPOINTING PROFILER.
-#                                  build_tapAdj_tapProfile/mitgcmuv_tap_adj
+#                                  build_tapAdj_profile/mitgcmuv_tap_adj
 #
 # A diagnostic run: the adjoint is the plain one plus timing calls, so use it
 # for the cost/benefit table it writes (tapenade_profile.NNNN.txt in the run
@@ -12,9 +12,9 @@
 #
 # This file says WHAT to run; HOW is tools/lib/submit_body.sh, shared by every
 # submit script. Run it from the setup directory through the wrapper:
-#     ../../../tools/submit.sh scripts/submit_tapAdj_tapProfile.sh
+#     ../../../tools/submit.sh scripts/submit_tapAdj_profile.sh
 
-#SBATCH -J DINO_1deg_tapAdj_tapProfile   # job name: names the log file only; the run directory is named from build_info.txt
+#SBATCH -J DINO_1deg_tapAdj_profile   # job name: names the log file only; the run directory is named from build_info.txt
 #SBATCH -o logs/%x.%j.out                # %x = job name, %j = job ID; relative to the setup directory, where tools/submit.sh runs sbatch
 # No -e: given only -o, sbatch sends both streams to that one file. The set -x
 # trace below is stderr, so it lands there.
@@ -30,10 +30,10 @@ set -x      # trace every command (with expansions) into the log: the record of 
 
 # ========== WHAT THIS SCRIPT RUNS ==========
 
-BUILD_DIR=build_tapAdj_tapProfile
+BUILD_DIR=build_tapAdj_profile
 RUN_MODE=tapAdj
 PARALLEL=mpi                                # -n above must match code_tap/SIZE.h (nPx=3, nPy=9 = 27 ranks)
-EXPECT_RUN_TOKEN=tapAdj_ckpAll_tapProfile   # refuse a build directory holding any other variant
+EXPECT_RUN_TOKEN=tapAdj_ckpAll_profile   # refuse a build directory holding any other variant
 
 # ========== TEST CASE ==========
 
@@ -48,7 +48,7 @@ test_cases="${IMPACTS_TEST_CASE-baseline/from180yrPk_visc2x}"
 # file under input_tap/ is never modified. The values here are the committed
 # defaults; override per run on the command line, which leaves the tree clean:
 #
-#     IMPACTS_DURATION_DAYS=180 ../../../tools/submit.sh scripts/submit_tapAdj_tapProfile.sh
+#     IMPACTS_DURATION_DAYS=180 ../../../tools/submit.sh scripts/submit_tapAdj_profile.sh
 #
 duration_days="${IMPACTS_DURATION_DAYS:-30}"                # 30 days -> nTimeSteps
 monitorFreq_days="${IMPACTS_MONITOR_FREQ_DAYS:-5}"

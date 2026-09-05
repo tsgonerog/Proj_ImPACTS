@@ -5,7 +5,7 @@
 
 C     adjointViscosity shadow of pkg/autodiff/autodiff_inadmode_unset_ad.F,
 C     compiled ahead of the vendored file by
-C     build_tapAdj_adjViscBoost.sh (its first -mods directory).
+C     build_tapAdj_adjVisc.sh (its first -mods directory).
 C     Upstream c69m body plus the outAd* restore block mirroring the
 C     inAd* block of autodiff_inadmode_set_ad.F beside it. ASTE never
 C     had this half - the mechanism was unreachable under Tapenade until

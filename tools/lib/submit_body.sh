@@ -180,8 +180,8 @@ build_dir="$base_dir/$BUILD_DIR"
 # ---------- build identity: the run directory is named from what was built ----------
 # build_info.txt is written by the build body after all its checks pass and
 # says what the executable is: run_token = frd, or tapAdj_<ckp>[_<variant>]
-# with <ckp> either ckpAll or nocheckpoint and <variant> adjViscBoost or
-# tapProfile. Taking the token from there rather than from this script means
+# with <ckp> either ckpAll or nocheckpoint and <variant> adjVisc or
+# profile. Taking the token from there rather than from this script means
 # the run directory cannot claim a build it did not get. An executable with no
 # record, or one that does not match its record (a by-hand make), is refused
 # rather than run under a guessed name.

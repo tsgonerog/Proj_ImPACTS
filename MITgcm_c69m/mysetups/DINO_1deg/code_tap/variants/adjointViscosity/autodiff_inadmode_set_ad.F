@@ -5,7 +5,7 @@
 
 C     adjointViscosity shadow of pkg/autodiff/autodiff_inadmode_set_ad.F,
 C     compiled ahead of the vendored file by
-C     build_tapAdj_adjViscBoost.sh (its first -mods directory).
+C     build_tapAdj_adjVisc.sh (its first -mods directory).
 C     Upstream c69m body plus the inAd* override block adapted from the
 C     ASTE 90x150x60 setup, whose original is archived in
 C     00_archive/code_tap/. Reached at the start of each backward step

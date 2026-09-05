@@ -108,12 +108,12 @@ duration is safe; changing the starting point means editing both by hand.
 | `build_tapAdj.sh` → `build_tapAdj_nocheckpoint.sh` | `build_tapAdj_nocheckpoint/` | `mitgcmuv_tap_adj` — **the default** (symlink since 2026-09-02) |
 | `build_tapAdj_nocheckpoint.sh` | `build_tapAdj_nocheckpoint/` | `mitgcmuv_tap_adj` (profile-guided `-nocheckpoint`; see below) |
 | `build_tapAdj_ckpAll.sh` | `build_tapAdj_ckpAll/` | `mitgcmuv_tap_adj` (reference: every call checkpointed; was `build_tapAdj.sh` / `build_tapAdj/` until 2026-09-02) |
-| `build_tapAdj_adjViscBoost.sh` | `build_tapAdj_adjViscBoost/` | `mitgcmuv_tap_adj` (adjoint-mode viscosity boost, every call checkpointed — the list is not equivalent under the boost; see "Profiling and checkpoint tuning") |
-| `build_tapAdj_tapProfile.sh` | `build_tapAdj_tapProfile/` | `mitgcmuv_tap_adj` (diagnostic: ckpAll + Tapenade checkpointing profiler) |
+| `build_tapAdj_adjVisc.sh` | `build_tapAdj_adjVisc/` | `mitgcmuv_tap_adj` (adjoint-mode viscosity boost, every call checkpointed — the list is not equivalent under the boost; see "Profiling and checkpoint tuning") |
+| `build_tapAdj_profile.sh` | `build_tapAdj_profile/` | `mitgcmuv_tap_adj` (diagnostic: ckpAll + Tapenade checkpointing profiler) |
 
 The **unmarked** adjoint names are symlinks to the current default pair; every
 real adjoint script carries a token — `_<ckp>` (`nocheckpoint` / `ckpAll`) or
-`_<variant>` (`adjViscBoost` / `tapProfile`) — and the run directories carry
+`_<variant>` (`adjVisc` / `profile`) — and the run directories carry
 both (see "Run"). Every build script is a definition in `scripts/` that
 sources the shared body `tools/lib/build_body.sh` (since 2026-09-05; what the
 definition supplies is its build directory, `-mods` list, Tapenade flags, run
@@ -133,9 +133,9 @@ dump (`DUMMY_FOR_ETAN`, called from the shadowed
 `code_tap/integr_continuity.F` — upstream dumps the free-surface adjoint from
 a separate hook there because `adEtaN` is half a time step out of phase with
 the other adjoint variables) and the two adjoint-mode switch hooks
-(`AUTODIFF_INADMODE_SET/UNSET`), which is what makes the `adjViscBoost` parameters
+(`AUTODIFF_INADMODE_SET/UNSET`), which is what makes the `adjVisc` parameters
 actually engage — before these hooks the TAF-named `ADAUTODIFF_INADMODE_SET`
-was never called under Tapenade and adjViscBoost silently ran plain physics.
+was never called under Tapenade and adjVisc silently ran plain physics.
 After `make`, the build body asserts, over the `HOOK_CHECKS` list in
 `scripts/setup_params.sh`, that every generated `_B` call carries exactly the
 argument count the hand-written routines declare (dump hook 25; etaN dump and
@@ -176,8 +176,8 @@ ln -sfn build_tapAdj_ckpAll.sh  build_tapAdj.sh
 ln -sfn submit_tapAdj_ckpAll.sh submit_tapAdj.sh
 
 # profiler — a diagnostic (30-day default, 2 % slower, writes tapenade_profile.*.txt)
-ln -sfn build_tapAdj_tapProfile.sh  build_tapAdj.sh
-ln -sfn submit_tapAdj_tapProfile.sh submit_tapAdj.sh
+ln -sfn build_tapAdj_profile.sh  build_tapAdj.sh
+ln -sfn submit_tapAdj_profile.sh submit_tapAdj.sh
 
 ls -l build_tapAdj.sh submit_tapAdj.sh    # confirm both point where you expect
 ```
@@ -196,7 +196,7 @@ your future self.
 
 Tapenade checkpoints every call inside a time step by default (store a
 snapshot, run the primal, re-run it recording inside the `_B` routine), and
-the re-run compounds with nesting depth. `build_tapAdj_tapProfile.sh` adds
+the re-run compounds with nesting depth. `build_tapAdj_profile.sh` adds
 Tapenade's `-profile` — plus the runtime and reporting main program it needs,
 from `tools/tapenade_profiling/mods_profile/` — and its 30-day run writes a
 per-call-site table of the CPU time each checkpoint costs and the peak tape it
@@ -239,7 +239,7 @@ physics or decomposition changes.
 The profiling build is a diagnostic — same numbers, 2 % slower — and compiles
 the plain sources without the list.
 
-**The adjViscBoost build does not carry the default `-nocheckpoint` list, on purpose.** Tried 2026-09-02: run 31056 (boost + list, 30 d from rest) vs 31025 (boost, every call checkpointed) — `fc` and all 441 `%MON` lines byte-identical, but all 66 `ADJ*` dumps and all 8 real `adxx_*` gradients differ at order one (RMS ratio 0.3–0.9), whereas the plain pair is bitwise identical under the same list. In joint mode Tapenade re-runs each routine's primal inside the backward sweep *after* `AUTODIFF_INADMODE_SET_B` has boosted the viscosities, so the boost reaches every recomputed intermediate; in split mode those intermediates were taped during the forward sweep at forward viscosities and the boost reaches only what the `_BWD` code reads live — a weaker, different regularisation. So the boosted adjoint stays a `ckpAll` build (run token `tapAdj_ckpAll_adjViscBoost`, 13 min per 30 d instead of 9), and 31056 stays on scratch as the record; report in `analyses/DINO_1deg/adjoint/tapenade_profiling/compare_30d_adjViscBoost_run31025_vs_nocheckpoint_run31056.md`. Corollary: `-nocheckpoint` is a pure performance change only for an adjoint whose backward sweep leaves the primal's parameters alone.
+**The adjVisc build does not carry the default `-nocheckpoint` list, on purpose.** Tried 2026-09-02: run 31056 (boost + list, 30 d from rest) vs 31025 (boost, every call checkpointed) — `fc` and all 441 `%MON` lines byte-identical, but all 66 `ADJ*` dumps and all 8 real `adxx_*` gradients differ at order one (RMS ratio 0.3–0.9), whereas the plain pair is bitwise identical under the same list. In joint mode Tapenade re-runs each routine's primal inside the backward sweep *after* `AUTODIFF_INADMODE_SET_B` has boosted the viscosities, so the boost reaches every recomputed intermediate; in split mode those intermediates were taped during the forward sweep at forward viscosities and the boost reaches only what the `_BWD` code reads live — a weaker, different regularisation. So the boosted adjoint stays a `ckpAll` build (run token `tapAdj_ckpAll_adjVisc`, 13 min per 30 d instead of 9), and 31056 stays on scratch as the record; report in `analyses/DINO_1deg/adjoint/tapenade_profiling/compare_30d_adjViscBoost_run31025_vs_nocheckpoint_run31056.md`. Corollary: `-nocheckpoint` is a pure performance change only for an adjoint whose backward sweep leaves the primal's parameters alone.
 
 ## Run
 
@@ -251,8 +251,8 @@ Commands are in **Quick start** above; this section covers what the scripts do.
 | `submit_tapAdj.sh` → `submit_tapAdj_nocheckpoint.sh` | `build_tapAdj_nocheckpoint/` (the default; symlink since 2026-09-02) |
 | `submit_tapAdj_nocheckpoint.sh` | `build_tapAdj_nocheckpoint/` |
 | `submit_tapAdj_ckpAll.sh` | `build_tapAdj_ckpAll/` (was `submit_tapAdj.sh` until 2026-09-02) |
-| `submit_tapAdj_adjViscBoost.sh` | `build_tapAdj_adjViscBoost/` |
-| `submit_tapAdj_tapProfile.sh` | `build_tapAdj_tapProfile/` (30-day default; writes `tapenade_profile.NNNN.txt`) |
+| `submit_tapAdj_adjVisc.sh` | `build_tapAdj_adjVisc/` |
+| `submit_tapAdj_profile.sh` | `build_tapAdj_profile/` (30-day default; writes `tapenade_profile.NNNN.txt`) |
 
 **The run directory is named from the build, not from the submit script.**
 The shared submit body (`tools/lib/submit_body.sh`, which every submit
@@ -272,7 +272,7 @@ $SCRATCH_ROOT/DINO_1deg_outputs/runs/adjoint/
 
 **A new run lands directly in `runs/adjoint/`, unfiled.** Since 2026-09-03 that
 directory also holds campaign subdirectories — `kappa_v_ensemble/`,
-`checkpointing_study/`, `adjViscBoost/`, `toolchain_validation/`,
+`checkpointing_study/`, `adjVisc/`, `toolchain_validation/`,
 `gradient_check/`, `sensitivity/` — and the forward side has
 `spinup_200yr_visc2x/` and `kappa_v_ensemble/`. The submit script does not
 choose one: it cannot know which campaign a run belongs to, and often that is
@@ -281,11 +281,14 @@ joins one (a plain `mv`; the campaign is the parent directory, never part of
 the name) and update the notebook that reads it. The scratch tree's own
 `README.md` has the campaign map and the filing rules.
 
-with `<ckp>` = `nocheckpoint` | `ckpAll` and `<variant>` = `adjViscBoost` |
-`tapProfile` when present. So the default gives
+with `<ckp>` = `nocheckpoint` | `ckpAll` and `<variant>` = `adjVisc` |
+`profile` when present. Both variant tokens were shortened on 2026-09-05
+(from `adjViscBoost` and `tapProfile`); runs made before that keep the older
+spellings on scratch and in their own `build_info.txt`, and were deliberately
+not renamed. So the default gives
 `DINO_1deg_tapAdj_nocheckpoint_5yr_from180yrPk_visc2x_run<jobid>`, the boost
-`DINO_1deg_tapAdj_ckpAll_adjViscBoost_…`, the reference
-`DINO_1deg_tapAdj_ckpAll_…` and the profiler `DINO_1deg_tapAdj_ckpAll_tapProfile_…`;
+`DINO_1deg_tapAdj_ckpAll_adjVisc_…`, the reference
+`DINO_1deg_tapAdj_ckpAll_…` and the profiler `DINO_1deg_tapAdj_ckpAll_profile_…`;
 a forward run is `DINO_1deg_frd_…` under `runs/forward/`, its token `frd`.
 The `#SBATCH -J` name only names the log file. `<tag>` is the last
 component of `IMPACTS_TEST_CASE`; when that is **empty** (the live
@@ -302,7 +305,7 @@ up to 31053 were checkpoint-everything builds (checked with `nm` on each run's
 copied executable) and carry `ckpAll`; 31025 and 31026 additionally got
 `from_rest_viscRef`, read from their staged namelists, in place of the empty
 tag they ran with; 31054/31055 already had `nocheckpoint`. Run 31056
-(`…_nocheckpoint_adjViscBoost_30d_from_rest_viscRef_…`) is the rejected
+(`…_nocheckpoint_adjVisc_30d_from_rest_viscRef_…`) is the rejected
 split-mode boost, kept as a record.
 
 A job leaves one log, `logs/<job-name>.<job-id>.out`, holding stdout and stderr
@@ -318,7 +321,7 @@ delete the log of a *running* job: SLURM holds the file open, so the job keeps
 writing to the unlinked inode, which loses the trace without freeing the space
 until the job exits.
 
-`adjViscBoost` runs the adjoint with **larger viscosity and diffusivity than the
+`adjVisc` runs the adjoint with **larger viscosity and diffusivity than the
 forward** — the standard trick for stopping a long adjoint from blowing up.
 `viscFacInAd = 10.` against `viscFacInFw = 1.`, `inAdviscArNr = 2.E-3` against a
 forward `1.2E-4`, plus added `inAddiffKhT/S`; the `outAd*` values restore the
@@ -365,7 +368,7 @@ variable in your shell would silently become a namelist key.
 | `input*/variants/` | alternative namelists, grouped by purpose, each group with its own `README.md`; the submit script stages the selected `data_<tag>` plus any sibling sharing its tag |
 | `input_binaries/` | **untracked, 179 MB.** Produced outside this repo; nothing here regenerates it |
 | `input_adj_binaries/` | **untracked.** `ones_64b.bin`, the uniform control weight every `data.ctrl` entry points at |
-| `build_*/` | **gitignored, reproducible.** One per build script: `build_frd/` and `build_tapAdj_{nocheckpoint,ckpAll,adjViscBoost,tapProfile}/`; each carries the `build_info.txt` the submit body names run directories from |
+| `build_*/` | **gitignored, reproducible.** One per build script: `build_frd/` and `build_tapAdj_{nocheckpoint,ckpAll,adjVisc,profile}/`; each carries the `build_info.txt` the submit body names run directories from |
 | `00_archive/` | superseded config in `code_tap/`, `input_tap/`, `scripts/`, mirroring the live dirs — nothing live reads it; has its own `README.md` |
 
 ## Namelists and variants
@@ -573,7 +576,7 @@ the file it replaces. From this directory:
 | `code_tap/dummy_for_etan.F` | `../../MITgcm/pkg/autodiff/dummy_for_etan.F` | Same widening for the `ADJetan` hook: the one `etaN` argument under `#ifdef ALLOW_TAPENADE` |
 | `code_tap/autodiff_inadmode_set.F`, `…unset.F` | `../../MITgcm/pkg/autodiff/autodiff_inadmode_set.F`, `…unset.F` | The mode-switch no-op hooks with the `uVel` activity-vehicle argument under `#ifdef ALLOW_TAPENADE` |
 | `code_tap/dummy_tap.F` | `../../MITgcm/pkg/tapenade/dummy_tap.F` | Upstream ships `DUMMY_IN_STEPPING_B/_D` and `DUMMY_FOR_ETAN_B/_D` as no-op stubs; the shadow gives them bodies (`DUMMY_IN_STEPPING_B` dumps its adjoint *arguments* after ADEXCH-folding them via `stubs_tap_adj.F`, mirroring upstream's `ADDUMMY_IN_STEPPING` restricted to the 11 fields the hook carries; `DUMMY_FOR_ETAN_B` dumps `etaNb` as `ADJetan` with no fold, like upstream) and adds the thin `AUTODIFF_INADMODE_SET_B`/`UNSET_B` wrappers that call the TAF-named bodies `ADAUTODIFF_INADMODE_SET`/`UNSET` (so the parameter-switching logic is not duplicated) plus `_D` no-ops. Keeping the wrappers here is what lets a plain build leave `pkg/autodiff/autodiff_inadmode_{set,unset}_ad.F` unshadowed |
-| `code_tap/variants/adjointViscosity/autodiff_inadmode_set_ad.F` | `../../MITgcm/pkg/autodiff/autodiff_inadmode_set_ad.F` | Upstream body + the ASTE-derived `inAd*` apply block (`viscArNr`, `viscAhGrid`, `diffKh*`, … declared in the `AUTODIFF_PARAMS.h` beside it). Compiled only by `build_tapAdj_adjViscBoost.sh`; a plain build uses the vendored file, unshadowed |
+| `code_tap/variants/adjointViscosity/autodiff_inadmode_set_ad.F` | `../../MITgcm/pkg/autodiff/autodiff_inadmode_set_ad.F` | Upstream body + the ASTE-derived `inAd*` apply block (`viscArNr`, `viscAhGrid`, `diffKh*`, … declared in the `AUTODIFF_PARAMS.h` beside it). Compiled only by `build_tapAdj_adjVisc.sh`; a plain build uses the vendored file, unshadowed |
 | `code_tap/variants/adjointViscosity/autodiff_inadmode_unset_ad.F` | `../../MITgcm/pkg/autodiff/autodiff_inadmode_unset_ad.F` | Upstream body + the `outAd*` restore block — this half never existed anywhere before (it was unreachable dead code territory), so expect no ASTE original to diff against |
 | `code_tap/flow_tap_local` | *(supplement to `../../MITgcm/tools/TAP_support/flow_tap`, not a shadow)* | Four stanzas re-declaring the hooks with their field arguments active. Compare with the `dummy_in_stepping` / `dummy_for_etan` / `autodiff_inadmode_*` stanzas in the stock file (all-passive) to see the one change of meaning; in an upstream patch these would replace those stanzas |
 | `code_tap/adjoint_tap_local` | *(wrapper around `../../MITgcm/tools/adjoint_options/adjoint_tap`, not a shadow)* | Sources the stock options file and appends `-ext ../code_tap/flow_tap_local` after the stock library, because Tapenade keeps the last declaration of an external |
@@ -593,7 +596,7 @@ in a separate change note, kept with the project notes rather than here.
 Every file here is compiled as-is under its real MITgcm name; no build script
 copies anything into this directory (since 2026-09-02), so a build leaves
 `git status` clean. `variants/adjointViscosity/` is a second `-mods` directory that
-`build_tapAdj_adjViscBoost.sh` lists ahead of `code_tap/`; its README explains.
+`build_tapAdj_adjVisc.sh` lists ahead of `code_tap/`; its README explains.
 The 2026-09-02 relocation reproduces the previous layout's runs bit for bit
 (31069 vs 31054 for the default build, 31070 vs 31025 for the boost; see
 `TODO.md`).
@@ -608,8 +611,8 @@ The 2026-09-02 relocation reproduces the previous layout's runs bit for bit
 | `dummy_tap.F` | shadow of `pkg/tapenade/dummy_tap.F`: the hand-written `DUMMY_IN_STEPPING_B` (the `ADJ*` dump body), `DUMMY_FOR_ETAN_B` (`ADJetan`), the `AUTODIFF_INADMODE_SET_B`/`UNSET_B` wrappers, and the `_D` no-ops |
 | `flow_tap_local` | Tapenade external library re-declaring the hooks' field arguments active; appended after `tools/TAP_support/flow_tap` by `adjoint_tap_local` |
 | `adjoint_tap_local` | the setup's `-adof` file: sources the stock `tools/adjoint_options/adjoint_tap` and appends `-ext ../code_tap/flow_tap_local` |
-| `tap_nocheckpoint.txt` | the routines `build_tapAdj_nocheckpoint.sh` (the default) passes to Tapenade's `-nocheckpoint` — `build_tapAdj_adjViscBoost.sh` deliberately does not (see "Profiling and checkpoint tuning") (split `_FWD`/`_BWD` mode instead of checkpointing), each annotated with the profiling-run gain that put it there — see "Profiling and checkpoint tuning" below |
-| `variants/adjointViscosity/` | (named `adjViscBoost/` until 2026-09-04; the build script, build directory and run token keep the old tag on purpose, because scratch run directories record it) the four ASTE-derived shadows of `pkg/autodiff` (`AUTODIFF_PARAMS.h`, `autodiff_readparms.F`, `autodiff_inadmode_set_ad.F`, `autodiff_inadmode_unset_ad.F`) that declare, read, apply and restore the `inAd*`/`outAd*` parameters; compiled only by `build_tapAdj_adjViscBoost.sh`, as its first `-mods` directory — see the README inside. A plain build compiles the vendored files |
+| `tap_nocheckpoint.txt` | the routines `build_tapAdj_nocheckpoint.sh` (the default) passes to Tapenade's `-nocheckpoint` — `build_tapAdj_adjVisc.sh` deliberately does not (see "Profiling and checkpoint tuning") (split `_FWD`/`_BWD` mode instead of checkpointing), each annotated with the profiling-run gain that put it there — see "Profiling and checkpoint tuning" below |
+| `variants/adjointViscosity/` | (named `adjVisc/` until 2026-09-04; the build script, build directory and run token keep the old tag on purpose, because scratch run directories record it) the four ASTE-derived shadows of `pkg/autodiff` (`AUTODIFF_PARAMS.h`, `autodiff_readparms.F`, `autodiff_inadmode_set_ad.F`, `autodiff_inadmode_unset_ad.F`) that declare, read, apply and restore the `inAd*`/`outAd*` parameters; compiled only by `build_tapAdj_adjVisc.sh`, as its first `-mods` directory — see the README inside. A plain build compiles the vendored files |
 | `stubs_tap_adj.F` | override of `pkg/tapenade/stubs_tap_adj.F` implementing the five `ADEXCH_*` adjoint halo exchanges (see below) |
 | `SIZE.h` | grid and decomposition (`nPx=3, nPy=9` over `sNx=17, sNy=22`); the one and only copy |
 | `CTRL_SIZE.h` | control-vector dimensions |

@@ -3,7 +3,7 @@
 The four files here are the **source half** of the adjoint-mode viscosity
 configuration;
 the namelist half is `input_tap/variants/adjointViscosity/data.autodiff_adjointViscosity`.
-`build_tapAdj_adjViscBoost.sh` compiles them by listing this directory *first*
+`build_tapAdj_adjVisc.sh` compiles them by listing this directory *first*
 in `genmake2 -mods`:
 
 ```
@@ -47,7 +47,7 @@ and git history holds the old layout.
 Two rules:
 
 - **The build and the submit script are a pair.** This directory only makes
-  the parameters exist; `submit_tapAdj_adjViscBoost.sh` swaps in the namelist
+  the parameters exist; `submit_tapAdj_adjVisc.sh` swaps in the namelist
   that gives them values. Either half alone silently runs plain physics.
 - **The boost stays a checkpoint-everything build.** The default build's
   `-nocheckpoint` list changes the boosted adjoint at order one (run 31056 vs

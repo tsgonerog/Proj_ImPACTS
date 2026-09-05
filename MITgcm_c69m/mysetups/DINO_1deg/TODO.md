@@ -1,5 +1,35 @@
 # TODO — DINO_1deg
 
+- [x] ~~**Shorten the two adjoint variant tokens**~~ (added and **done
+  2026-09-05**). `tapProfile` → `profile` (the `tapAdj_` prefix had already
+  said Tapenade, so the token read `tapAdj_ckpAll_tapProfile`) and
+  `adjViscBoost` → `adjVisc` (one word for the variant, matching the
+  `variants/adjointViscosity/` source directories renamed on 2026-09-04 and
+  closing the split that entry documents). Renamed: the four scripts
+  (`{build,submit}_tapAdj_{profile,adjVisc}.sh`), their `BUILD_DIR`,
+  `VARIANT`, `RUN_TOKEN`, `EXPECT_RUN_TOKEN` and `#SBATCH -J`, the two build
+  directories, and every live reference in the READMEs, `tools/`, `CLAUDE.md`
+  and the notebooks. **Nothing on scratch was renamed**: runs 31025, 31053,
+  31056, 31070, 31075, 31090, 31094, 31095, 31103 and 31104 keep the old
+  spellings in their directory names and in their own `build_info.txt`, so
+  the "a run directory records the build it actually got" contract still
+  holds and the job ID is still the durable key. References that cite a
+  specific past run — the `compare_30d_adjViscBoost_run31025_…md` filename,
+  the `runs/adjoint/adjViscBoost/` campaign directory, the 31053 rows in the
+  profiling README, the 28453/28461 labels in
+  `sensitivity_5yr_from180yrPk_visc2x.ipynb` — were deliberately left on the
+  old tokens. Both build directories were rebuilt under their new names
+  (they are not relocatable: `genmake2` bakes the absolute path into the
+  `Makefile`) and pass every hook, dump-call and variant-source assertion.
+  `build_tapAdj_tapProfile/` and `build_tapAdj_adjViscBoost/` were deleted
+  the same day, leaving five build directories.
+  - [ ] Optional: validate the two rebuilds with a run each, as the
+    2026-09-04 path move was validated by 31090/31091 —
+    `../../../tools/submit.sh scripts/submit_tapAdj_profile.sh` against
+    31104, and `scripts/submit_tapAdj_adjVisc.sh` against 31103, then
+    `tools/compare_adj_runs.sh`. Source and flags are unchanged, so this
+    confirms the path-only rebuild rather than testing new behaviour.
+
 - [x] ~~Rerun the kappa_v ensemble with the ADEXCH-fixed build~~ (added
   2026-08-31, **done 2026-09-01**). Reference 31039 + members 31040–31046,
   fresh `build_tapAdj/` (renamed `build_tapAdj_ckpAll/` on 2026-09-02) from `main`, member pickups repointed per
@@ -41,17 +71,17 @@
   with no ERROR or WARNING anywhere) — moved to
   `/scratch2/<user>/_trash_20260903/`, not deleted.
 
-- [ ] **Retry the four blown ensemble members (M1/M4/M5/M7) with adjViscBoost**
+- [ ] **Retry the four blown ensemble members (M1/M4/M5/M7) with adjVisc**
   (added 2026-08-31). Not possible before: the boost was silently inert under
   Tapenade until the 2026-08-31 mode-switch hooks, now `AUTODIFF_INADMODE_SET/UNSET`
   (first working boost: run 31025 vs
   31026 — `fc` bit-identical, adjoints damped). Pair
-  `build_tapAdj_adjViscBoost.sh` with `submit_tapAdj_adjViscBoost.sh` and the
+  `build_tapAdj_adjVisc.sh` with `submit_tapAdj_adjVisc.sh` and the
   member test case.
 
-- [x] ~~Rebuild `build_tapAdj_adjViscBoost/` (and `build_tapAdj_rawTapenade/`
+- [x] ~~Rebuild `build_tapAdj_adjVisc/` (and `build_tapAdj_rawTapenade/`
   if still wanted) so they pick up the ADEXCH fix.~~ Done 2026-08-31 in the
-  hook redesign: `build_tapAdj_adjViscBoost/` was rebuilt with the
+  hook redesign: `build_tapAdj_adjVisc/` was rebuilt with the
   `TAP_*` hooks (validated end to end, run 31025) and
   `build_tapAdj_rawTapenade.sh` was retired — raw Tapenade output *is* the
   working configuration now, so DINO has no control build to keep current.
@@ -68,13 +98,13 @@
   its explicit name rather than retired, so every report and run name stays
   true); the plain pair was renamed `build_tapAdj_ckpAll.sh` /
   `submit_tapAdj_ckpAll.sh` (build directory `build_tapAdj_ckpAll/`); the list
-  was tried in `build_tapAdj_adjViscBoost.sh` and reverted the same day (next
+  was tried in `build_tapAdj_adjVisc.sh` and reverted the same day (next
   item); every build script writes
   `build_info.txt` and the submit scripts name run directories from its
   `run_token`; all adjoint run directories on scratch were renamed to carry
   the build token. **Still open below: the SOMA port.**
 
-- [x] ~~**adjViscBoost revalidation after the list fold-in**~~ (added and
+- [x] ~~**adjVisc revalidation after the list fold-in**~~ (added and
   **done 2026-09-02 — and it failed, informatively**). Job 31056
   (`DINO_1deg_tapAdj_nocheckpoint_adjViscBoost_30d_from_rest_viscRef_run31056`,
   boost + the list, 8:48) vs 31025 (boost, every call checkpointed, 13:19):
@@ -85,8 +115,8 @@
   now `AUTODIFF_INADMODE_SET_B`) has boosted the viscosities;
   split-mode tapes were taken in the forward sweep at forward viscosities, so
   the boost only reaches what the `_BWD` code reads live. The list was
-  removed from `build_tapAdj_adjViscBoost.sh` again (run token
-  `tapAdj_ckpAll_adjViscBoost`); 31056 stays on scratch as the record, report in
+  removed from `build_tapAdj_adjVisc.sh` again (run token
+  `tapAdj_ckpAll_adjVisc`); 31056 stays on scratch as the record, report in
   `analyses/DINO_1deg/adjoint/tapenade_profiling/compare_30d_adjViscBoost_run31025_vs_nocheckpoint_run31056.md`.
   A faster boosted adjoint would need the boost applied to the taped
   intermediates too (i.e. boosting the *forward* sweep's recorded viscosities,
@@ -180,11 +210,12 @@
   `input_tap/variants/adjViscBoost/` became `…/variants/adjointViscosity/`
   (namelist `data.autodiff_adjointViscosity`), since `adjViscBoost` was an
   internal coinage appearing in a document for outside readers. **The build
-  identity keeps the old tag on purpose** — `build_tapAdj_adjViscBoost.sh`,
+  identity kept the old tag** — `build_tapAdj_adjViscBoost.sh`,
   `build_tapAdj_adjViscBoost/`, `run_token=tapAdj_ckpAll_adjViscBoost` —
   because run directories are named from `run_token` and runs 31025, 31056,
-  31070 and 31075 already carry it. The rule: the directory is
-  `adjointViscosity`, the build and its runs are `adjViscBoost`.
+  31070 and 31075 already carry it. (**Superseded 2026-09-05**: the build
+  identity became `adjVisc`, closing that split; the four runs above keep
+  their names, and `*adjVisc*` matches both spellings.)
   `build_tapAdj_adjViscBoost/` was rebuilt afterwards, since the rename left
   its four `-mods` symlinks dangling, and the rebuild was validated by run
   31090 (30 d from rest, the configuration of 31075): all 210 `ADJ*`/`adxx_*`

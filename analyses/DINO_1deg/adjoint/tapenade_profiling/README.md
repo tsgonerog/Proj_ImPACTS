@@ -27,13 +27,13 @@ default DINO adjoint since 2026-09-02 (`build_tapAdj.sh` is a symlink to it).
 | Run | Build | Length | Node | Wall time | Role |
 | --- | --- | --- | --- | --- | --- |
 | 31052 | `build_tapAdj_ckpAll` (plain; `build_tapAdj` until 2026-09-02) | 30 d | c2-1 | 0:13:13 | fresh plain reference; bitwise identical to 31032 (0:13:31) |
-| 31053 | `build_tapAdj_tapProfile` | 30 d | c2-3 | 0:13:29 | the profile (`tapenade_profile.0000`–`.0026.txt`) |
+| 31053 | `build_tapAdj_profile` (`build_tapAdj_tapProfile` until 2026-09-05) | 30 d | c2-3 | 0:13:29 | the profile (`tapenade_profile.0000`–`.0026.txt`) |
 | 31054 | `build_tapAdj_nocheckpoint` | 30 d | c2-1 | **0:08:47** | validation against 31052 |
 | 31039 | `build_tapAdj_ckpAll` (plain; `build_tapAdj` until 2026-09-02) | 5 yr | — | 14:05:45 | production-length reference (2026-09-01) |
 | 31055 | `build_tapAdj_nocheckpoint` | 5 yr | c2-1 | **9:35:58** | production-length validation against 31039 |
 | 31060–31067 | `build_tapAdj_nocheckpoint` | 5 yr × 8 | c2-4, c3-1, c7-4, c8-1–c8-4, c9-1 | **9:30:47–9:44:50** | the κ_v ensemble (REF + M1–M7) rerun on 2026-09-02, validation against its 2026-09-01 `ckpAll` runs 31039–31046 (14:02:37–15:39:13) |
-| 31025 | `build_tapAdj_adjViscBoost` (ckpAll + boost) | 30 d | — | 0:13:19 | boosted reference (from rest, live `input_tap/data`) |
-| 31056 | `build_tapAdj_adjViscBoost` + the list (**rejected**) | 30 d | c2-1 | 0:08:48 | split mode under the boost is **not** equivalent: `fc` identical, every sensitivity field differs at order one — the list was removed from that build again |
+| 31025 | `build_tapAdj_adjVisc` (ckpAll + boost) | 30 d | — | 0:13:19 | boosted reference (from rest, live `input_tap/data`) |
+| 31056 | `build_tapAdj_adjVisc` + the list (**rejected**) | 30 d | c2-1 | 0:08:48 | split mode under the boost is **not** equivalent: `fc` identical, every sensitivity field differs at order one — the list was removed from that build again |
 
 ## Files
 
@@ -171,7 +171,7 @@ are interchangeable.
 
 ```bash
 cd MITgcm_c69m/mysetups/DINO_1deg
-./scripts/build_tapAdj_tapProfile.sh && ../../../tools/submit.sh scripts/submit_tapAdj_tapProfile.sh
+./scripts/build_tapAdj_profile.sh && ../../../tools/submit.sh scripts/submit_tapAdj_profile.sh
 python3 analyses/DINO_1deg/adjoint/tapenade_profiling/parse_tapenade_profile.py \
         /scratch2/$USER/DINO_1deg_outputs/runs/adjoint/<profile run>/tapenade_profile.0000.txt --top 40
 # edit code_tap/tap_nocheckpoint.txt, then
