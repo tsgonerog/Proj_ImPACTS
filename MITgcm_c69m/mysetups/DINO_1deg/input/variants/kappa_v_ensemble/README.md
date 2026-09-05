@@ -23,7 +23,7 @@ control — so the design needs seven new runs, not eight.
 
 ```bash
 cd MITgcm_c69m/mysetups/DINO_1deg
-IMPACTS_TEST_CASE=kappa_v_ensemble/M3 ../../../tools/submit.sh submit_frd.sh
+IMPACTS_TEST_CASE=kappa_v_ensemble/M3 ../../../tools/submit.sh scripts/submit_frd.sh
 ```
 
 Each file differs from `../data_from_rest_visc2x` in exactly three lines:

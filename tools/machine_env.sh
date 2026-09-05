@@ -11,7 +11,7 @@
 # had before this file existed. Any variable already set in the environment wins,
 # so you can override one value for a single invocation without editing anything:
 #
-#     SCRATCH_ROOT=/tmp/test ../../../tools/submit.sh submit_tapAdj.sh
+#     SCRATCH_ROOT=/tmp/test ../../../tools/submit.sh scripts/submit_tapAdj.sh
 #
 # Variables exported
 #   MACHINE         sverdrup | perlmutter

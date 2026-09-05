@@ -171,12 +171,12 @@ are interchangeable.
 
 ```bash
 cd MITgcm_c69m/mysetups/DINO_1deg
-./build_tapAdj_tapProfile.sh && ../../../tools/submit.sh submit_tapAdj_tapProfile.sh
+./scripts/build_tapAdj_tapProfile.sh && ../../../tools/submit.sh scripts/submit_tapAdj_tapProfile.sh
 python3 analyses/DINO_1deg/adjoint/tapenade_profiling/parse_tapenade_profile.py \
         /scratch2/$USER/DINO_1deg_outputs/runs/adjoint/<profile run>/tapenade_profile.0000.txt --top 40
 # edit code_tap/tap_nocheckpoint.txt, then
-./build_tapAdj_nocheckpoint.sh && IMPACTS_DURATION_DAYS=30 ../../../tools/submit.sh submit_tapAdj_nocheckpoint.sh
-#   (or ./build_tapAdj.sh and submit_tapAdj.sh -- symlinks to the same pair since 2026-09-02;
+./scripts/build_tapAdj_nocheckpoint.sh && IMPACTS_DURATION_DAYS=30 ../../../tools/submit.sh scripts/submit_tapAdj_nocheckpoint.sh
+#   (or ./scripts/build_tapAdj.sh and scripts/submit_tapAdj.sh -- symlinks to the same pair since 2026-09-02;
 #    the plain reference run comes from build_tapAdj_ckpAll.sh / submit_tapAdj_ckpAll.sh)
 python3 analyses/DINO_1deg/adjoint/tapenade_profiling/compare_adjoint_runs.py <ckpAll run dir> <nocheckpoint run dir>
 ```

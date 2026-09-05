@@ -1,0 +1,248 @@
+#!/bin/bash
+# tools/lib/build_body.sh -- the shared body of every build script.
+#
+# Not a program: sourced, never executed (and deliberately not +x). The build
+# scripts in each setup's scripts/ directory
+# (MITgcm_c69m/mysetups/<setup>/scripts/build_*.sh) are short definition files
+# that say WHAT to build -- build directory, -mods list, Tapenade flags, run
+# token, any extra check -- and end with
+#
+#     source "$SETUP_DIR/../../../tools/lib/build_body.sh"
+#
+# which does the building: machine profile, genmake2, make, the generated-hook
+# assertions and build_info.txt, identically for every variant of every setup.
+# Until 2026-09-05 each of those scripts carried its own copy of this body, and
+# a fix to it had to be made in each of them.
+#
+# Interface -- set by the definition before sourcing:
+#
+#   SETUP_DIR   absolute path of the setup directory (the one holding code*/,
+#               input*/ and scripts/)                                   required
+#   BUILD_DIR   build directory, relative to SETUP_DIR                   required
+#   BUILD_MODE  frd | tapAdj                                             required
+#   RUN_TOKEN   written to build_info.txt; the submit body names run
+#               directories from it (frd, tapAdj_ckpAll, ...)            required
+#   PARALLEL    mpi | serial: genmake2 -mpi with MPI_OPTFILE, or no -mpi with
+#               SERIAL_OPTFILE                                        default mpi
+#   MODS        array of -mods directories, RELATIVE TO THE BUILD DIRECTORY;
+#               on a name clash the earlier directory wins
+#                                     default (../code) or (../code_tap) by mode
+#   ADOF        tapAdj: the -adof options file, relative to the build directory
+#                                           default ../code_tap/adjoint_tap_local
+#   TAP_EXTRA   tapAdj: passed verbatim through genmake2 -tap_extra     default ""
+#   CKP, CKP_NOTE, VARIANT, VARIANT_NOTE
+#               tapAdj: value and trailing comment of the
+#               tapenade_checkpointing= and variant= lines of build_info.txt
+#
+#   pre_configure()      optional; runs in SETUP_DIR before the build directory
+#                        is entered -- read a routine list, check an extra
+#                        -mods directory exists, set TAP_EXTRA
+#   post_build_checks()  optional; runs in the build directory after the
+#                        generic checks -- assert a variant was compiled
+#   build_info_extra()   optional; echoes extra key=value lines into
+#                        build_info.txt
+#
+# Per-setup constants come from SETUP_DIR/scripts/setup_params.sh:
+#
+#   HOOK_CHECKS  array of "NAME_B <argument count> <generated file>": each
+#                hook's generated _B call is checked after make (tapAdj only)
+#   DUMP_CALLS   how many DUMP_ADJ_* calls the compiled dummy_tap.f must carry
+#                (tapAdj only)
+#
+# The definition runs under `set -euo pipefail`, and so does this file.
+
+# ---------- guard ----------
+if [ "${BASH_SOURCE[0]}" = "$0" ]; then
+    echo "ERROR: $(basename "$0") is a library; source it from a scripts/build_*.sh definition" >&2
+    exit 2
+fi
+for v in SETUP_DIR BUILD_DIR BUILD_MODE RUN_TOKEN; do
+    if [ -z "${!v:-}" ]; then
+        echo "ERROR: the build definition must set $v before sourcing build_body.sh" >&2
+        exit 2
+    fi
+done
+case "$BUILD_MODE" in frd|tapAdj) ;; *) echo "ERROR: BUILD_MODE must be frd or tapAdj, got '$BUILD_MODE'" >&2; exit 2 ;; esac
+PARALLEL="${PARALLEL:-mpi}"
+case "$PARALLEL" in mpi|serial) ;; *) echo "ERROR: PARALLEL must be mpi or serial, got '$PARALLEL'" >&2; exit 2 ;; esac
+
+# The identity of the definition that sourced us, resolved before any cd:
+# invoked_as is the name typed (build_tapAdj.sh when the default symlink was
+# used), build_script the file it resolves to.
+INVOKED_AS="$(basename "${BASH_SOURCE[1]}")"
+BUILD_SCRIPT="$(basename "$(readlink -f "${BASH_SOURCE[1]}")")"
+
+# ---------- machine profile ----------
+# Set root directory for MITgcm relative to the setup (works after cd)
+MITGCM_ROOT="$SETUP_DIR/../../MITgcm"
+
+# Per-machine optfiles, module stack and Tapenade check. Defaults reproduce the
+# sverdrup settings, so nothing changes here; on another machine add a case
+# block to tools/machine_env.sh rather than editing anything in a setup.
+source "$SETUP_DIR/../../../tools/machine_env.sh"
+impacts_load_modules
+
+# The optfile is defaulted by machine_env.sh; this catches a machine with none.
+if [ "$PARALLEL" = mpi ]; then
+    OPTFILE="${MPI_OPTFILE:-}"; OPTFILE_VAR=MPI_OPTFILE
+else
+    OPTFILE="${SERIAL_OPTFILE:-}"; OPTFILE_VAR=SERIAL_OPTFILE
+fi
+if [ -z "$OPTFILE" ] || [ ! -f "$OPTFILE" ]; then
+    echo "ERROR: $OPTFILE_VAR is unset or missing: '$OPTFILE'"
+    echo "       Set it for machine '$MACHINE' in tools/machine_env.sh, or export it."
+    exit 1
+fi
+
+# ---------- per-setup constants ----------
+SETUP_PARAMS="$SETUP_DIR/scripts/setup_params.sh"
+if [ ! -f "$SETUP_PARAMS" ]; then
+    echo "ERROR: $SETUP_PARAMS not found (every setup's scripts/ carries one)"; exit 1
+fi
+# shellcheck source=/dev/null
+source "$SETUP_PARAMS"
+
+# ---------- what to build ----------
+cd "$SETUP_DIR"
+if [ "$BUILD_MODE" = tapAdj ]; then
+    EXE=mitgcmuv_tap_adj
+    MAKE_TARGET=tap_adj
+    if [ -z "${MODS+set}" ] || [ "${#MODS[@]}" -eq 0 ]; then MODS=(../code_tap); fi
+    ADOF="${ADOF:-../code_tap/adjoint_tap_local}"
+    TAP_EXTRA="${TAP_EXTRA:-}"
+    for v in CKP VARIANT; do
+        [ -n "${!v:-}" ] || { echo "ERROR: a tapAdj build definition must set $v (for build_info.txt)"; exit 2; }
+    done
+else
+    EXE=mitgcmuv
+    MAKE_TARGET=
+    if [ -z "${MODS+set}" ] || [ "${#MODS[@]}" -eq 0 ]; then MODS=(../code); fi
+fi
+
+# The definition's own preparation: read the -nocheckpoint list, check the
+# profiler's -mods directory is there, and so on. Runs in the setup directory,
+# so relative paths like code_tap/ resolve.
+if declare -F pre_configure > /dev/null; then
+    pre_configure
+fi
+
+# ---------- configure and build ----------
+# Ensure build directory exists
+if [ ! -d "$BUILD_DIR" ]; then
+    echo "Creating the directory $BUILD_DIR..."
+    mkdir "$BUILD_DIR"
+fi
+
+# Go to build directory
+cd "$BUILD_DIR" || { echo "Failed to enter $BUILD_DIR"; exit 1; }
+
+# Clean any previous build (ignore if Makefile not created yet)
+make CLEAN || true
+
+# Configure the build (this creates the Makefile here). Every path handed to
+# genmake2 is relative to the build directory, like -mods, so the generated
+# Makefile carries no machine path beyond the setup's own. For the adjoint,
+# -adof names the setup's Tapenade options file, which appends
+# code_tap/flow_tap_local AFTER the stock external library (Tapenade keeps the
+# last declaration of an external), and -tap_extra carries the variant's
+# Tapenade flags, written verbatim into the Makefile's TAP_EXTRA so inner
+# quotes survive to the shell that runs Tapenade.
+genmake_args=()
+[ "$PARALLEL" = mpi ] && genmake_args+=(-mpi)
+[ "$BUILD_MODE" = tapAdj ] && genmake_args+=(-tap)
+genmake_args+=(-rd="$MITGCM_ROOT" -of="$OPTFILE" -mods="${MODS[*]}")
+if [ "$BUILD_MODE" = tapAdj ]; then
+    genmake_args+=(-adof="$ADOF")
+    [ -n "$TAP_EXTRA" ] && genmake_args+=(-tap_extra "$TAP_EXTRA")
+fi
+"$MITGCM_ROOT/tools/genmake2" "${genmake_args[@]}"
+
+# Generate dependency list
+make depend
+
+# Build using 8 threads
+# shellcheck disable=SC2086
+make -j 8 $MAKE_TARGET
+
+[ -x "$EXE" ] || { echo "ERROR: make finished but $BUILD_DIR/$EXE does not exist"; exit 1; }
+
+# ---------- adjoint checks ----------
+if [ "$BUILD_MODE" = tapAdj ]; then
+    # Tapenade must have generated each hook's _B call, and the argument lists
+    # must match the hand-written routines (DINO: dump hook 11 value/adjoint
+    # pairs + myTime, myIter, myThid = 25; etaN dump hook 1 pair + 3 = 5;
+    # mode-switch hooks 1 pair + 3 = 5). F77 would silently misalign
+    # mismatched arguments, so fail the build loudly instead. The list of hooks
+    # and counts is the setup's (HOOK_CHECKS in scripts/setup_params.sh).
+    check_gen_call() {
+        local name=$1 expect=$2 file=$3 n
+        n=$(awk -v pat="CALL ${name}\\\\(" '$0 ~ pat {f=1}
+             f{buf=buf $0; if (index($0,")")) exit}
+             END{if (buf=="") {print 0} else {print gsub(/,/,",",buf)+1}}' \
+            "$file")
+        if [ "${n:-0}" -ne "$expect" ]; then
+            echo "ERROR: generated CALL ${name} in ${file} has ${n:-0}"
+            echo "       arguments, expected ${expect}. Align the hand-written"
+            echo "       routine with the generated call before using this"
+            echo "       executable."
+            exit 1
+        fi
+        echo "OK: generated ${name} call has ${expect} arguments."
+    }
+    if [ -z "${HOOK_CHECKS+set}" ] || [ "${#HOOK_CHECKS[@]}" -eq 0 ]; then
+        echo "ERROR: HOOK_CHECKS is empty in $SETUP_PARAMS"; exit 1
+    fi
+    for entry in "${HOOK_CHECKS[@]}"; do
+        # shellcheck disable=SC2086
+        check_gen_call $entry
+    done
+
+    # The hook adjoints must have kept their bodies. dummy_tap.F includes
+    # AD_CONFIG.h, the only definition of ALLOW_ADJOINT_RUN, which guards the
+    # ADJ* dump code: without it the adjoint is still bitwise correct but
+    # writes no ADJ* files (2026-09-02, runs 31071-31073). Fail here rather
+    # than after a run.
+    ndump=$(grep -c 'CALL DUMP_ADJ_' dummy_tap.f || true)
+    if [ "${ndump:-0}" -lt "${DUMP_CALLS:-10}" ]; then
+        echo "ERROR: the compiled dummy_tap.f carries only ${ndump:-0} DUMP_ADJ_* calls (expected ${DUMP_CALLS:-10}):"
+        echo "       the ADJ* dump bodies were preprocessed away -- check the AD_CONFIG.h include."
+        exit 1
+    fi
+    echo "OK: the compiled dummy_tap.f carries ${ndump} ADJ* dump calls."
+fi
+
+# The definition's own checks: the variant really compiled, every listed
+# routine went split, the profiler is instrumented ...
+if declare -F post_build_checks > /dev/null; then
+    post_build_checks
+fi
+
+# ---------- build record ----------
+# Written last, after every check above passed, so build_info.txt can only
+# describe an executable this script built and verified. The submit body
+# refuses an executable without it, or whose checksum does not match, and
+# takes run_token from it, so a run directory is named from what was actually
+# built, not from what the submit script assumes:
+#     <setup>_<run_token>_<duration>[_<tag>]_run<jobid>
+dirty=$(git -C "$SETUP_DIR" diff --name-only HEAD -- . 2>/dev/null | wc -l)
+{
+    echo "build_script=$BUILD_SCRIPT"   # the definition file, symlink resolved
+    echo "invoked_as=$INVOKED_AS"
+    echo "build_dir=$(basename "$PWD")"
+    echo "exe_md5=$(md5sum "$EXE" | cut -d' ' -f1)"   # identity of the binary this record describes; the submit body verifies it
+    if [ "$BUILD_MODE" = tapAdj ]; then
+        printf 'tapenade_checkpointing=%-13s # %s\n' "$CKP" "${CKP_NOTE:-}"
+        printf 'variant=%-28s # %s\n' "$VARIANT" "${VARIANT_NOTE:-}"
+    fi
+    echo "run_token=$RUN_TOKEN"
+    if [ "$BUILD_MODE" = tapAdj ]; then
+        echo "tap_extra=$(sed -n 's/^TAP_EXTRA *= *//p' Makefile)"
+    fi
+    if declare -F build_info_extra > /dev/null; then
+        build_info_extra
+    fi
+    echo "git_commit=$(git -C "$SETUP_DIR" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+    echo "git_modified_tracked_files=${dirty}   # in this setup"
+    echo "built=$(date '+%Y-%m-%d %H:%M:%S %Z') on $(hostname)"
+} > build_info.txt
+echo "OK: wrote $(basename "$PWD")/build_info.txt (run_token=$RUN_TOKEN)."

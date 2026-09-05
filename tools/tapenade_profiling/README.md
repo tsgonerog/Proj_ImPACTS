@@ -124,8 +124,8 @@ rather than mislead).
 
 ```bash
 cd MITgcm_c69m/mysetups/DINO_1deg
-./build_tapAdj_tapProfile.sh
-../../../tools/submit.sh submit_tapAdj_tapProfile.sh      # 30 days by default
+./scripts/build_tapAdj_tapProfile.sh
+../../../tools/submit.sh scripts/submit_tapAdj_tapProfile.sh      # 30 days by default
 ```
 
 The run directory (`DINO_1deg_tapAdj_ckpAll_tapProfile_30d_..._run<id>`) gets

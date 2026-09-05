@@ -10,7 +10,7 @@ selects is staged.
 ## How a variant is selected
 
 ```bash
-IMPACTS_TEST_CASE=<group>/<tag> ../../../tools/submit.sh <submit script>
+IMPACTS_TEST_CASE=<group>/<tag> ../../../tools/submit.sh scripts/<submit script>
 ```
 
 which stages `variants/<group>/data_<tag>` as `data`.

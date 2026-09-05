@@ -8,32 +8,37 @@ Idealised single-basin "DINO" ocean, pole to pole. **51 × 198 × 36**, curvilin
 
 ## Quick start
 
-Run everything **from this directory** (`MITgcm_c69m/mysetups/DINO_1deg`) — the
-scripts resolve the MITgcm tree relative to their own location but use relative
-paths like `code_tap/` for the setup, so they expect this to be the working
-directory. **Nothing needs exporting:** `tools/machine_env.sh` supplies the
-optfile, scratch root, MPI launcher and per-machine sbatch flags.
+Run everything **from this directory** (`MITgcm_c69m/mysetups/DINO_1deg`).
+The scripts live in `scripts/` (since 2026-09-05) and are short *definitions*
+that source the shared bodies in `tools/lib/`: a build definition `cd`s here
+itself, so it runs from anywhere, while a submit definition must be submitted
+from here — `tools/submit.sh` does that for you — because the job resolves
+everything against `SLURM_SUBMIT_DIR`. **Nothing needs exporting:**
+`tools/machine_env.sh` supplies the optfile, scratch root, MPI launcher and
+per-machine sbatch flags.
 
 ### Forward model
 
 ```bash
-./build_frd.sh                                   # -> build_frd/mitgcmuv
-../../../tools/submit.sh submit_frd.sh           # 10 yr from rest, visc2x
+./scripts/build_frd.sh                                   # -> build_frd/mitgcmuv
+../../../tools/submit.sh scripts/submit_frd.sh           # 10 yr from rest, visc2x
 ```
 
 ### Adjoint model
 
 ```bash
-./build_tapAdj.sh                                # -> build_tapAdj_nocheckpoint/mitgcmuv_tap_adj
-../../../tools/submit.sh submit_tapAdj.sh        # 5 yr from the 180 yr pickup
+./scripts/build_tapAdj.sh                                # -> build_tapAdj_nocheckpoint/mitgcmuv_tap_adj
+../../../tools/submit.sh scripts/submit_tapAdj.sh        # 5 yr from the 180 yr pickup
 ```
 
 Build and submit scripts are **paired by build directory** — `submit_frd.sh`
 runs what `build_frd.sh` produced, `submit_tapAdj.sh` what `build_tapAdj.sh`
-produced. Mixing a submit script with a different build silently runs a
-configuration you did not intend; see the two tables below for the pairing.
+produced. Since 2026-09-05 the pairing is enforced: each submit definition
+names the `run_token` it expects and the shared body refuses a build directory
+holding anything else, so mixing them fails loudly instead of running a
+configuration you did not intend; the two tables below give the pairing.
 
-**The two unmarked adjoint names are symlinks** (since 2026-09-02) to
+**The two unmarked adjoint names in `scripts/` are symlinks** (since 2026-09-02) to
 `build_tapAdj_nocheckpoint.sh` / `submit_tapAdj_nocheckpoint.sh`, the default
 adjoint: Tapenade's profile-guided `-nocheckpoint` build, bitwise identical to
 the checkpoint-everything one and 1.5× faster. The previous default lives on
@@ -63,17 +68,17 @@ commit:
 
 ```bash
 # 200-year forward spin-up
-IMPACTS_DURATION_DAYS=73200 ../../../tools/submit.sh submit_frd.sh
+IMPACTS_DURATION_DAYS=73200 ../../../tools/submit.sh scripts/submit_frd.sh
 
 # 30-day adjoint, denser monitor output
 IMPACTS_DURATION_DAYS=30 IMPACTS_ADJ_MONITOR_FREQ_DAYS=1 \
-    ../../../tools/submit.sh submit_tapAdj.sh
+    ../../../tools/submit.sh scripts/submit_tapAdj.sh
 
 # a different namelist variant
-IMPACTS_TEST_CASE=scheme_tests/from_rest_viscRef_adv30 ../../../tools/submit.sh submit_frd.sh
+IMPACTS_TEST_CASE=scheme_tests/from_rest_viscRef_adv30 ../../../tools/submit.sh scripts/submit_frd.sh
 
 # one member of a grouped experiment (variants/kappa_v_ensemble/data_M3)
-IMPACTS_TEST_CASE=kappa_v_ensemble/M3 ../../../tools/submit.sh submit_frd.sh
+IMPACTS_TEST_CASE=kappa_v_ensemble/M3 ../../../tools/submit.sh scripts/submit_frd.sh
 ```
 
 | Variable | Patches | Default (`frd` / `tapAdj`) |
@@ -92,8 +97,8 @@ failed to arrive shows up as `_10yr_` instead of `_200yr_`.
 
 **`nIter0` is deliberately not in that table.** The start iteration lives in
 whichever `data_<tag>` `test_cases` selects, and the matching pickup is a
-hardcoded `ln -s` further down the submit script. Changing the duration is safe;
-changing the starting point means editing both by hand.
+hardcoded `ln -s` in the submit definition's `stage_pickups`. Changing the
+duration is safe; changing the starting point means editing both by hand.
 
 ## Build
 
@@ -109,10 +114,14 @@ changing the starting point means editing both by hand.
 The **unmarked** adjoint names are symlinks to the current default pair; every
 real adjoint script carries a token — `_<ckp>` (`nocheckpoint` / `ckpAll`) or
 `_<variant>` (`adjViscBoost` / `tapProfile`) — and the run directories carry
-both (see "Run"). Each build script ends by writing `build_info.txt` into its
-build directory: the script, the build directory, the Makefile's `TAP_EXTRA`,
-the `-nocheckpoint` list, the commit, and a `run_token`. All four adjoint
-scripts use **stock** `genmake2`: since the 2026-08-31
+both (see "Run"). Every build script is a definition in `scripts/` that
+sources the shared body `tools/lib/build_body.sh` (since 2026-09-05; what the
+definition supplies is its build directory, `-mods` list, Tapenade flags, run
+token and any extra check), and the body ends by writing `build_info.txt` into
+the build directory: the script, the build directory, the Makefile's
+`TAP_EXTRA`, the `-nocheckpoint` list, the commit, `exe_md5` and a `run_token`
+— the forward build too, with `run_token=frd`. All four adjoint definitions
+use **stock** `genmake2`: since the 2026-08-31
 dump-hook redesign no generated file is post-edited. The `ADJ*` dump call is
 generated by Tapenade itself because `code_tap/forward_step.F` passes the state
 fields to the upstream `DUMMY_IN_STEPPING` hook (under `ALLOW_TAPENADE`) and
@@ -127,10 +136,11 @@ the other adjoint variables) and the two adjoint-mode switch hooks
 (`AUTODIFF_INADMODE_SET/UNSET`), which is what makes the `adjViscBoost` parameters
 actually engage — before these hooks the TAF-named `ADAUTODIFF_INADMODE_SET`
 was never called under Tapenade and adjViscBoost silently ran plain physics.
-After `make`, the scripts assert that every generated `_B` call carries
-exactly the argument count the hand-written routines declare (dump hook 25;
-etaN dump and mode-switch hooks 5 each), and fail loudly otherwise — F77
-would silently misalign a mismatch.
+After `make`, the build body asserts, over the `HOOK_CHECKS` list in
+`scripts/setup_params.sh`, that every generated `_B` call carries exactly the
+argument count the hand-written routines declare (dump hook 25; etaN dump and
+mode-switch hooks 5 each), and fails loudly otherwise — F77 would silently
+misalign a mismatch.
 
 There is no `rawTapenade` control build any more: raw Tapenade output *is* the
 working configuration. (Since 2026-08-31 the same is true of SOMA, whose
@@ -145,17 +155,17 @@ than running bare `make` in a build directory.
 
 ### Switching the default adjoint
 
-`build_tapAdj.sh` and `submit_tapAdj.sh` are **symlinks**, not copies: each is
-a tracked path whose only content is the name of the script it points at (git
-stores it as mode `120000`; `ls -l` shows `build_tapAdj.sh -> …`). Running
-`./build_tapAdj.sh` runs the target script, which uses *its own* build
-directory, job name and run token — so repointing the link is the whole
-change. Always move the pair together; a build link on one variant and a
+`scripts/build_tapAdj.sh` and `scripts/submit_tapAdj.sh` are **symlinks**, not
+copies: each is a tracked path whose only content is the name of the script it
+points at, beside it in `scripts/` (git stores it as mode `120000`; `ls -l`
+shows `build_tapAdj.sh -> …`). Running `./scripts/build_tapAdj.sh` runs the
+target definition, which uses *its own* build directory, job name and run
+token — so repointing the link is the whole change. Always move the pair together; a build link on one variant and a
 submit link on another builds one executable and runs a different build
 directory.
 
 ```bash
-cd MITgcm_c69m/mysetups/DINO_1deg
+cd MITgcm_c69m/mysetups/DINO_1deg/scripts
 
 # nocheckpoint — the default since 2026-09-02
 ln -sfn build_tapAdj_nocheckpoint.sh  build_tapAdj.sh
@@ -177,9 +187,10 @@ link as a file, not as a directory to descend into). After repointing, `git
 status` shows both links as modified; commit that, and update the "default
 since" sentences in this file and in `CLAUDE.md`, or the docs will name the
 wrong variant. You rarely need to repoint at all: every variant is callable
-by its explicit name (`./build_tapAdj_ckpAll.sh`, then
-`../../../tools/submit.sh submit_tapAdj_ckpAll.sh`), so the links only decide
-what a bare `./build_tapAdj.sh` means for everyone, including your future self.
+by its explicit name (`./scripts/build_tapAdj_ckpAll.sh`, then
+`../../../tools/submit.sh scripts/submit_tapAdj_ckpAll.sh`), so the links only
+decide what a bare `./scripts/build_tapAdj.sh` means for everyone, including
+your future self.
 
 ### Profiling and checkpoint tuning
 
@@ -244,13 +255,15 @@ Commands are in **Quick start** above; this section covers what the scripts do.
 | `submit_tapAdj_tapProfile.sh` | `build_tapAdj_tapProfile/` (30-day default; writes `tapenade_profile.NNNN.txt`) |
 
 **The run directory is named from the build, not from the submit script.**
-Every adjoint submit script reads `run_token` from the build directory's
-`build_info.txt` (written by the build script as its last step, after every
-check passed), refuses an executable that has no record or whose checksum does
+The shared submit body (`tools/lib/submit_body.sh`, which every submit
+definition in `scripts/` sources) reads `run_token` from the build directory's
+`build_info.txt` (written by the build body as its last step, after every
+check passed), refuses an executable that has no record, whose checksum does
 not match the record's `exe_md5` (a by-hand `make`; since 2026-09-03 — the
 earlier mtime test misfired on the NFS home and remains only as the fallback for
-records without that line), copies the record into the run directory, and names
-the run
+records without that line), or whose token is not the one the definition names
+in `EXPECT_RUN_TOKEN` (since 2026-09-05), copies the record into the run
+directory, and names the run
 
 ```
 $SCRATCH_ROOT/DINO_1deg_outputs/runs/adjoint/
@@ -272,8 +285,9 @@ with `<ckp>` = `nocheckpoint` | `ckpAll` and `<variant>` = `adjViscBoost` |
 `tapProfile` when present. So the default gives
 `DINO_1deg_tapAdj_nocheckpoint_5yr_from180yrPk_visc2x_run<jobid>`, the boost
 `DINO_1deg_tapAdj_ckpAll_adjViscBoost_…`, the reference
-`DINO_1deg_tapAdj_ckpAll_…` and the profiler `DINO_1deg_tapAdj_ckpAll_tapProfile_…`.
-The `#SBATCH -J` name only names the `.out`/`.err` files. `<tag>` is the last
+`DINO_1deg_tapAdj_ckpAll_…` and the profiler `DINO_1deg_tapAdj_ckpAll_tapProfile_…`;
+a forward run is `DINO_1deg_frd_…` under `runs/forward/`, its token `frd`.
+The `#SBATCH -J` name only names the log file. `<tag>` is the last
 component of `IMPACTS_TEST_CASE`; when that is **empty** (the live
 `input_tap/data`, which has no name of its own) the submit script derives the
 `<start>_<viscosity>` tokens from the namelist instead — `nIter0` →
@@ -334,8 +348,10 @@ close together would each stage whichever value landed last while their run
 directory names each claimed their own duration. If a namelist diff ever appears
 after a run, something has regressed — `tools/pre_push_check.sh` watches for it.
 
-The names that get patched are listed explicitly in a `time_params` array beside
-the defaults. Do not restore the old `compgen -v | grep '_days$'` auto-detection:
+The frequency names that get patched are listed explicitly in a `TIME_PARAMS`
+array beside the defaults; the duration lands on `nTimeSteps` at `DELTA_T`
+because `scripts/setup_params.sh` says so (`DURATION_KEY=nTimeSteps`). Do not
+restore the old `compgen -v | grep '_days$'` auto-detection:
 `compgen -v` also enumerates *exported environment variables*, so any `*_days`
 variable in your shell would silently become a namelist key.
 
@@ -345,10 +361,11 @@ variable in your shell would silently become a namelist key.
 | --- | --- |
 | `code/`, `input/` | forward model |
 | `code_tap/`, `input_tap/` | adjoint model — adds `data.autodiff`, `data.cost`, `data.ctrl`, `data.grdchk` |
+| `scripts/` | the build and submit definitions (since 2026-09-05), one per build directory, plus the two default symlinks and `setup_params.sh` (dT, duration key, calendar, hook list, run-naming rule); each definition sources a shared body in `tools/lib/` |
 | `input*/variants/` | alternative namelists, grouped by purpose, each group with its own `README.md`; the submit script stages the selected `data_<tag>` plus any sibling sharing its tag |
 | `input_binaries/` | **untracked, 179 MB.** Produced outside this repo; nothing here regenerates it |
 | `input_adj_binaries/` | **untracked.** `ones_64b.bin`, the uniform control weight every `data.ctrl` entry points at |
-| `build_*/` | **gitignored, reproducible.** One per build script: `build_frd/` and `build_tapAdj_{nocheckpoint,ckpAll,adjViscBoost,tapProfile}/`; each adjoint one carries the `build_info.txt` the submit scripts name run directories from |
+| `build_*/` | **gitignored, reproducible.** One per build script: `build_frd/` and `build_tapAdj_{nocheckpoint,ckpAll,adjViscBoost,tapProfile}/`; each carries the `build_info.txt` the submit body names run directories from |
 | `00_archive/` | superseded config in `code_tap/`, `input_tap/`, `scripts/`, mirroring the live dirs — nothing live reads it; has its own `README.md` |
 
 ## Namelists and variants
@@ -393,15 +410,15 @@ variant can change a package flag as well as the namelist:
 
 ```bash
 IMPACTS_TEST_CASE=scheme_tests/from_rest_viscRef_kppON \
-    ../../../tools/submit.sh submit_frd.sh      # stages data AND data.pkg
+    ../../../tools/submit.sh scripts/submit_frd.sh      # stages data AND data.pkg
 ```
 
 Select a variant without touching any script:
 
 ```bash
-IMPACTS_TEST_CASE=baseline/from180yrPk_visc2x  ../../../tools/submit.sh submit_tapAdj.sh
-IMPACTS_TEST_CASE=kappa_v_ensemble/M3          ../../../tools/submit.sh submit_tapAdj.sh
-IMPACTS_TEST_CASE=                             ../../../tools/submit.sh submit_tapAdj.sh   # live input_tap/data
+IMPACTS_TEST_CASE=baseline/from180yrPk_visc2x  ../../../tools/submit.sh scripts/submit_tapAdj.sh
+IMPACTS_TEST_CASE=kappa_v_ensemble/M3          ../../../tools/submit.sh scripts/submit_tapAdj.sh
+IMPACTS_TEST_CASE=                             ../../../tools/submit.sh scripts/submit_tapAdj.sh   # live input_tap/data
 ```
 
 or change the committed default, the value `IMPACTS_TEST_CASE` falls back to:
@@ -525,14 +542,15 @@ scripts; stock `genmake2` throughout):
    adjoint runs correctly but writes no `ADJ*` files.
 6. **A build-time assertion guards the interface.** F77 checks no signatures,
    so a drift between the generated call and the hand-written routine would
-   silently misalign arguments. After `make`, both build scripts count each
-   generated call's arguments (`check_gen_call`: dump hook 25; etaN dump and
-   mode switches 5 each) and fail loudly on a mismatch; they then check that
+   silently misalign arguments. After `make`, the shared build body counts each
+   generated call's arguments (`check_gen_call`, over the `HOOK_CHECKS` list in
+   `scripts/setup_params.sh`: dump hook 25; etaN dump and mode switches 5
+   each) and fails loudly on a mismatch; it then checks that
    the compiled `dummy_tap.f` still carries the ten `ADJ*` dump calls, which
    vanish silently if `dummy_tap.F` loses its `AD_CONFIG.h` include (see
    point 5). Changing a hook's field set means
    touching the shadow call site, the hook shadow, `flow_tap_local`, the
-   `_B`/`_D` bodies *and* this assertion together.
+   `_B`/`_D` bodies *and* the `HOOK_CHECKS` entry together.
 
 **Until 2026-09-02 the hooks had Tapenade-only names** (`TAP_DUMMY_IN_STEPPING`,
 `TAP_DUMMY_FOR_ETAN`, `TAP_INADMODE_SET/UNSET` in `tap_*.F` files, with the

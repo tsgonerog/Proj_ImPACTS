@@ -216,3 +216,43 @@
   31052/31054 (no record on either side, reported as unconfirmed) and
   31075/31056 (four differing `CONFIG` fields, still `NOT CLEAN` on its 80
   differing sensitivities).
+
+- [x] ~~**Move the build and submit scripts into `scripts/` and share their
+  bodies**~~ (added and **done 2026-09-05**, on `main`). The ten DINO scripts
+  sat at the setup's top level and the eight adjoint ones were near-copies of
+  two templates — 270 of ~282 submit lines and 101 of ~150 build lines shared
+  with the `ckpAll` copy, and the 2026-09-03 checksum-guard fix had touched all
+  eight. Now each is a short *definition* in `scripts/` (build directory,
+  `-mods` list, Tapenade flags, run token; `#SBATCH` header, committed
+  defaults, pickup lines) that sources `tools/lib/build_body.sh` or
+  `tools/lib/submit_body.sh`, with what makes the setup different — dT,
+  `nTimeSteps` vs `endTime`, the calendar, the generated-hook list, the
+  run-naming rule — in `scripts/setup_params.sh`. SOMA was converted the same
+  day as the second consumer. Unchanged: every script name, the two default
+  symlinks, `build_info.txt`, the run-directory contents. Changed with it:
+  `tools/submit.sh` runs sbatch from the setup directory (the parent of
+  `scripts/`); the submit body enforces the build/submit pairing
+  (`EXPECT_RUN_TOKEN`) instead of only documenting it; forward builds write a
+  record too (`run_token=frd`, forward names unchanged); SOMA runs are named
+  from the token (`tapAdj_ckpAll`). One trade-off, documented in the body and
+  in `CLAUDE.md`: the body is read at job start, so an edit to it reaches
+  queued jobs. **Validation:** reference runs were made first with the old
+  scripts and the untouched executables — 31092 (frd, 30 d from rest), 31093
+  (ckpAll), 31094 (boost), 31095 (profiler), all 30 d; SOMA 31096 (frd, 30 d)
+  and 31097 (adjoint, 5 d); 31091 already existed for the default — then all
+  seven builds were rebuilt through the new scripts (every assertion passed,
+  `git status` clean) and run once each. 31100 vs 31092: 131 files and 1 665
+  `%MON` lines identical. 31101 (nocheckpoint) vs 31091, 31102 (ckpAll) vs
+  31093, 31103 (boost) vs 31094: each `EQUIVALENT` — 210 `ADJ*`/`adxx_*`
+  files, `fc` and 441 `%MON` lines identical, every configuration field of
+  `build_info.txt` matching. 31104 (profiler) vs 31095: the same, and the 27
+  `tapenade_profile.*.txt` tables identical once measured seconds are masked
+  and rows sorted — now a recognised expected class in
+  `tools/compare_adj_runs.sh`, which also learned to read a serial run's `fc`
+  and `%MON` from `output_tap_adj.txt`. SOMA 31105 (frd) vs 31096: 117 files
+  and 1 665 `%MON` lines identical; SOMA 31106 (adjoint) vs 31097:
+  `EQUIVALENT` — 186 sensitivity files, `fc` and 390 `%MON` lines identical.
+  The DINO runs are filed under `toolchain_validation/` on both the forward
+  and the adjoint side, each new run carrying its `comparison_vs_*.txt`; the
+  build logs, the comparison logs and the one-off validation driver are in
+  `DINO_1deg_outputs/logs/` and `SOMA_1deg_outputs/logs/`.

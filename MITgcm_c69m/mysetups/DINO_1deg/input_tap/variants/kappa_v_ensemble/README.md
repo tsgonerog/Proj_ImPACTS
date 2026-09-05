@@ -9,7 +9,7 @@ which carries the κ table.
 
 ```bash
 cd MITgcm_c69m/mysetups/DINO_1deg
-IMPACTS_TEST_CASE=kappa_v_ensemble/M3 ../../../tools/submit.sh submit_tapAdj.sh
+IMPACTS_TEST_CASE=kappa_v_ensemble/M3 ../../../tools/submit.sh scripts/submit_tapAdj.sh
 ```
 
 Each file is identical to `../data_from180yrPk_visc2x` apart from

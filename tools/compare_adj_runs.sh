@@ -34,13 +34,24 @@
 # monitor comparison matches the new run's lines against the reference run's
 # LEADING BLOCK of the same length rather than comparing wholesale.
 #
+# A fourth difference is EXPECTED between two runs of the PROFILER build
+# (tapProfile) and is likewise classified rather than reported as a failure:
+#
+#   tapenade_profile.NNNN.txt   Tapenade's per-rank cost/benefit tables carry
+#                               measured CPU seconds and are sorted by them, so
+#                               the timings and the row order differ run to run.
+#                               They are compared with the times masked and the
+#                               rows sorted; the call sites, call counts, peak
+#                               stack and memory gains left must match exactly,
+#                               or the file counts as an unexpected difference.
+#
 # Deliberately no `set -e`: every check must run, and the report must be
 # written even when an earlier one fails.
 #
 # Example -- schedule it to run when an adjoint job finishes (the job-chaining
 # recipe in the project notes covers this pattern in full):
 #
-#   ADJ=$(../../../tools/submit.sh submit_tapAdj.sh --parsable | tail -1)
+#   ADJ=$(../../../tools/submit.sh scripts/submit_tapAdj.sh --parsable | tail -1)
 #   sbatch --parsable --dependency=afterany:$ADJ run_comparison.sh
 #
 
@@ -163,10 +174,19 @@ if [ "$odiff" -gt 0 ]; then
         case "$f" in
             data.pkg|output_tap_adj.txt|output.txt|xx_theta.effective.*)
                 tag="[expected: grdchk]" ;;
+            tapenade_profile.*.txt)
+                # the profiler's table: measured times masked, rows sorted --
+                # what is left (call sites, counts, peak stack, memory) must match
+                if diff <(sed -E 's/Time gain[ -]*[0-9.]+ s\./Time gain <t>/' "$OLD/$f" | sort) \
+                        <(sed -E 's/Time gain[ -]*[0-9.]+ s\./Time gain <t>/' "$NEW/$f" | sort) > /dev/null 2>&1
+                then tag="[expected: profiler timings]"
+                else tag="[UNEXPECTED: profiler table differs beyond the measured times]"; unexpected=$((unexpected+1)); fi ;;
             *)  tag="[UNEXPECTED]"; unexpected=$((unexpected+1)) ;;
         esac
         echo "  --- $f  $tag"
         case "$f" in
+          tapenade_profile.*.txt)
+            echo "      $(diff "$OLD/$f" "$NEW/$f" 2>/dev/null | grep -c '^[<>]') raw lines differ; with measured times masked and rows sorted: $(diff <(sed -E 's/Time gain[ -]*[0-9.]+ s\./Time gain <t>/' "$OLD/$f" | sort) <(sed -E 's/Time gain[ -]*[0-9.]+ s\./Time gain <t>/' "$NEW/$f" | sort) 2>/dev/null | grep -c '^[<>]') lines" ;;
           xx_theta.effective.*.data)
             python3 -c "
 import numpy as np
@@ -239,8 +259,14 @@ echo
 
 # ---------- 5. cost function ----------
 echo "---------- 5. cost function ----------"
-fl_old=$(grep -a 'global fc' "$OLD/STDOUT.0000" 2>/dev/null | head -1)
-fl_new=$(grep -a 'global fc' "$NEW/STDOUT.0000" 2>/dev/null | head -1)
+# An MPI run's rank 0 writes fc and the %MON stream to STDOUT.0000; a serial
+# run (SOMA's adjoint) has no STDOUT.* at all and writes both to
+# output_tap_adj.txt. Read whichever the run has (2026-09-05; before that a
+# serial run always compared as NOT CLEAN with an empty fc).
+mon_of() { if [ -f "$1/STDOUT.0000" ]; then echo "$1/STDOUT.0000"; else echo "$1/output_tap_adj.txt"; fi; }
+echo "(read from $(basename "$(mon_of "$NEW")"))"
+fl_old=$(grep -a 'global fc' "$(mon_of "$OLD")" 2>/dev/null | head -1)
+fl_new=$(grep -a 'global fc' "$(mon_of "$NEW")" 2>/dev/null | head -1)
 echo "reference: $fl_old"
 echo "new      : $fl_new"
 fc_old=$(printf '%s' "$fl_old" | grep -oE '[-0-9.]+E[+-][0-9]+')
@@ -256,8 +282,8 @@ echo
 
 # ---------- 6. monitor stream ----------
 echo "---------- 6. monitor output ----------"
-grep -a '%MON' "$OLD/STDOUT.0000" > "$WORK/mon_old.txt" 2>/dev/null
-grep -a '%MON' "$NEW/STDOUT.0000" > "$WORK/mon_new.txt" 2>/dev/null
+grep -a '%MON' "$(mon_of "$OLD")" > "$WORK/mon_old.txt" 2>/dev/null
+grep -a '%MON' "$(mon_of "$NEW")" > "$WORK/mon_new.txt" 2>/dev/null
 n_mold=$(wc -l < "$WORK/mon_old.txt"); n_mnew=$(wc -l < "$WORK/mon_new.txt")
 echo "%MON lines: reference=$n_mold  new=$n_mnew"
 mon_verdict="n/a"

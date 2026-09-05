@@ -87,11 +87,13 @@ on CFS (`/global/cfs/cdirs/<repo>/`), not scratch.
 
 ```bash
 cd MITgcm_c69m/mysetups/DINO_1deg
-./build_tapAdj.sh        # DINO: a symlink to the default variant, build_tapAdj_nocheckpoint.sh
+./scripts/build_tapAdj.sh        # DINO: a symlink to the default variant, build_tapAdj_nocheckpoint.sh
 ```
 
 No `export MPI_OPTFILE` needed — the profile supplies it. The build scripts call
-`impacts_load_modules` themselves.
+`impacts_load_modules` themselves (in the shared body, `tools/lib/build_body.sh`,
+which every `scripts/build_*.sh` definition sources; a definition can be run
+from anywhere, it `cd`s to its setup).
 
 `linux_amd64_gnu+mpi_perlmutter` was written from the MITgcm gfortran and Cray
 templates plus NERSC's documented wrappers. **It has not been compile-tested on
@@ -110,14 +112,18 @@ that silences the warning. See `tools/optfile_templates/README.md`.
 ### 4. Submit
 
 ```bash
-./tools/submit.sh MITgcm_c69m/mysetups/DINO_1deg/submit_tapAdj.sh
+./tools/submit.sh MITgcm_c69m/mysetups/DINO_1deg/scripts/submit_tapAdj.sh
 ```
 
 Use the wrapper rather than `sbatch` directly. Account, QOS, constraint and
 walltime cannot be written as `#SBATCH` directives without breaking the other
 machine, so the wrapper passes them on the command line, where sbatch lets them
-override the script. On sverdrup `SBATCH_EXTRA` is empty and this is exactly
-`sbatch --export=ALL <script>`; plain `sbatch` still works there.
+override the script. It also runs sbatch from the *setup* directory (the parent
+of `scripts/`), which is what the job's `SLURM_SUBMIT_DIR`, its `-o logs/` path
+and the `source` of the shared body `tools/lib/submit_body.sh` resolve against.
+On sverdrup `SBATCH_EXTRA` is empty and this is exactly `sbatch --export=ALL
+scripts/submit_tapAdj.sh` from that directory; plain `sbatch` still works there
+if you run it the same way.
 
 **`--export=ALL` is not decoration on a new machine.** It is sbatch's default,
 but the jobs genuinely depend on it: `impacts_load_modules` is a no-op on

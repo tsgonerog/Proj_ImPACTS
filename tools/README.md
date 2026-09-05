@@ -2,18 +2,22 @@
 
 Repository-level tooling: the things that are shared by every setup, or that
 act on the repository as a whole. Three of them are scripts you run, one is a
-file you *source*, and two are reference directories that no build script
-touches.
+file you *source*, `lib/` holds the two bodies that every setup's build and
+submit definitions source, and two are reference directories that no build
+script touches.
 
 Nothing here is MITgcm source, and nothing here is read by MITgcm. Per-setup
-build and submit scripts live in the setup directories
-(`MITgcm_c69m/mysetups/DINO_1deg/`); this directory holds what those scripts
-call, plus the checks that guard the repository around them.
+build and submit scripts live in the setup directories' `scripts/`
+subdirectories (`MITgcm_c69m/mysetups/DINO_1deg/scripts/`); this directory
+holds what those scripts call — and, since 2026-09-05, most of what they *do*:
+`lib/build_body.sh` and `lib/submit_body.sh` — plus the checks that guard the
+repository around them.
 
 | | What it is | Run it? |
 | --- | --- | --- |
 | [`machine_env.sh`](machine_env.sh) | The single place cluster differences live — scratch root, MPI launcher, optfiles, sbatch flags, module stack | **Source it**, never execute (it is deliberately not `+x`) |
-| [`submit.sh`](submit.sh) | `sbatch` wrapper that adds the per-machine flags. Submit through this, not bare `sbatch` | `./tools/submit.sh <script> [sbatch flags]` |
+| [`lib/`](lib/) | The shared build and submit bodies. Every `scripts/build_*.sh` and `scripts/submit_*.sh` in every setup is a short definition that ends by sourcing one of these | **Sourced by the definitions**, never run (no `+x`; each refuses to execute) |
+| [`submit.sh`](submit.sh) | `sbatch` wrapper that adds the per-machine flags and runs sbatch from the setup directory. Submit through this, not bare `sbatch` | `./tools/submit.sh <setup>/scripts/<script> [sbatch flags]` |
 | [`compare_adj_runs.sh`](compare_adj_runs.sh) | Bit-compares two adjoint run directories and writes a verdict report; can wait on a running job first | `tools/compare_adj_runs.sh [opts] <ref> <new>` |
 | [`pre_push_check.sh`](pre_push_check.sh) | Read-only standing check: filters, side effects you did not author, derived output, dead notebook paths | `./tools/pre_push_check.sh` |
 | [`optfile_templates/`](optfile_templates/) | `genmake2` optfiles written here and **not yet validated** on their target machine | see its own [README](optfile_templates/README.md) |
@@ -22,9 +26,11 @@ call, plus the checks that guard the repository around them.
 Shared conventions:
 
 - **Every script locates the repository from its own path** (`dirname
-  "${BASH_SOURCE[0]}"`), so it can be invoked from anywhere. The exception is
-  the *setup* scripts these call, which use relative paths and must be run from
-  the setup directory — which is why `submit.sh` `cd`s there for you.
+  "${BASH_SOURCE[0]}"`), so it can be invoked from anywhere. The setup scripts
+  are definitions that source `lib/`: a build definition `cd`s to its own
+  setup, so it too runs from anywhere; a submit definition is anchored on
+  `SLURM_SUBMIT_DIR`, which must be the setup directory — which is why
+  `submit.sh` `cd`s there (the parent of `scripts/`) for you.
 - **Exit status is meaningful.** `0` = fine, `1` = a real problem, `2` = you
   used it wrong. `pre_push_check.sh` and `compare_adj_runs.sh` are designed to
   be usable in a conditional or a job dependency.
@@ -36,8 +42,8 @@ Shared conventions:
 
 ## `machine_env.sh` — the porting layer
 
-Sourced by every live build and submit script, and by `submit.sh` and
-`pre_push_check.sh`. Porting to a new cluster means adding one `case` block
+Sourced by the two `lib/` bodies — hence by every live build and submit
+script — and by `submit.sh` and `pre_push_check.sh`. Porting to a new cluster means adding one `case` block
 here rather than editing a dozen scripts; [`PORTING.md`](../PORTING.md) is the
 walkthrough.
 
@@ -72,7 +78,7 @@ Most values use `: "${VAR:=default}"`, so **anything already set in your
 environment wins** and a one-off override needs no edit:
 
 ```bash
-SCRATCH_ROOT=/tmp/test ../../../tools/submit.sh submit_tapAdj.sh
+SCRATCH_ROOT=/tmp/test ../../../tools/submit.sh scripts/submit_tapAdj.sh
 IMPACTS_MACHINE=perlmutter source tools/machine_env.sh    # force a profile
 ```
 
@@ -106,17 +112,18 @@ echo "$MACHINE $SCRATCH_ROOT"                  # sverdrup /scratch2/<user>
 ls "$SCRATCH_ROOT/DINO_1deg_outputs/runs/adjoint/"
 ```
 
-`build_tapAdj.sh` sources this file to get `MPI_OPTFILE` for `genmake2 -of`, and
-`submit_tapAdj.sh` sources it to get `SCRATCH_ROOT` for the run directory and
-`MPI_LAUNCHER` for the model invocation. Neither takes an optfile argument —
-that is the point.
+`lib/build_body.sh` (behind `scripts/build_tapAdj.sh`) sources this file to get
+`MPI_OPTFILE` — or `SERIAL_OPTFILE`, for SOMA's adjoint — for `genmake2 -of`,
+and `lib/submit_body.sh` (behind `scripts/submit_tapAdj.sh`) sources it to get
+`SCRATCH_ROOT` for the run directory and `MPI_LAUNCHER` for the model
+invocation. Neither takes an optfile argument — that is the point.
 
 ---
 
 ## `submit.sh` — submit with this, not `sbatch`
 
 ```
-./tools/submit.sh <submit-script> [extra sbatch flags...]
+./tools/submit.sh <setup>/scripts/<submit-script> [extra sbatch flags...]
 ```
 
 The submit scripts carry the `#SBATCH` directives that are the same everywhere
@@ -129,9 +136,13 @@ this is exactly `sbatch --export=ALL <script>`.
 It has **no options of its own** — everything after the script path is handed
 to `sbatch`. What it does: validates the script exists, sources
 `machine_env.sh`, runs `impacts_check_env` (warns, continues), `cd`s to the
-script's directory so the job's `$SLURM_SUBMIT_DIR` resolves `input_tap/`,
-`input_binaries/` and the build directory correctly, prints what it is about to
-run, then `exec`s sbatch.
+*setup* directory — the parent of the script's `scripts/` directory; a script
+sitting directly in a setup directory, the pre-2026-09-05 layout, is submitted
+from there as before — so that the job's `$SLURM_SUBMIT_DIR` resolves
+`input*/`, `input_binaries/`, the build directory and the shared body
+`lib/submit_body.sh` correctly and `#SBATCH -o logs/…` lands in the setup's
+`logs/`, prints what it is about to run, then `exec`s sbatch with the script
+path relative to that directory (`scripts/submit_x.sh`).
 
 Exit status: `2` with usage if given no arguments, `1` if the script does not
 exist, otherwise sbatch's own.
@@ -147,12 +158,13 @@ exist, otherwise sbatch's own.
   so the Intel/MPI stack *and* the `IMPACTS_*` per-run overrides reach the
   compute node only through the inherited environment. A user-supplied
   `--export=` still wins, coming later on the command line.
-- **`--parsable` needs `| tail -1`.** `submit.sh` prints a three-line banner to
+- **`--parsable` needs `| tail -1`.** `submit.sh` prints a four-line banner
+  (machine, extra flags, the directory it submits from, the sbatch line) to
   stdout before `exec`ing sbatch, so a bare `$(... --parsable)` captures the
   banner too:
 
   ```bash
-  jid=$(../../../tools/submit.sh submit_tapAdj.sh --parsable | tail -1)
+  jid=$(../../../tools/submit.sh scripts/submit_tapAdj.sh --parsable | tail -1)
   ```
 
 ### DINO examples
@@ -161,24 +173,24 @@ exist, otherwise sbatch's own.
 cd MITgcm_c69m/mysetups/DINO_1deg
 
 # committed defaults: forward, then adjoint
-../../../tools/submit.sh submit_frd.sh
-../../../tools/submit.sh submit_tapAdj.sh
+../../../tools/submit.sh scripts/submit_frd.sh
+../../../tools/submit.sh scripts/submit_tapAdj.sh
 
 # per-run overrides — these leave the working tree clean
-IMPACTS_DURATION_DAYS=73200 ../../../tools/submit.sh submit_frd.sh          # 200 yr
-IMPACTS_TEST_CASE=kappa_v_ensemble/M3 ../../../tools/submit.sh submit_tapAdj.sh
+IMPACTS_DURATION_DAYS=73200 ../../../tools/submit.sh scripts/submit_frd.sh          # 200 yr
+IMPACTS_TEST_CASE=kappa_v_ensemble/M3 ../../../tools/submit.sh scripts/submit_tapAdj.sh
 IMPACTS_TEST_CASE=grdchk_repair/from180yrPk_visc2x_grdchkON \
-  IMPACTS_DURATION_DAYS=30 ../../../tools/submit.sh submit_tapAdj.sh
+  IMPACTS_DURATION_DAYS=30 ../../../tools/submit.sh scripts/submit_tapAdj.sh
 
 # the adjViscBoost pairing — build and namelist must match
-../../../tools/submit.sh submit_tapAdj_adjViscBoost.sh
+../../../tools/submit.sh scripts/submit_tapAdj_adjViscBoost.sh
 
 # dry-run: extra flags are passed through, and land before the script name
-../../../tools/submit.sh submit_tapAdj.sh --test-only
+../../../tools/submit.sh scripts/submit_tapAdj.sh --test-only
 
 # chain: adjoint waits for a forward leg (the job-chaining recipe in the project notes)
-fwd=$(IMPACTS_TEST_CASE=kappa_v_ensemble/M3 ../../../tools/submit.sh submit_frd.sh --parsable | tail -1)
-adj=$(IMPACTS_TEST_CASE=kappa_v_ensemble/M3 ../../../tools/submit.sh submit_tapAdj.sh \
+fwd=$(IMPACTS_TEST_CASE=kappa_v_ensemble/M3 ../../../tools/submit.sh scripts/submit_frd.sh --parsable | tail -1)
+adj=$(IMPACTS_TEST_CASE=kappa_v_ensemble/M3 ../../../tools/submit.sh scripts/submit_tapAdj.sh \
         --parsable --dependency=afterok:$fwd | tail -1)
 echo "M3: forward $fwd -> adjoint $adj"
 ```
@@ -188,9 +200,9 @@ changing the decomposition means changing both. `IMPACTS_TEST_CASE` uses
 `${VAR-default}`, so an explicit empty value (`IMPACTS_TEST_CASE=`) selects the
 live `input_tap/data` rather than the committed variant.
 
-Output lands in two places: `<job-name>.<job-id>.{out,err}` in the setup
-directory (the `.err` is a full `set -x` trace of staging, which is where
-staging failures appear), and the run itself under
+Output lands in two places: `logs/<job-name>.<job-id>.out` in the setup
+directory (stdout and stderr merged — a full `set -x` trace of staging, which is
+where staging failures appear), and the run itself under
 `$SCRATCH_ROOT/DINO_1deg_outputs/runs/adjoint/DINO_1deg_<run_token>_<duration>[_<tag>]_run<jobid>/`,
 where `run_token` (`tapAdj_<ckp>[_<variant>]`, e.g. `tapAdj_nocheckpoint`,
 `tapAdj_ckpAll`, `tapAdj_ckpAll_adjViscBoost`, `tapAdj_ckpAll_tapProfile`)
@@ -244,10 +256,14 @@ The report is always printed to stdout as well as written.
    Differences are classified, not just listed. `build_info.txt` is excluded
    from the byte comparison and compared **field by field** instead — see
    below.
-5. **Cost function** — the first `global fc` line from `STDOUT.0000` of each.
-   Later `global fc` lines in a `grdchk` run are its perturbed forward
-   integrations; only the first is the reference cost.
-6. **Monitor stream** — every `%MON` line. A `grdchk` run emits extra ones after
+5. **Cost function** — the first `global fc` line from `STDOUT.0000` of each
+   (or from `output_tap_adj.txt` for a serial run such as SOMA's adjoint, which
+   writes no `STDOUT.*`; since 2026-09-05 — before that a serial run always
+   compared as `NOT CLEAN` with an empty `fc`). Later `global fc` lines in a
+   `grdchk` run are its perturbed forward integrations; only the first is the
+   reference cost.
+6. **Monitor stream** — every `%MON` line, from the same file as the cost
+   function. A `grdchk` run emits extra ones after
    the main run, so the new run's lines are matched against the reference's
    **leading block of the same length** rather than compared wholesale.
 7. **Verdict** — `EQUIVALENT` only if there was a `NORMAL END`, zero differing
@@ -261,7 +277,15 @@ verdict: `data.pkg` (the flag), `output_tap_adj.txt` (grdchk's `ph-test` /
 `ph-grd` chatter), and `xx_theta.effective.*` (grdchk leaves its last probe's
 perturbation behind — exactly one element differing by exactly `grdchk_eps`,
 which the script confirms with a small numpy check, skipped gracefully if numpy
-is unavailable). Everything else is tagged `[UNEXPECTED]` and fails the verdict.
+is unavailable). **A fourth is expected between two runs of the profiler
+build**: the per-rank `tapenade_profile.NNNN.txt` tables carry measured CPU
+seconds and are sorted by them, so both the timings and the row order differ
+run to run. They are compared with the times masked and the rows sorted, and
+tagged `[expected: profiler timings]` when the call sites, call counts, peak
+stack and memory gains still match exactly (added 2026-09-05, when the
+profiler build was revalidated after the scripts refactor: run 31104 vs
+31095, 27 tables, every one identical under the mask). Everything else is
+tagged `[UNEXPECTED]` and fails the verdict.
 
 **`build_info.txt` is compared field by field, not byte for byte.** A whole-file
 `cmp` on it is useless: the record holds both *what* was built and *when and from
@@ -323,7 +347,7 @@ tools/compare_adj_runs.sh \
 
 # submit and compare unattended, from the setup directory
 cd MITgcm_c69m/mysetups/DINO_1deg
-jid=$(IMPACTS_DURATION_DAYS=30 ../../../tools/submit.sh submit_tapAdj.sh --parsable | tail -1)
+jid=$(IMPACTS_DURATION_DAYS=30 ../../../tools/submit.sh scripts/submit_tapAdj.sh --parsable | tail -1)
 nohup ../../../tools/compare_adj_runs.sh --wait "$jid" \
   "$R/toolchain_validation/DINO_1deg_tapAdj_ckpAll_30d_from180yrPk_visc2x_run31022" \
   "$R/DINO_1deg_tapAdj_nocheckpoint_30d_from180yrPk_visc2x_run$jid" &
@@ -386,8 +410,8 @@ building any variant the check should report nothing:
 
 ```bash
 cd MITgcm_c69m/mysetups/DINO_1deg
-./build_tapAdj_adjViscBoost.sh
-./build_tapAdj.sh                    # symlink -> _nocheckpoint
+./scripts/build_tapAdj_adjViscBoost.sh
+./scripts/build_tapAdj.sh            # symlink -> _nocheckpoint
 
 cd ../../..
 ./tools/pre_push_check.sh            # a diff here is yours, or a regression
@@ -443,12 +467,12 @@ command line, at submission time.** There is no config file for them. Every
 occurrence in a script is a *read with a default*, never an assignment:
 
 ```bash
-# MITgcm_c69m/mysetups/DINO_1deg/submit_tapAdj.sh -> submit_tapAdj_nocheckpoint.sh
-test_cases="${IMPACTS_TEST_CASE-baseline/from180yrPk_visc2x}"           # :43
-simulation_duration_with_dT1800_days="${IMPACTS_DURATION_DAYS:-1830}"   # :65
-monitorFreq_days="${IMPACTS_MONITOR_FREQ_DAYS:-5}"                      # :66
-adjMonitorFreq_days="${IMPACTS_ADJ_MONITOR_FREQ_DAYS:-5}"               # :67
-adjDumpFreq_days="${IMPACTS_ADJ_DUMP_FREQ_DAYS:-5}"                     # :68
+# MITgcm_c69m/mysetups/DINO_1deg/scripts/submit_tapAdj.sh -> submit_tapAdj_nocheckpoint.sh
+test_cases="${IMPACTS_TEST_CASE-baseline/from180yrPk_visc2x}"
+duration_days="${IMPACTS_DURATION_DAYS:-1830}"
+monitorFreq_days="${IMPACTS_MONITOR_FREQ_DAYS:-5}"
+adjMonitorFreq_days="${IMPACTS_ADJ_MONITOR_FREQ_DAYS:-5}"
+adjDumpFreq_days="${IMPACTS_ADJ_DUMP_FREQ_DAYS:-5}"
 ```
 
 Every `IMPACTS_X=value` you find elsewhere in the repository is a documentation
@@ -474,7 +498,7 @@ namelist key every variable lands on.
 ### How a per-run override actually reaches the model
 
 ```bash
-IMPACTS_DURATION_DAYS=30 ../../../tools/submit.sh submit_tapAdj.sh
+IMPACTS_DURATION_DAYS=30 ../../../tools/submit.sh scripts/submit_tapAdj.sh
 └────────── 1 ─────────┘
 ```
 
@@ -500,7 +524,7 @@ is already sbatch's default — these overrides depend on it.
   in your shell silently applies to *every* later submission from that shell,
   and `--export=ALL` faithfully forwards it. The prefix form scopes it to one
   command. This is also why the submit scripts list the parameters to patch in
-  an explicit `time_params` array: the old `compgen -v | grep '_days$'`
+  an explicit `TIME_PARAMS` array: the old `compgen -v | grep '_days$'`
   auto-detection also enumerated exported environment variables, so any
   `*_days` variable in the submitting shell became a namelist key.
 - **`-` versus `:-` is deliberate.** `IMPACTS_TEST_CASE` uses `${VAR-default}`,
@@ -520,8 +544,58 @@ intended use.
 
 `nIter0` is in neither family. The start iteration is baked into whichever
 `data_<tag>` the test case selects, and the matching pickup is a hardcoded
-`ln -s` further down the same submit script. Changing the duration is safe;
-changing the starting point means editing both by hand.
+`ln -s` in the same submit script's `stage_pickups`. Changing the duration is
+safe; changing the starting point means editing both by hand.
+
+---
+
+## `lib/` — the shared build and submit bodies
+
+Since 2026-09-05 no build or submit script in a setup carries its own
+machinery. Each `scripts/build_*.sh` and `scripts/submit_*.sh` is a short
+*definition* — what to build or run — that ends by sourcing one of these two
+files, which do the work identically for every variant of every setup:
+
+| | Sourced by | Does |
+| --- | --- | --- |
+| [`lib/build_body.sh`](lib/build_body.sh) | every `scripts/build_*.sh` | machine profile and optfile check, `make CLEAN`, stock `genmake2` from the definition's `-mods` / `-adof` / `-tap_extra`, `make depend`, `make -j 8`, the generated-hook and dump-call assertions (adjoint), the definition's own checks, `build_info.txt` |
+| [`lib/submit_body.sh`](lib/submit_body.sh) | every `scripts/submit_*.sh` | namelist variant resolution, the `build_info.txt` checksum and run-token guard, run-directory naming, staging, sibling overrides, the definition's extra staging, the time-stepping patch of the staged copy, executable and record copy, pickups, the run, `run_timing.txt`, the definition's epilogue |
+
+What a definition supplies is documented in each body's header. The short
+version: a build definition sets `SETUP_DIR`, `BUILD_DIR`, `BUILD_MODE`
+(`frd`/`tapAdj`), `PARALLEL` (`mpi`/`serial`), `MODS` (relative to the build
+directory, first wins), `TAP_EXTRA`, `RUN_TOKEN` and the `build_info.txt`
+notes, and may define `pre_configure`, `post_build_checks` and
+`build_info_extra`; a submit definition carries the `#SBATCH` header
+(directives cannot be sourced, which is why there is one file per variant),
+sets `BUILD_DIR`, `RUN_MODE`, `PARALLEL`, `EXPECT_RUN_TOKEN`, `test_cases`,
+`duration_days`, the `*Freq_days` and the explicit `TIME_PARAMS` list, and may
+define `stage_extra`, `stage_pickups` and `post_run`. The per-setup constants
+both bodies read — `DELTA_T`, `DURATION_KEY` (`nTimeSteps` or `endTime`),
+`DAYS_PER_YEAR`, `HOOK_CHECKS`, `DUMP_CALLS`, and an optional
+`run_suffix_from_namelist` — live in the setup's `scripts/setup_params.sh`.
+
+Both files are libraries: no execute bit, and each refuses to run unless
+sourced. Three things follow from the split:
+
+- **A fix to the mechanics is made once.** Before this the eight DINO adjoint
+  scripts shared 270 of ~282 submit lines and 101 of ~150 build lines with
+  their `ckpAll` copies, and the 2026-09-03 checksum-guard fix touched all
+  eight.
+- **The pairing is enforced.** A submit definition names the `run_token` it
+  expects; the body refuses a build directory holding any other variant,
+  where before a mismatched pair ran silently.
+- **The submit body is read at job start, not at submission.** sbatch spools
+  only the definition; the body — like `machine_env.sh`, the namelists and
+  the build directory — is read from the repository when the job starts, so
+  an edit to it reaches every queued job. Cancel and resubmit rather than
+  assuming a queued job is frozen; the `set -x` log under `logs/` records what
+  actually ran.
+
+Adding a variant is one new definition file per side (build and submit) in
+the setup's `scripts/`. Adding a setup is a `scripts/setup_params.sh` plus its
+definitions; SOMA is the second consumer, with `DURATION_KEY=endTime`, a
+360-day year, a serial adjoint and two hook checks against DINO's four.
 
 ---
 
@@ -537,10 +611,10 @@ source tools/machine_env.sh && impacts_check_env
 
 # 1. build the adjoint (the build script sources machine_env.sh itself)
 cd MITgcm_c69m/mysetups/DINO_1deg
-./build_tapAdj.sh                       # -> build_tapAdj_nocheckpoint/mitgcmuv_tap_adj (symlink to the default variant)
+./scripts/build_tapAdj.sh               # -> build_tapAdj_nocheckpoint/mitgcmuv_tap_adj (symlink to the default variant)
 
 # 2. submit a cheap 30-day regression adjoint from the 180-yr pickup
-jid=$(IMPACTS_DURATION_DAYS=30 ../../../tools/submit.sh submit_tapAdj.sh --parsable | tail -1)
+jid=$(IMPACTS_DURATION_DAYS=30 ../../../tools/submit.sh scripts/submit_tapAdj.sh --parsable | tail -1)
 echo "submitted $jid"
 
 # 3. when it lands, bit-compare it against a run you trust
