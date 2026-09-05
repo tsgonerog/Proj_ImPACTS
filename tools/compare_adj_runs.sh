@@ -143,9 +143,10 @@ echo
 # ---------- 4. everything else ----------
 echo "---------- 4. all other common files ----------"
 echo "(excluding STDOUT.*/STDERR.* (build date, node, grdchk section, timers),"
-echo " the executable and run_timing.txt (wall clock))"
+echo " the executable and run_timing.txt (wall clock); build_info.txt is compared"
+echo " field by field just below, because parts of it must differ)"
 grep -vE '^(ADJ|adxx)' "$WORK/common.txt" \
-  | grep -vE '^(STDOUT\.|STDERR\.|mitgcmuv|run_timing\.txt$)' > "$WORK/other.txt"
+  | grep -vE '^(STDOUT\.|STDERR\.|mitgcmuv|run_timing\.txt$|build_info\.txt$)' > "$WORK/other.txt"
 : > "$WORK/other_diff.txt"
 osame=0; odiff=0
 while IFS= read -r f; do
@@ -178,6 +179,61 @@ if nz.size: print(f'      magnitudes: {sorted(set(np.round(a[nz]-b[nz],12)))[:5]
         esac
     done < "$WORK/other_diff.txt"
     echo "unexpected differences among them: $unexpected"
+fi
+echo
+
+# ---- build_info.txt, field by field ---------------------------------------
+# A whole-file cmp is useless here: build_info.txt records both WHAT was built
+# and WHEN/FROM WHAT it was built, and the second group cannot match across two
+# builds -- the build date is baked in, so no two builds are ever byte-identical.
+# Blanket-ignoring the file would throw away the first group, which is exactly
+# what tells you whether the two runs are the same configuration at all. So the
+# keys are split:
+#
+#   provenance    expected to differ; says nothing about the configuration
+#   configuration defines what was built; a difference is reported loudly but
+#                 does NOT fail the verdict, because "different build, identical
+#                 output" is a real and wanted result -- it is what the
+#                 checkpointing study (ckpAll vs nocheckpoint) sets out to show.
+#
+# Keys absent on one side are reported as such rather than skipped: exe_md5 was
+# only added on 2026-09-03, so any comparison against an older run hits this.
+BI_PROVENANCE=" built exe_md5 git_commit git_modified_tracked_files invoked_as "
+
+bi_keys() { sed -n 's/^\([A-Za-z_][A-Za-z0-9_]*\)=.*/\1/p' "$1" 2>/dev/null | sort -u; }
+# trailing "# ..." comments are stripped: a reworded comment is not a config change
+bi_val()  { sed -n "s/^$2=//p" "$1" 2>/dev/null | head -1             | sed -e 's/[[:space:]]*#.*$//' -e 's/[[:space:]]*$//'; }
+
+echo "build_info.txt (field by field):"
+if [ ! -f "$OLD/build_info.txt" ] || [ ! -f "$NEW/build_info.txt" ]; then
+    bi_config_diff=-1
+    echo "  not present in both runs — no build record to compare"
+    [ -f "$OLD/build_info.txt" ] || echo "    reference has none (builds before 2026-09-02 wrote no record)"
+    [ -f "$NEW/build_info.txt" ] || echo "    new run has none"
+elif cmp -s "$OLD/build_info.txt" "$NEW/build_info.txt"; then
+    bi_config_diff=0
+    echo "  byte-identical — same build, same executable"
+else
+    bi_config_diff=0; bi_prov_diff=0
+    for k in $( { bi_keys "$OLD/build_info.txt"; bi_keys "$NEW/build_info.txt"; } | sort -u ); do
+        vo=$(bi_val "$OLD/build_info.txt" "$k"); vn=$(bi_val "$NEW/build_info.txt" "$k")
+        [ "$vo" = "$vn" ] && continue
+        case "$BI_PROVENANCE" in
+            *" $k "*) bi_prov_diff=$((bi_prov_diff+1)); continue ;;
+        esac
+        bi_config_diff=$((bi_config_diff+1))
+        printf '  CONFIG  %-24s ref: %s\n' "$k" "${vo:-(absent)}"
+        printf '          %-24s new: %s\n' "" "${vn:-(absent)}"
+    done
+    if [ "$bi_config_diff" -eq 0 ]; then
+        echo "  $bi_prov_diff provenance field(s) differ (build date, commit, exe_md5) — expected;"
+        echo "  every configuration field matches, so this is the same build configuration"
+    else
+        echo "  -> the two runs came from DIFFERENT build configurations (above)."
+        echo "     Not a fault by itself: identical output across configurations is the"
+        echo "     point of a checkpointing or toolchain comparison. But read the"
+        echo "     sensitivity verdict knowing that is what was compared."
+    fi
 fi
 echo
 
@@ -229,6 +285,16 @@ if [ "$n_end" -gt 0 ] && [ "$diffc" -eq 0 ] && [ "$unexpected" -eq 0 ] \
     echo "the cost function matches to every printed digit, and the monitor stream"
     echo "matches byte for byte. Any remaining differences are the known"
     echo "consequences of running without grdchk."
+    if [ "${bi_config_diff:-0}" -gt 0 ]; then
+        echo
+        echo "Note: the two runs came from DIFFERENT build configurations"
+        echo "($bi_config_diff field(s) in build_info.txt; see section 4). Identical"
+        echo "output across them is the result, not an oversight."
+    elif [ "${bi_config_diff:-0}" -lt 0 ]; then
+        echo
+        echo "Note: no build record in one or both runs, so the build configurations"
+        echo "could not be confirmed to match (see section 4)."
+    fi
     return 0
 else
     echo "NOT CLEAN - review the sections above:"
@@ -237,6 +303,13 @@ else
     echo "  unexpected other diffs   : $unexpected (expect 0)"
     echo "  cost function            : reference=$fc_old new=$fc_new"
     echo "  monitor stream           : $mon_verdict (expect identical)"
+    if [ "${bi_config_diff:-0}" -gt 0 ]; then
+        echo "  build configuration      : DIFFERS in $bi_config_diff field(s) (see section 4)"
+    elif [ "${bi_config_diff:-0}" -lt 0 ]; then
+        echo "  build configuration      : unconfirmed (no build record in one or both)"
+    else
+        echo "  build configuration      : same (provenance fields aside)"
+    fi
     return 1
 fi
 }

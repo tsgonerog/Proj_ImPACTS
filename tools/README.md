@@ -241,7 +241,9 @@ The report is always printed to stdout as well as written.
    for byte. This is the section that matters.
 4. **All other common files** — excluding `STDOUT.*`/`STDERR.*` (build date,
    node, timers), the executable, and `run_timing.txt` (wall clock).
-   Differences are classified, not just listed.
+   Differences are classified, not just listed. `build_info.txt` is excluded
+   from the byte comparison and compared **field by field** instead — see
+   below.
 5. **Cost function** — the first `global fc` line from `STDOUT.0000` of each.
    Later `global fc` lines in a `grdchk` run are its perturbed forward
    integrations; only the first is the reference cost.
@@ -250,7 +252,8 @@ The report is always printed to stdout as well as written.
    **leading block of the same length** rather than compared wholesale.
 7. **Verdict** — `EQUIVALENT` only if there was a `NORMAL END`, zero differing
    sensitivities, zero unexpected other differences, an identical `fc` and an
-   identical monitor stream.
+   identical monitor stream. It also states the build relationship: same
+   configuration, different configuration, or unconfirmed.
 
 **Three differences are expected** between a run with `useGrdchk=.TRUE.` and one
 with it `.FALSE.`, and are tagged `[expected: grdchk]` rather than failing the
@@ -259,6 +262,35 @@ verdict: `data.pkg` (the flag), `output_tap_adj.txt` (grdchk's `ph-test` /
 perturbation behind — exactly one element differing by exactly `grdchk_eps`,
 which the script confirms with a small numpy check, skipped gracefully if numpy
 is unavailable). Everything else is tagged `[UNEXPECTED]` and fails the verdict.
+
+**`build_info.txt` is compared field by field, not byte for byte.** A whole-file
+`cmp` on it is useless: the record holds both *what* was built and *when and from
+what* it was built, and the second group cannot match across two builds, because
+the build date is baked into the executable so no two builds are ever
+byte-identical. Blanket-ignoring the file would be worse — it is the only thing
+that says whether two runs are even the same configuration. So the keys are split
+in two:
+
+| Group | Keys | Treatment |
+| --- | --- | --- |
+| provenance | `built`, `exe_md5`, `git_commit`, `git_modified_tracked_files`, `invoked_as` | expected to differ; reported as a count, never fails the verdict |
+| configuration | everything else — `run_token`, `tapenade_checkpointing`, `variant`, `tap_extra`, `nocheckpoint_list`, `build_script`, `build_dir` | each difference printed as `CONFIG <key>` with both values |
+
+A configuration difference is reported loudly but **does not fail the verdict**,
+because "different build, identical output" is a real and wanted result — it is
+exactly what the checkpointing study (`ckpAll` vs `nocheckpoint`) sets out to
+show. What it does is make sure you cannot read such a comparison without
+noticing what was actually compared.
+
+Keys present on only one side print as `(absent)` rather than being skipped:
+`exe_md5` was added on 2026-09-03, and builds before 2026-09-02 wrote no record
+at all, so a comparison against an older run reports the configuration as
+*unconfirmed* rather than matching. Trailing `# ...` comments are stripped before
+comparing, so rewording a comment is not a configuration change.
+
+Until 2026-09-04 `build_info.txt` was compared byte for byte, which meant every
+comparison of a rebuilt executable against a kept reference returned `NOT CLEAN`
+on that file alone.
 
 Deliberately no `set -e`: every check must run and the report must be written
 even when an earlier one fails.
