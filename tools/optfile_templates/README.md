@@ -4,7 +4,7 @@
 MITgcm tree** and have **not been validated on the machine they target**.
 
 They live here rather than in `MITgcm_c69m/MITgcm/tools/build_options/` on
-purpose. That directory holds 95 upstream optfiles that are known to work; an
+purpose. That directory holds 93 upstream optfiles that are known to work; an
 untested one sitting among them reads as a peer of theirs and invites being
 trusted. Keeping them separate also means the vendored tree deviates from stock
 MITgcm by as little as possible — see "How the vendored tree deviates" in

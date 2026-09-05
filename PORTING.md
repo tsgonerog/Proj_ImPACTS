@@ -96,7 +96,7 @@ No `export MPI_OPTFILE` needed — the profile supplies it. The build scripts ca
 `linux_amd64_gnu+mpi_perlmutter` was written from the MITgcm gfortran and Cray
 templates plus NERSC's documented wrappers. **It has not been compile-tested on
 Perlmutter**, which is why it sits in `tools/optfile_templates/` rather than in
-`MITgcm/tools/build_options/` alongside the 95 upstream optfiles that do work.
+`MITgcm/tools/build_options/` alongside the 93 upstream optfiles that do work.
 `machine_env.sh` still points at it, so the build runs and gives you real
 compiler errors to work from; `impacts_check_env` warns for as long as the
 template is what is in use.
@@ -159,7 +159,7 @@ with the existing campaigns, or fix the per-tile normalisation first.
 Known and deliberate, listed so they are not a surprise:
 
 - **Notebook scratch paths** are absolute
-  `/scratch2/tshahriar/<setup>_1deg_outputs/{frd,tapAdj}/...`. The analysis
+  `/scratch2/tshahriar/<setup>_outputs/runs/{forward,adjoint}/<campaign>/...`. The analysis
   notebooks are not part of the run path, so they were left pointing at sverdrup.
   Repoint them if you move the analysis too — `./tools/pre_push_check.sh` reports
   every path that no longer resolves. Expect it to report the SOMA notebook: it
@@ -178,7 +178,11 @@ Known and deliberate, listed so they are not a surprise:
 1. Add a case block to `tools/machine_env.sh` setting `SCRATCH_ROOT`,
    `MPI_LAUNCHER`, `MPI_OPTFILE`, `SERIAL_OPTFILE`, `SBATCH_EXTRA` and an
    `impacts_load_modules` function.
-2. Add an optfile under `MITgcm_c69m/MITgcm/tools/build_options/`.
+2. Add an optfile under `tools/optfile_templates/` and point the case block at
+   it — not inside the vendored `MITgcm/`, which is kept byte-for-byte upstream
+   (`CLAUDE.md`, "How the vendored tree deviates"). Once it has built on the
+   machine, copy it somewhere of your own and `export IMPACTS_MPI_OPTFILE` at
+   it, which silences the template warning.
 3. Make sure the machine is detected, or set `IMPACTS_MACHINE`.
 
 Nothing else should need touching. An unknown machine is refused with a clear

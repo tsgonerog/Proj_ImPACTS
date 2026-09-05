@@ -69,7 +69,7 @@ perlmutter)
     # NERSC wants srun; mpirun is not supported on Perlmutter.
     : "${MPI_LAUNCHER:=srun -n}"
     # UNTESTED template, deliberately kept out of MITgcm/tools/build_options/ so
-    # it is not mistaken for one of the 95 working upstream optfiles. It is used
+    # it is not mistaken for one of the 93 working upstream optfiles. It is used
     # as-is so a first build produces real errors to fix; impacts_check_env warns
     # while it is still the template. Once adapted, point IMPACTS_MPI_OPTFILE at
     # your copy. See tools/optfile_templates/README.md and PORTING.md.

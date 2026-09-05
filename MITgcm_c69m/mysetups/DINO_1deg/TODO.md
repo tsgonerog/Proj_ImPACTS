@@ -191,4 +191,28 @@
   files bitwise identical, `fc` = 3.99075406661494E-01 to every printed digit,
   all 441 `%MON` lines byte-identical, 27 `NORMAL END`, 13:50 against 14:14.
   The only file that differs is `build_info.txt`, which records the new
-  `exe_md5`, commit and build time and is supposed to.
+  `exe_md5`, commit and build time and is supposed to. Since 2026-09-04
+  `tools/compare_adj_runs.sh` compares that file field by field (next entry),
+  and the regenerated report for 31090 reads `EQUIVALENT`.
+
+- [x] ~~**Split the notes out, rebuild every build directory from the new path,
+  and stop the comparison tool failing on `build_info.txt`**~~ (added and
+  **done 2026-09-04**). `notes/` became the private `impacts-notes` repository
+  and this one `impacts-mitgcm`, checked out side by side under
+  `Proj_ImPACTS/`; nothing reads across, and the Overleaf sync tool went with
+  the notes. `genmake2` bakes the setup's absolute path into every generated
+  `Makefile`, so the move invalidated all seven build directories; they were
+  rebuilt from the new path and the rebuild validated by run 31091 (default
+  build, 30 d from the 180-yr pickup), bitwise identical to 31074 — `fc`, 210
+  `ADJ*`/`adxx_*` files, 441 `%MON` lines, 27 `NORMAL END`, 8:59 against 8:45
+  — filed under `runs/adjoint/toolchain_validation/` beside it. That
+  comparison, like 31090's, first returned `NOT CLEAN` on `build_info.txt`
+  alone, because the tool `cmp`'d the record whole and no two builds share a
+  build date or `exe_md5`; `tools/compare_adj_runs.sh` now splits the keys —
+  provenance (`built`, `exe_md5`, `git_commit`, `git_modified_tracked_files`,
+  `invoked_as`) is counted, configuration is checked and any difference
+  printed as `CONFIG <key>` — and neither fails the verdict, so both pairs
+  read `EQUIVALENT`. Checked on three pairs: 31074/31091 (same configuration),
+  31052/31054 (no record on either side, reported as unconfirmed) and
+  31075/31056 (four differing `CONFIG` fields, still `NOT CLEAN` on its 80
+  differing sensitivities).

@@ -246,9 +246,11 @@ Commands are in **Quick start** above; this section covers what the scripts do.
 **The run directory is named from the build, not from the submit script.**
 Every adjoint submit script reads `run_token` from the build directory's
 `build_info.txt` (written by the build script as its last step, after every
-check passed), refuses an executable that has no record or is newer than it
-(a by-hand `make`), copies the record into the run directory, and names the
-run
+check passed), refuses an executable that has no record or whose checksum does
+not match the record's `exe_md5` (a by-hand `make`; since 2026-09-03 — the
+earlier mtime test misfired on the NFS home and remains only as the fallback for
+records without that line), copies the record into the run directory, and names
+the run
 
 ```
 $SCRATCH_ROOT/DINO_1deg_outputs/runs/adjoint/

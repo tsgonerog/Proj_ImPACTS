@@ -399,7 +399,7 @@ A submit script:
    `adjMonitorFreq_days`, `adjDumpFreq_days` and the script converts to
    seconds/timesteps itself;
 3. stages a job-ID-stamped run directory under
-   `$SCRATCH_ROOT/<setup>_outputs/{frd,tapAdj}/`, copying `input_tap/` and
+   `$SCRATCH_ROOT/<setup>_outputs/runs/{forward,adjoint}/`, copying `input_tap/` and
    symlinking the untracked input binaries;
 4. symlinks any pickup needed to restart from a spun-up state;
 5. runs the executable and writes `run_timing.txt`.
@@ -591,12 +591,12 @@ Python dependencies (no environment file is checked in): `numpy`, `xarray`,
 
 ## Verification status
 
-There are no unit tests. What has and has not been checked, as of 2026-09-02:
+There are no unit tests. What has and has not been checked, as of 2026-09-04:
 
 | Check | Status | What it showed |
 | --- | --- | --- |
 | Forward reproducibility | **verified** | A 10-year `from_rest_visc2x` run reproduced the first 10 years of the 200-year spin-up **bit-identically** — 161 field comparisons, four diagnostic streams, 1334 monitor values, AMOC series, all exactly zero. The spin-up ran twice, as 28463 and 30983, byte-identical to each other; only 30983 survives the 2026-09-03 scratch consolidation, and the 10-year run (30945) was deleted with it. Repeating the check means re-running 10 years from rest and diffing against 30983 |
-| Builds | **verified** | All build directories compile clean. Both setups' adjoint builds generate their hook `_B` calls natively from stock `genmake2` (argument counts asserted by every build script); no generated file is post-edited anywhere |
+| Builds | **verified, last on 2026-09-04** | All build directories compile clean. Both setups' adjoint builds generate their hook `_B` calls natively from stock `genmake2` (argument counts asserted by every build script); no generated file is post-edited anywhere. All seven were rebuilt on 2026-09-04 — the variant rename left the boost build's `-mods` links dangling, and the move to `Proj_ImPACTS/impacts-mitgcm/` invalidated every generated `Makefile` — and the rebuilds reproduce their references bitwise: run 31090 vs 31075 (boost, 30 d from rest) and 31091 vs 31074 (default, 30 d from the 180-yr pickup), each 210 of 210 sensitivity files, `fc` and 441 `%MON` lines identical (`tools/compare_adj_runs.sh`, which since the same day compares `build_info.txt` field by field instead of failing on its build stamp) |
 | Adjoint runs end to end | **verified** | 30-day adjoint from the 180-year pickup writes `ADJ*` and `adxx*`, peak sensitivity on the cost section at `i=2, j=127, k=26`. The 5-yr reference chain 28486 ≡ 30995 ≡ 31039 reproduces `fc` and every `adxx_*` bit-identically (the 2026-09-01 rerun's `ADJ*` dumps are seam-corrected and add `ADJetan`) |
 | `-nocheckpoint` tuned adjoint (DINO) | **verified 2026-09-02** | `build_tapAdj_nocheckpoint.sh` — the 33 routines Tapenade's own profiler ranked highest, differentiated in split mode instead of checkpointed — reproduces the plain build **bitwise** (fc, all `adxx_*`, all `ADJ*`) at 30 days (run 31054 vs 31052, 8:47 vs 13:13) and at 5 years (31055 vs 31039, 9:35:58 vs 14:05:45, **1.47×**). Method, numbers and the 45 % ceiling in `tools/tapenade_profiling/README.md`. **Made the DINO default on 2026-09-02** (`build_tapAdj.sh` → symlink to it; the plain build lives on as `build_tapAdj_ckpAll.sh`)). **Re-verified 2026-09-03 on the whole κ_v ensemble**: all eight 5-yr adjoints (31060–31067 vs 31039–31046) bitwise identical, the four blow-ups included, at 1.45–1.65× per run — 37.8 h saved of 114.6 h |
 | `-nocheckpoint` under `adjViscBoost` | **tested 2026-09-02, not equivalent — rejected** | Run 31056 (boost + list) vs 31025 (boost, every call checkpointed): `fc` and `%MON` byte-identical, every `ADJ*` and `adxx_*` field different at order one. Joint-mode recomputation happens after the mode-switch hook has boosted the viscosities; split-mode tapes were taken before it. The boosted adjoint therefore stays a `ckpAll` build; report in `analyses/DINO_1deg/adjoint/tapenade_profiling/` |
