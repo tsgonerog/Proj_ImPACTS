@@ -70,7 +70,7 @@ submission.
 # from sverdrup
 rsync -av MITgcm_c69m/mysetups/DINO_1deg/input_binaries/ \
           MITgcm_c69m/mysetups/DINO_1deg/input_adj_binaries/ \
-          perlmutter.nersc.gov:~/Proj_ImPACTS/MITgcm_c69m/mysetups/DINO_1deg/
+          perlmutter.nersc.gov:~/Proj_ImPACTS/impacts-mitgcm/MITgcm_c69m/mysetups/DINO_1deg/
 ```
 
 Both directories are gitignored, so a fresh clone has neither. There is no

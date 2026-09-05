@@ -1,4 +1,4 @@
-# Proj_ImPACTS
+# impacts-mitgcm
 
 Adjoint sensitivity experiments with the [MITgcm](https://mitgcm.readthedocs.io),
 built with the **Tapenade** automatic-differentiation toolchain (`pkg/tapenade`)
@@ -32,8 +32,7 @@ tracked.
 | understand what git keeps | [What git does and does not keep](#what-git-does-and-does-not-keep) |
 | push my work | [Workflow: before you push](#workflow-before-you-push) |
 | move to another cluster | `PORTING.md` |
-| see where the project is heading — work underway, and work proposed but not yet built | `notes/directions/` |
-| look up how a past workflow actually ran | `notes/references/` |
+| see where the project is heading — work underway, and work proposed but not yet built | the project notes, kept separately (see [Companion repository](#companion-repository)) |
 
 ### Where output lives
 
@@ -67,8 +66,7 @@ already define, so nothing has to be kept in sync by hand.
 | --- | --- |
 | `MITgcm_c69m/` | MITgcm **checkpoint69m** (2026-03-30) source tree plus the experiments built against it |
 | `analyses/` | Jupyter notebooks that read run output from scratch and produce diagnostics/figures |
-| `tools/` | Repository-level tooling — see [`tools/README.md`](tools/README.md) for what each one does, its options and worked DINO examples. `machine_env.sh` (per-machine settings), `submit.sh`, `pre_push_check.sh`, `compare_adj_runs.sh` (bit-compare two adjoint run directories, optionally waiting on a job), `overleaf_sync.sh` + `overleaf_sync_selftest.sh` (two-way sync between `notes/directions/<direction>/` and its Overleaf project; `push --wip` sends the working tree, for drafting without a commit per round trip), `optfile_templates/` (project optfiles not yet validated on their target machine), `tapenade_profiling/` (profiling and `-nocheckpoint` tuning; its `mods_profile/` is the first `-mods` directory of `build_tapAdj_tapProfile.sh`) |
-| `notes/` | **The project's direction record** — where the work this project is pursuing now, and the work it intends to pursue next, is written down. For that planned and in-progress work this is the only place it exists: none of it is derivable from the code, the run output or the git history. `directions/` (a question the project is working towards or might take on, one subdirectory each, with its planning documents and status) and `references/` (practical how-tos from workflows that have already run). Nothing here is read by a build or submit script, though the LaTeX documents compile to PDFs |
+| `tools/` | Repository-level tooling — see [`tools/README.md`](tools/README.md) for what each one does, its options and worked DINO examples. `machine_env.sh` (per-machine settings), `submit.sh`, `pre_push_check.sh`, `compare_adj_runs.sh` (bit-compare two adjoint run directories, optionally waiting on a job), `optfile_templates/` (project optfiles not yet validated on their target machine), `tapenade_profiling/` (profiling and `-nocheckpoint` tuning; its `mods_profile/` is the first `-mods` directory of `build_tapAdj_tapProfile.sh`) |
 
 Each document has a different job:
 
@@ -78,16 +76,31 @@ Each document has a different job:
 | `PORTING.md` | How to move it to another cluster |
 | `analyses/README.md` | What each notebook does and which run it reads |
 | `MITgcm_c69m/mysetups/<setup>/README.md` | That setup's grid, build/submit pairings and quirks |
-| `notes/README.md` | Which directions and practical references exist, how a new one is added, the LaTeX/Overleaf conventions the directions share, and how to sync a direction with Overleaf in both directions |
-| `notes/references/slurm_job_chaining/README.md` | Chaining jobs with `--dependency`, and running a follow-on step when a job finishes |
-| `notes/directions/nn_surrogate/README.md` | What the surrogate proposal is, how its two documents relate, and where their numbers came from |
-| `notes/references/tapenade_hooks/README.md` | How the `ADJ*`/`ADJetan` dump hooks and the adjViscBoost mode switches were rebuilt Tapenade-native, and what an upstream version would look like |
-| `notes/references/adxx_vs_adj/README.md` | What the `adxx_*` control gradients and `ADJ*` adjoint-state dumps each mean, and which to use for what |
 | `CLAUDE.md` | Non-obvious mechanics and traps, written for an AI assistant but useful to anyone |
 
 The MITgcm tree is vendored in full (~6,600 tracked files), not a submodule,
 because it carries **locally patched build tooling** — see
 [The Tapenade adjoint toolchain](#the-tapenade-adjoint-toolchain).
+
+### Companion repository
+
+The project's **direction record** — the planning documents for work underway
+and work proposed but not yet built, and the practical write-ups of workflows
+that have already run — is maintained separately, as `impacts-notes`. It was
+split out of this repository on 2026-09-04 so that this one stands on its own
+as the shared record of the model configuration, the runs and the analysis.
+
+Nothing here reads from it: no build script, no submit script and no notebook.
+Where a document below refers to "the project notes", that is what it means,
+and the substance a reader needs is stated here rather than only there. The two
+are checked out side by side:
+
+    Proj_ImPACTS/
+    ├── impacts-mitgcm/     this repository
+    └── impacts-notes/      the direction record
+
+The Overleaf sync tooling (`overleaf_sync.sh` and its self-test) moved with the
+notes, since it only ever operated on them.
 
 ### Experiment setups
 

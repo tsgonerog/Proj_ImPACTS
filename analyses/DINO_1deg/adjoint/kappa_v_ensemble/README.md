@@ -1,7 +1,7 @@
 # kappa_v ensemble — adjoint-sensitivity analysis
 
-Analysis of the vertical-diffusivity perturbation ensemble (notes/directions/nn_surrogate
-master plan, Part I): seven members perturbing the uniform background
+Analysis of the vertical-diffusivity perturbation ensemble (Part I of the
+neural-network surrogate proposal): seven members perturbing the uniform background
 `kappa_v = 1.2e-5 m²/s` by 0.25×–32×, each with a 10-yr forward leg (years
 2170–2180) and a 5-yr adjoint (2180–2185), against the reference adjoint run
 31039. The forward legs and original adjoints ran 2026-08-28 and the analysis

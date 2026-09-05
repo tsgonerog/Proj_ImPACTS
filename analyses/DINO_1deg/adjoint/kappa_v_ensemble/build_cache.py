@@ -48,7 +48,7 @@ import time
 import numpy as np
 import multiprocessing as mp
 
-sys.path.insert(0, "/home/tshahriar/Proj_ImPACTS/analyses/DINO_1deg/adjoint/kappa_v_ensemble")
+sys.path.insert(0, "/home/tshahriar/Proj_ImPACTS/impacts-mitgcm/analyses/DINO_1deg/adjoint/kappa_v_ensemble")
 import ensemble_common as ec
 
 sys.path.insert(0, ec.MITGCMUTILS_PATH)

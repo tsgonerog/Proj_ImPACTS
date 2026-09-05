@@ -44,24 +44,3 @@ analyses/**/*-checkpoint.ipynb
 
 # Python bytecode (analyses/.../ensemble_common.py is imported by notebooks)
 **/__pycache__/
-
-# ----------------------------------------------------------------------------
-# notes/ LaTeX build artefacts
-#
-# The .tex sources are the deliverable: each is self-contained and is shared by
-# handing over the source, not a PDF. Compiling one locally (TinyTeX, latexmk,
-# Overleaf sync) drops its intermediates beside it; none of them belong in git.
-# If a rendered PDF ever does need sharing from here, `git add -f` it
-# deliberately rather than loosening this rule.
-# ----------------------------------------------------------------------------
-
-notes/**/*.aux
-notes/**/*.bbl
-notes/**/*.blg
-notes/**/*.fdb_latexmk
-notes/**/*.fls
-notes/**/*.log
-notes/**/*.out
-notes/**/*.pdf
-notes/**/*.synctex.gz
-notes/**/*.toc

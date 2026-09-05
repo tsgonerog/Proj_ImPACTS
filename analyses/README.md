@@ -168,7 +168,7 @@ namelist, not from the run-directory tag.
 
 `kappa_v_ensemble/` is a seven-notebook suite (2026-08-30; re-executed
 2026-09-01 on the hook-build adjoint rerun) analysing the vertical-diffusivity
-perturbation ensemble of the `notes/directions/nn_surrogate` master plan,
+perturbation ensemble of the neural-network surrogate proposal,
 Part I: the reference adjoint 31039 (fc/adxx bit-identical to 30995 and 28486;
 seam-clean `ADJ*` + new `ADJetan`) against members M1–M7 (runs 31040–31046,
 reruns of 31003–31009, κ_v scaled 0.25×–32×), plus the internal-variability
@@ -241,10 +241,11 @@ The one deliberate exception is `kappa_v_ensemble/`, which reads nine runs and
 therefore writes everything to the sibling directory
 `/scratch2/<user>/DINO_1deg_outputs/runs/adjoint/analysis/kappa_v_ensemble/` instead
 of into any one run (details in that suite's own `README.md`). Its two
-publication figures are additionally committed under
-`notes/directions/nn_surrogate/briefs/kappa_ensemble_results/figures/` — they
-are LaTeX sources for that brief, and the only images tracked in this
-repository.
+publication figures are additionally kept with the project notes, as LaTeX
+sources for the `kappa_ensemble_results` brief. Since the 2026-09-04 split
+those live in a separate repository, so **no project-authored image is tracked
+here** — the only images in this repository are the vendored MITgcm
+documentation figures under `MITgcm_c69m/MITgcm/doc/`.
 
 Current locations:
 

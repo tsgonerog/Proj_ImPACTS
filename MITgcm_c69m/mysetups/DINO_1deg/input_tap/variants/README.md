@@ -37,7 +37,7 @@ without KPP.
 | [`baseline/`](baseline/) | The reference adjoint configuration the committed default points at (`from180yrPk_visc2x`) |
 | [`viscosity_study/`](viscosity_study/) | Adjoint runs at the `viscAhGrid` settings of the forward-side study of the same name |
 | [`adjointViscosity/`](adjointViscosity/) | `data.autodiff` with adjoint-mode viscosity inflation (`viscFacInAd = 10.`). **Needs the matching build and submit script** — `build_tapAdj_adjViscBoost.sh` + `submit_tapAdj_adjViscBoost.sh` |
-| [`kappa_v_ensemble/`](kappa_v_ensemble/) | The vertical-mixing perturbation ensemble of `notes/directions/nn_surrogate/` — the 5-year adjoints |
+| [`kappa_v_ensemble/`](kappa_v_ensemble/) | The vertical-mixing perturbation ensemble of the surrogate proposal — the 5-year adjoints |
 | [`grdchk_repair/`](grdchk_repair/) | The finite-difference gradient check with its perturbation moved onto the sensitivity peak and `useGrdchk` switched on — the check that can actually pass (0.9 % at the peak, run 31037), unlike the committed `data.grdchk` point |
 
 ## Adding to this

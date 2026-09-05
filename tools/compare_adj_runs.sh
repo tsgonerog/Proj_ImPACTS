@@ -37,8 +37,8 @@
 # Deliberately no `set -e`: every check must run, and the report must be
 # written even when an earlier one fails.
 #
-# Example -- schedule it to run when an adjoint job finishes (see
-# notes/references/slurm_job_chaining/):
+# Example -- schedule it to run when an adjoint job finishes (the job-chaining
+# recipe in the project notes covers this pattern in full):
 #
 #   ADJ=$(../../../tools/submit.sh submit_tapAdj.sh --parsable | tail -1)
 #   sbatch --parsable --dependency=afterany:$ADJ run_comparison.sh

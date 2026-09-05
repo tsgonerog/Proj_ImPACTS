@@ -42,7 +42,7 @@ C     adjust the following line of code to define the zonal section
 C     where you are interested to calculated AMOC transport || use  the
 C     following notebook in sverdrup to find jsec for desired latitude (say for 26
 C     degrees north)
-C     /home/tshahriar/Proj_ImPACTS/analyses/DINO_1deg/grid_and_cost_sections.ipynb
+C     /home/tshahriar/Proj_ImPACTS/impacts-mitgcm/analyses/DINO_1deg/grid_and_cost_sections.ipynb
       parameter( isecbeg = 1, isecend = 51, jsec = 127 )
 C     the following line defines a meridional section, but I am not using
 C     it in the soma-adjoint setup. To confirm, search for

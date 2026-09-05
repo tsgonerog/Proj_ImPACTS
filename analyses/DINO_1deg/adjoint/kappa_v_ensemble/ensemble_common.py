@@ -7,7 +7,7 @@ exactly one place.  The heavy intermediate products are produced once by
 ``build_cache.py`` (same directory) and read back here from
 ``CACHE_DIR`` — see that script's docstring for what each cache file holds.
 
-Experiment (notes/directions/nn_surrogate master plan, Part I; submitted
+Experiment (Part I of the neural-network surrogate proposal; submitted
 2026-08-28, adjoints rerun 2026-09-01 with the Tapenade-native hook build):
     seven members perturb the uniform background vertical diffusivity
     kappa_v = 1.2e-5 m^2/s by factors 0.25x .. 32x.  Each member ran a 10-yr
@@ -74,7 +74,7 @@ ANIM_ROOT = ANALYSIS_ROOT / "animations"
 STATS_ROOT = ANALYSIS_ROOT / "stats"
 
 # MITgcmutils (vendored with the model source) is used to read pickup files.
-MITGCMUTILS_PATH = ("/home/tshahriar/Proj_ImPACTS/MITgcm_c69m/MITgcm/"
+MITGCMUTILS_PATH = ("/home/tshahriar/Proj_ImPACTS/impacts-mitgcm/MITgcm_c69m/MITgcm/"
                     "utils/python/MITgcmutils")
 
 # ----------------------------------------------------------------------------

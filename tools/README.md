@@ -1,7 +1,7 @@
 # `tools/`
 
 Repository-level tooling: the things that are shared by every setup, or that
-act on the repository as a whole. Five of them are scripts you run, one is a
+act on the repository as a whole. Three of them are scripts you run, one is a
 file you *source*, and two are reference directories that no build script
 touches.
 
@@ -16,8 +16,6 @@ call, plus the checks that guard the repository around them.
 | [`submit.sh`](submit.sh) | `sbatch` wrapper that adds the per-machine flags. Submit through this, not bare `sbatch` | `./tools/submit.sh <script> [sbatch flags]` |
 | [`compare_adj_runs.sh`](compare_adj_runs.sh) | Bit-compares two adjoint run directories and writes a verdict report; can wait on a running job first | `tools/compare_adj_runs.sh [opts] <ref> <new>` |
 | [`pre_push_check.sh`](pre_push_check.sh) | Read-only standing check: filters, side effects you did not author, derived output, dead notebook paths | `./tools/pre_push_check.sh` |
-| [`overleaf_sync.sh`](overleaf_sync.sh) | Two-way sync between a folder under `notes/` — usually `directions/<direction>/` — and its Overleaf project | `./tools/overleaf_sync.sh <cmd> <direction>` |
-| [`overleaf_sync_selftest.sh`](overleaf_sync_selftest.sh) | 40 assertions over the above, against a throwaway local repo. No credential, no network | `./tools/overleaf_sync_selftest.sh` |
 | [`optfile_templates/`](optfile_templates/) | `genmake2` optfiles written here and **not yet validated** on their target machine | see its own [README](optfile_templates/README.md) |
 | [`tapenade_profiling/`](tapenade_profiling/) | How to profile the adjoint and tune checkpointing on c69m, plus the c69f originals | see its own [README](tapenade_profiling/README.md) |
 
@@ -30,9 +28,9 @@ Shared conventions:
 - **Exit status is meaningful.** `0` = fine, `1` = a real problem, `2` = you
   used it wrong. `pre_push_check.sh` and `compare_adj_runs.sh` are designed to
   be usable in a conditional or a job dependency.
-- **Nothing here commits, pushes, or edits a tracked file** except
-  `overleaf_sync.sh pull`, which rewrites the working tree under one
-  `notes/directions/` folder and says so loudly.
+- **Nothing here commits, pushes, or edits a tracked file.** Every script in
+  this directory is read-only with respect to the repository; the ones that
+  write, write into a build or run directory on scratch.
 
 ---
 
@@ -178,7 +176,7 @@ IMPACTS_TEST_CASE=grdchk_repair/from180yrPk_visc2x_grdchkON \
 # dry-run: extra flags are passed through, and land before the script name
 ../../../tools/submit.sh submit_tapAdj.sh --test-only
 
-# chain: adjoint waits for a forward leg (see notes/references/slurm_job_chaining/)
+# chain: adjoint waits for a forward leg (the job-chaining recipe in the project notes)
 fwd=$(IMPACTS_TEST_CASE=kappa_v_ensemble/M3 ../../../tools/submit.sh submit_frd.sh --parsable | tail -1)
 adj=$(IMPACTS_TEST_CASE=kappa_v_ensemble/M3 ../../../tools/submit.sh submit_tapAdj.sh \
         --parsable --dependency=afterok:$fwd | tail -1)
@@ -310,8 +308,8 @@ nohup ../../../tools/compare_adj_runs.sh --wait "$jid" \
 
 A cleaner way to arrange the second one, without a background process holding
 the terminal, is a SLURM dependency — put the `compare_adj_runs.sh` call in a
-small job script and submit it `--dependency=afterany:$jid`. See
-[`notes/references/slurm_job_chaining/`](../notes/references/slurm_job_chaining/).
+small job script and submit it `--dependency=afterany:$jid`. The job-chaining
+recipe in the project notes covers the pattern in full.
 
 Two things about DINO runs that bear on how you read a comparison: pre-31022
 `ADJ*` dumps carry a tile-edge artifact (mask ~2 cells around `i=17|18`,
@@ -367,166 +365,6 @@ Build variants **in the order you want `code_tap/` left in**, and never `make`
 in an older build directory after building a different variant — `genmake2`
 symlinks headers back into `code_tap/`, so the older build's headers now resolve
 to the other variant. Re-run its build script instead.
-
----
-
-## `overleaf_sync.sh` — `notes/directions/<direction>/` ⇄ Overleaf
-
-```
-./tools/overleaf_sync.sh status <direction>            what differs, in both directions
-./tools/overleaf_sync.sh pull   <direction>            Overleaf     -> working tree
-./tools/overleaf_sync.sh push   <direction>            repo HEAD    -> Overleaf
-./tools/overleaf_sync.sh push   <direction> --wip      working tree -> Overleaf, no commit
-./tools/overleaf_sync.sh push   <direction> --force    overwrite un-pulled Overleaf edits
-```
-
-`<direction>` is the folder name under `notes/directions/`. Every form
-tab-completion produces is accepted: `nn_surrogate`, `nn_surrogate/`,
-`directions/nn_surrogate`, `notes/directions/nn_surrogate/`. Flags come after the
-direction, in any order.
-
-Directions with a project mapped today: **`nn_surrogate`**,
-**`dino_quarter_degree`**, plus one single-document reference,
-**`references/tapenade_hooks/upstream_slides`** (a key is the path under
-`notes/`, so it need not be a direction). A new one needs a line added to `project_url()` in the
-script.
-
-### What each subcommand does
-
-| | Behaviour |
-| --- | --- |
-| `status` | Fetches, reports how far the mirror is behind Overleaf, then diffs **repo `HEAD` against Overleaf** — because that is what a plain push would send. If the tree is also dirty it lists the uncommitted files *and* separately answers whether your **working tree** matches Overleaf, which is the question that matters after a `--wip` push. Changes nothing |
-| `push` | **Refuses on a dirty tree** (commit first, or use `--wip`), warns about untracked files that will not be sent, refuses over un-pulled Overleaf commits (unless `--force`), then clears the mirror, lays down `HEAD`, commits it as `Sync from <sha> — <subject>` and pushes. Says "nothing to push" when Overleaf already matches |
-| `pull` | Fast-forwards the mirror, **snapshots a dirty tree** to `refs/overleaf-prepull/<direction>`, deletes the tracked files, extracts Overleaf's copy over them, removes empty directories, then prints `git status --short` for that folder. **Stages nothing, commits nothing, rebuilds nothing** — and prints the diff/rebuild/abort commands you want next |
-
-The un-pulled guard applies to `--wip` pushes too. `--force` is the only thing
-that lifts it.
-
-### The three safety properties
-
-This automates the round trip written out in
-[`notes/README.md`](../notes/README.md) and keeps its three properties, which
-are the whole reason that procedure was ever spelled out by hand:
-
-1. **Only tracked files go up.** `build/` and the PDFs never leave. By default
-   what goes up is `HEAD`, so an uncommitted edit never reaches a reader.
-2. **Coming back, tracked files are deleted before the Overleaf copy is laid
-   down.** Overwriting in place adds and updates but never removes — so a
-   section deleted in Overleaf would otherwise survive on disk, keep being
-   `\input`, and appear in no diff at all.
-3. **`pull` never commits and never rebuilds for you.** You review the diff and
-   you rebuild, because Overleaf ships full TeX Live and the local TinyTeX does
-   not: a package a collaborator adds compiles there and fails here, and a
-   rebuild is the only thing that finds it.
-
-### The flags
-
-**`--wip`** (alias `--worktree`) sends the tracked files *as they stand on disk*
-instead of `HEAD`, commits in the mirror alone, never moves `HEAD`, and records
-the sync in the Overleaf log as `WIP from <sha>+` so a later reader is not told
-a commit exists that does not. Use it when Overleaf is your editor and you are
-round-tripping every few minutes. Do not use it when the push *is* the delivery
-— a reader about to open the project should get something this repository can
-reproduce, which is what `Sync from <sha>` means.
-
-The cost: **`pull` stops being harmless.** Under commit-first everything `pull`
-deletes is in a commit and `git checkout` brings it back; once real work lives
-uncommitted in the tree, it does not. So `pull` snapshots a dirty tree to
-`refs/overleaf-prepull/<direction>` before touching it and tells you how to get
-it back.
-
-**`--force`** pushes over Overleaf commits you have not pulled. Without it, the
-guard refuses: anything in Overleaf after the last commit this machine saw was
-written there, and pushing over it reverts someone's edit. Recoverable from the
-git bridge's history, but silent, so the script fails closed — including when
-the last-seen marker is dangling after a history rewrite.
-
-### Authentication — the username is the trap
-
-Overleaf's git bridge is a paid feature and needs a **git token**, not your
-account password:
-
-```
-Username: git          <- the literal word, NOT your Overleaf email
-Password: <the token>
-```
-
-Overleaf appears to key on the username, so any other value is refused with
-*"Overleaf now only supports Git authentication tokens"* and a 403 — the same
-error as using a password, and it fires even when the password field holds a
-perfectly valid token. If you are staring at that message with a token in hand,
-the username is why. `credential.helper cache --timeout=86400` is already set
-globally. Never put the token in this repository.
-
-### Why a mirror clone, not a git remote
-
-Overleaf's project root is `notes/directions/<direction>/`, not this
-repository's root, so the two trees do not line up and `git remote add` cannot
-work. `git-subtree` would bridge it but is not installed with this git, and its
-synthetic history fights the bridge's own. So each direction gets a plain clone
-of its Overleaf project **outside** this repository, at
-`~/.overleaf_mirrors/<direction>` (override with `OVERLEAF_MIRROR_ROOT`), and
-files are mirrored in and out of it. Beside it, `<direction>.last_synced` records
-the Overleaf commit this machine last saw — that is what the un-pulled guard
-reads. `OVERLEAF_REMOTE` overrides the project URL entirely, which is how the
-self-test runs the whole round trip against a local bare repo.
-
-### Example
-
-```bash
-./tools/overleaf_sync.sh status nn_surrogate     # always start here
-
-# deliver: commit first, so the Overleaf log names a reproducible sha
-git add notes/directions/nn_surrogate && git commit -m "..."
-./tools/overleaf_sync.sh push nn_surrogate
-
-# drafting round trip, no commit per iteration
-./tools/overleaf_sync.sh push nn_surrogate --wip
-./tools/overleaf_sync.sh pull nn_surrogate
-git diff notes/directions/nn_surrogate                 # read every change
-cd notes/directions/nn_surrogate/<doc> && latexmk -pdf -auxdir=build main.tex
-```
-
-Content removed in an Overleaf round trip is authored, not lost — a
-collaborator cut it there. Repair what it breaks locally rather than restoring
-it.
-
----
-
-## `overleaf_sync_selftest.sh` — the repository's one real test
-
-```
-./tools/overleaf_sync_selftest.sh [direction]      # default: nn_surrogate
-```
-
-40 assertions over `overleaf_sync.sh`, in six groups: argument handling, `pull`,
-`push`, "after a pull, push is unblocked", `push --wip`, and "pull protects an
-uncommitted tree". It runs the whole round trip against a **throwaway bare
-repository** standing in for Overleaf via the `OVERLEAF_REMOTE` override — so it
-never contacts overleaf.com, never touches `~/.overleaf_mirrors`, and never
-needs a credential. Exit status is 0 only if every check passes.
-
-It exists because `overleaf_sync.sh pull` deletes tracked files as a *normal*
-step, and more so since `push --wip` made it routine for a pull to overwrite
-work that is in no commit. A tool that does that deserves a test proving it puts
-everything back.
-
-**What it will not do:** it never commits to this repository and never moves
-`HEAD` — it asserts both at the end. It edits the working tree under the chosen
-direction and restores it with `git checkout` + `git clean -fd`, all scoped to
-that one path. It **refuses to start on a dirty tree** under the direction it
-tests, because it cannot tell your uncommitted work from its own and would
-restore over both. Commit or stash first.
-
-Run it after any change to `overleaf_sync.sh`:
-
-```bash
-./tools/overleaf_sync_selftest.sh
-# ...
-# 40 passed, 0 failed.
-```
-
----
 
 ## `optfile_templates/` and `tapenade_profiling/`
 
@@ -596,8 +434,6 @@ example showing the command line to type. The one real assignment anywhere is
 | `IMPACTS_DURATION_DAYS` | setup submit scripts | Run length in days (DINO patches `nTimeSteps` at dT 1800; SOMA patches `endTime` at dT 1200) |
 | `IMPACTS_MONITOR_FREQ_DAYS` | setup submit scripts | Monitor frequency |
 | `IMPACTS_ADJ_MONITOR_FREQ_DAYS`, `IMPACTS_ADJ_DUMP_FREQ_DAYS` | adjoint submit scripts | Adjoint monitor and `ADJ*` dump frequency |
-| `OVERLEAF_MIRROR_ROOT` | `overleaf_sync.sh` | Where mirror clones live (default `~/.overleaf_mirrors`) |
-| `OVERLEAF_REMOTE` | `overleaf_sync.sh` | Override the project URL; how the self-test avoids the network |
 
 The committed default beside each read is the cheap regression configuration,
 not the production one; each setup's own README tabulates the defaults and the
@@ -689,14 +525,11 @@ R=$SCRATCH_ROOT/DINO_1deg_outputs/runs/adjoint
 # 4. before pushing, check what in the tree is actually yours
 cd ../../..
 ./tools/pre_push_check.sh               # builds no longer touch the tree; any diff is yours
-
-# 5. if the result changes a direction, sync the write-up
-./tools/overleaf_sync.sh status nn_surrogate
 ```
 
 Related reading: [`README.md`](../README.md) for the science and layout,
 [`CLAUDE.md`](../CLAUDE.md) for the mechanics that only show up across several
 scripts, [`PORTING.md`](../PORTING.md) for a new cluster, the setup's own
 [`README.md`](../MITgcm_c69m/mysetups/DINO_1deg/README.md) for DINO's grid and
-build/submit pairings, and [`notes/references/`](../notes/references/) for
-workflows that have actually run.
+build/submit pairings. Workflows that have actually run are written up in the
+project notes, which live in the companion `impacts-notes` repository.

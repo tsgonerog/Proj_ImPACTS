@@ -3,7 +3,7 @@
 - [x] ~~Rerun the kappa_v ensemble with the ADEXCH-fixed build~~ (added
   2026-08-31, **done 2026-09-01**). Reference 31039 + members 31040–31046,
   fresh `build_tapAdj/` (renamed `build_tapAdj_ckpAll/` on 2026-09-02) from `main`, member pickups repointed per
-  `notes/references/slurm_job_chaining/` §2.2. Validated per run against the
+  the job-chaining recipe. Validated per run against the
   originals (30995, 31003–31009): `fc` + all 32 `adxx_*` bitwise identical;
   `ADJ*` differences seam-confined (0 cells outside the mask in all 4,026
   dump pairs/run) — and only for the 7 horizontal-stencil fields, the 4
@@ -16,8 +16,8 @@
 - [x] ~~Rerun the kappa_v ensemble with the `-nocheckpoint` build and compare~~
   (added and **done 2026-09-02/03**). Jobs 31060–31067 (REF + M1–M7; same
   pickups and namelists; submitted through temporary copies of
-  `submit_tapAdj_nocheckpoint.sh` with the member pickup repointed, see
-  `notes/references/slurm_job_chaining/` §2.2). Every pair **bitwise
+  `submit_tapAdj_nocheckpoint.sh` with the member pickup repointed per the
+  job-chaining recipe). Every pair **bitwise
   identical** to 31039–31046 (`fc`, 32 `adxx_*`, 4 393 `ADJ*`, `%MON`), the
   four blow-ups included; wall time 114.6 h → 76.8 h over the eight runs
   (1.45–1.65× per run, 1.54× on the reverse sweep, forward sweep unchanged).
@@ -167,10 +167,8 @@
 
 - [x] ~~**Write the hook redesign up as a talk, and take the internal name out
   of it**~~ (added and **done 2026-09-04**).
-  `notes/references/tapenade_hooks/upstream_slides/` is a 13-frame Beamer deck
-  derived from the change note beside it, with its own Overleaf project
-  (mapped in `project_url()` as
-  `references/tapenade_hooks/upstream_slides`). Each of the twelve modified
+  A 13-frame Beamer deck, kept with the project notes and derived from the
+  change note beside it, with its own Overleaf project. Each of the twelve modified
   files appears as `code_tap/<file>` → the checkpoint69m file it shadows, the
   first path linked to its blob on GitHub. DINO-only, and deliberately without
   an evidence table or an open-questions frame — both were cut in review; §4

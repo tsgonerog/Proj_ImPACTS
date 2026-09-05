@@ -1,8 +1,8 @@
 # `kappa_v_ensemble/` — forward legs
 
-Vertical-mixing perturbation ensemble, Part I of
-[`notes/directions/nn_surrogate/`](../../../../../../notes/directions/nn_surrogate/): **do the adjoint
-sensitivity patterns depend on the model's vertical mixing?**
+Vertical-mixing perturbation ensemble, Part I of the neural-network surrogate
+proposal: **do the adjoint sensitivity patterns depend on the model's vertical
+mixing?**
 
 These seven namelists are the **forward re-equilibration leg**, year 2170 →
 2180, each at its own vertical diffusivity. The adjoint half lives in
@@ -45,6 +45,6 @@ that regenerates them, and each must be 2,908,224 bytes of big-endian float64.
 **Outcome (runs 30996–31002, 2026-08-28/29).** All seven forward legs completed
 and are healthy; each wrote its year-2180 pickup and its matching adjoint ran
 from it. Results live in `analyses/DINO_1deg/adjoint/kappa_v_ensemble/`
-and `notes/directions/nn_surrogate/` (master Part I §Results) — including the caveat that
+and in the surrogate proposal's Part I §Results — including the caveat that
 four of the seven *adjoint* legs blow up (see the adjoint-side
 `input_tap/variants/kappa_v_ensemble/README.md`).

@@ -132,8 +132,8 @@ pair in the directory of the same name. The eight adjoints of
 which blow up — were rerun on 2026-09-02 with the `-nocheckpoint` build: same
 namelists, same pickups, eight jobs at once on eight separate nodes, as on
 2026-09-01. Members went in through temporary copies of
-`submit_tapAdj_nocheckpoint.sh` with the pickup repointed
-(`notes/references/slurm_job_chaining/` §2.2).
+`submit_tapAdj_nocheckpoint.sh` with the pickup repointed, per the
+job-chaining recipe in the project notes.
 
 | member | κ | `ckpAll` (2026-09-01) | `nocheckpoint` (2026-09-02) | speed-up | reverse sweep |
 | --- | --- | --- | --- | --- | --- |

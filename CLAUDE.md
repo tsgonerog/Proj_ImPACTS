@@ -8,23 +8,16 @@ MITgcm adjoint-sensitivity experiments built with the **Tapenade** AD toolchain 
 
 `README.md` documents the science and the layout; each setup has its own `README.md` (grid, build/submit pairings, quirks); `analyses/README.md` indexes the notebooks; `PORTING.md` covers other clusters. This file covers the mechanics that only become clear from reading several scripts at once.
 
-`./tools/overleaf_sync_selftest.sh` is the one real test in the repository — 40
-assertions over `tools/overleaf_sync.sh`, run against a throwaway bare repo
-standing in for Overleaf, so it needs no credential and never contacts
-overleaf.com. It exists because `overleaf_sync.sh pull` deletes tracked files as
-a normal step — and more so since `push --wip`, which sends the working tree and
-so makes it routine for a pull to overwrite work that is in no commit. Takes an
-optional direction argument; refuses to start on a dirty tree under the
-direction it tests, and never commits or moves `HEAD`.
+**The project notes are a separate repository.** `notes/` — the planning documents for work underway and proposed, and the write-ups of workflows that have already run — was split out on 2026-09-04 into `impacts-notes`, which is private; this repository is the one shared with collaborators. The two are checked out as siblings under `Proj_ImPACTS/`. Nothing here reads from it, and no build, submit or notebook path crosses between them, so a reference to "the project notes" in any document here is a pointer to context, never a dependency. Anything a reader of this repository actually needs is stated here.
 
-`./tools/pre_push_check.sh` is the other standing check: a read-only
+`./tools/pre_push_check.sh` is the one standing check in this repository: a read-only
 pre-push sanity check covering the nbstrip filter, submit-script namelist churn,
 stray images under `analyses/`, and notebook scratch paths that no longer
 resolve. Exits non-zero only on real breakage. Run
 it before concluding a tree is clean — `git status` alone does not distinguish a
 change the user authored from one a build or submit script made.
 
-There is no root build system, no linter, and no package manifest, and nothing that tests the Fortran or the notebooks — the two checks above cover tooling only. Fortran is built per-setup via `genmake2` + `make`; Python analysis happens in notebooks with no checked-in environment file (`numpy`, `xarray`, `xmitgcm`, `matplotlib`).
+There is no root build system, no linter, and no package manifest, and nothing that tests the Fortran or the notebooks — that check covers tooling only. (Until 2026-09-04 there was a second one, `overleaf_sync_selftest.sh`; it went to the `impacts-notes` repository with the Overleaf sync tool it tests.) Fortran is built per-setup via `genmake2` + `make`; Python analysis happens in notebooks with no checked-in environment file (`numpy`, `xarray`, `xmitgcm`, `matplotlib`).
 
 ## Layout
 

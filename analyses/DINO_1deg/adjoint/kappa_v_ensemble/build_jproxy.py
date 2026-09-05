@@ -34,7 +34,7 @@ Writes cache/jproxy_series.nc with:
 import sys
 import numpy as np
 
-sys.path.insert(0, "/home/tshahriar/Proj_ImPACTS/analyses/DINO_1deg/adjoint/kappa_v_ensemble")
+sys.path.insert(0, "/home/tshahriar/Proj_ImPACTS/impacts-mitgcm/analyses/DINO_1deg/adjoint/kappa_v_ensemble")
 import ensemble_common as ec
 
 import xarray as xr

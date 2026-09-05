@@ -566,7 +566,7 @@ and the artefacts of the pre-redesign mechanism are gone on purpose (`forward_st
 generated file is post-edited any more; `adcommon.h` archived in
 `00_archive/code_tap/` — its upstream twin `pkg/autodiff/adcommon.h` still
 serves the TAF path). The whole arrangement is written up for upstream review
-in `notes/references/tapenade_hooks/`.
+in a separate change note, kept with the project notes rather than here.
 
 ### `code_tap/` — adjoint source overrides
 
